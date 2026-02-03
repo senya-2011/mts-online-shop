@@ -1,0 +1,299 @@
+openapi: 3.0.4
+info:
+  title: MTS Online Shop
+  version: 0.0.1
+servers: 
+  - url: http://localhost:8080/api/
+    description: Dev Server
+paths:
+  /goods:
+    get:
+      summary: Метод получения всех доступных товаров
+      tags:
+        - Goods
+      operationId: getAllGoods
+      responses:
+        '200':
+          description: Успешный ответ со списком всех доступных товаров
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+                  
+  /goods/{user_id}:
+    get:
+      summary: Метод получения товаров из корзины юзера
+      tags:
+        - Goods
+      operationId: getUserGoods
+      parameters: 
+        - name: user_id
+          in: path
+          required: true
+          description: Индификатор юзера
+          example: 1337
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Успешный ответ с корзиной пользователя
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      summary: Добавить товар в корзину
+      tags:
+        - Goods
+      operationId: addProductInCart
+      parameters: 
+        - name: user_id
+          in: path
+          required: true
+          description: Индификатор юзера
+          example: 1337
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Успешный ответ с добавленным товаром
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      summary: Очистить корзину
+      tags:
+        - Goods
+      operationId: clearCart
+      parameters: 
+        - name: user_id
+          in: path
+          required: true
+          description: Индификатор юзера
+          example: 1337
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Корзина очищена
+
+  /goods/{user_id}/{item_id}:
+    delete:
+      summary: Удалить конкретный товар из корзины
+      tags:
+        - Goods
+      operationId: deleteItemFromCart
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: Идентификатор юзера
+          example: 1337
+          schema:
+            type: integer
+            format: int64
+        - name: item_id
+          in: path
+          required: true
+          description: Идентификатор товара или записи в корзине, которую нужно удалить
+          example: 55
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Товар успешно удален из корзины.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+  
+  /orders:
+    post:
+      summary: Создать заказ
+      tags:
+        - Orders
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '200':
+          description: Заказ успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+
+  /orders/user/{user_id}:
+    get:
+      summary: Получить заказы пользователя
+      tags:
+        - Orders
+      operationId: getUserOrders
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderResponse"
+
+  /order/{order_id}:
+    get:
+      summary: Получить детали конкретного заказа
+      tags:
+        - Orders
+      operationId: getOrderById
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Данные заказа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+
+  /order/{order_id}/payment:
+    post:
+      summary: Оплата заказа (Ввод данных карты)
+      tags:
+        - Orders
+      operationId: payOrder
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Данные банковской карты
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Оплата прошла успешно, статус заказа изменен на paid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Ошибка оплаты (неверные данные карты или недостаточно средств)
+        '404':
+          description: Заказ не найден
+
+
+
+        
+components:
+  schemas:
+    Product:
+      type: object
+      required:
+        - object_id
+        - name
+        - price
+      properties:
+        object_id:
+          type: integer 
+          format: int64
+          example: 12
+        name:
+          type: string
+          example: Пакет интернета 5Gb
+        price:
+          type: number
+          format: float
+          example: 199.99
+
+    OrderRequest:
+      type: object 
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          example: 1337
+
+    OrderResponse:
+      type: object 
+      required:
+        - order_id
+        - user_id
+        - status
+        - total_price
+        - goods
+      properties:
+        order_id:
+          type: integer
+          format: int64 
+          example: 3
+        user_id:
+          type: integer
+          format: int64
+          example: 1337
+        status:
+          type: string
+          example: paid
+        total_price:
+          type: number 
+          format: float 
+          example: 750.00
+        goods:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+    
+    PaymentRequest:
+      type: object 
+      required:
+        - card_number
+        - expires_at
+        - cvv
+      properties:
+        card_number:
+          type: string 
+          description: Номер карты 16 цифр
+          example: 1234123412341234
+          pattern: '^[0-9]{16}$'
+        expires_at:
+          type: string 
+          description: ММ/YY
+          example: "09/30"
+        cvv:
+          type: string
+          description: Код с обратной стороны
+          example: "1234"
