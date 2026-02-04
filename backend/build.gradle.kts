@@ -29,6 +29,10 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation("org.springframework.boot:spring-boot-starter-web")
+
+    implementation("io.swagger.core.v3:swagger-annotations:2.2.22")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.projectlombok:lombok")

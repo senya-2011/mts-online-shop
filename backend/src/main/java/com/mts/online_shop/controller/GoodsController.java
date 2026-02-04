@@ -18,6 +18,11 @@ public class GoodsController implements GoodsApi {
     }
 
     @Override
+    public ResponseEntity<List<Product>> getAllGoods() {
+        return ResponseEntity.ok(goodsService.findAllGoods());
+    }
+
+    @Override
     public ResponseEntity<Product> addProductToCart(Long userId, Long productId) {
         return null;
     }
@@ -29,11 +34,6 @@ public class GoodsController implements GoodsApi {
 
     @Override
     public ResponseEntity<List<Product>> deleteItemFromCart(Long userId, Long itemId) {
-        return null;
-    }
-
-    @Override
-    public ResponseEntity<List<Product>> getAllGoods() {
         return null;
     }
 

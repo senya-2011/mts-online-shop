@@ -18,7 +18,7 @@ repositories {
 
 dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-web:3.4.0")
-    compileOnly("io.swagger.core.v3:swagger-annotations:2.2.20")
+    implementation("io.swagger.core.v3:swagger-annotations:2.2.20")
     compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")
     compileOnly("org.openapitools:jackson-databind-nullable:0.2.6")
 }

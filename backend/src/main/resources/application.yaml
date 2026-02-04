@@ -12,6 +12,8 @@ spring:
 
 server:
   port: ${MY_PORT:8080}
+  servlet:
+    context-path: /api
 logging:
   level:
     root: WARN
