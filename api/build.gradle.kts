@@ -31,6 +31,7 @@ openApiGenerate {
     outputDir.set(generatedOpenApiDir.asFile.absolutePath)
     apiPackage.set("com.mts.online_shop.api")
     modelPackage.set("com.mts.online_shop.model")
+    cleanupOutput.set(true)
     configOptions.set(
         mapOf(
             "interfaceOnly" to "true",
