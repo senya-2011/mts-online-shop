@@ -2,7 +2,7 @@ openapi: 3.0.4
 info:
   title: MTS Online Shop
   version: 0.0.1
-servers: 
+servers:
   - url: http://localhost:8080/api/
     description: Dev Server
 paths:
@@ -21,14 +21,14 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
-                  
+
   /goods/{user_id}:
     get:
       summary: Метод получения товаров из корзины юзера
       tags:
         - Goods
       operationId: getUserGoods
-      parameters: 
+      parameters:
         - name: user_id
           in: path
           required: true
@@ -46,33 +46,12 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
-    post:
-      summary: Добавить товар в корзину
-      tags:
-        - Goods
-      operationId: addProductInCart
-      parameters: 
-        - name: user_id
-          in: path
-          required: true
-          description: Индификатор юзера
-          example: 1337
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: Успешный ответ с добавленным товаром
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Product"
     delete:
       summary: Очистить корзину
       tags:
         - Goods
       operationId: clearCart
-      parameters: 
+      parameters:
         - name: user_id
           in: path
           required: true
@@ -84,6 +63,33 @@ paths:
       responses:
         '200':
           description: Корзина очищена
+
+  /goods/{user_id}/{product_id}:
+    post:
+      summary: Добавить конкретный товар в корзину
+      tags:
+        - Goods
+      operationId: addProductToCart
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Успешный ответ с добавленным товаром
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
 
   /goods/{user_id}/{item_id}:
     delete:
@@ -216,7 +222,7 @@ paths:
 
 
 
-        
+
 components:
   schemas:
     Product:
@@ -227,7 +233,7 @@ components:
         - price
       properties:
         object_id:
-          type: integer 
+          type: integer
           format: int64
           example: 12
         name:
@@ -239,7 +245,7 @@ components:
           example: 199.99
 
     OrderRequest:
-      type: object 
+      type: object
       required:
         - user_id
       properties:
@@ -249,7 +255,7 @@ components:
           example: 1337
 
     OrderResponse:
-      type: object 
+      type: object
       required:
         - order_id
         - user_id
@@ -259,7 +265,7 @@ components:
       properties:
         order_id:
           type: integer
-          format: int64 
+          format: int64
           example: 3
         user_id:
           type: integer
@@ -269,8 +275,8 @@ components:
           type: string
           example: paid
         total_price:
-          type: number 
-          format: float 
+          type: number
+          format: float
           example: 750.00
         goods:
           type: array
@@ -278,19 +284,19 @@ components:
             $ref: "#/components/schemas/Product"
     
     PaymentRequest:
-      type: object 
+      type: object
       required:
         - card_number
         - expires_at
         - cvv
       properties:
         card_number:
-          type: string 
+          type: string
           description: Номер карты 16 цифр
           example: 1234123412341234
           pattern: '^[0-9]{16}$'
         expires_at:
-          type: string 
+          type: string
           description: ММ/YY
           example: "09/30"
         cvv:
