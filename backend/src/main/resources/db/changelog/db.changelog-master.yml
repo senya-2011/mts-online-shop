@@ -9,3 +9,7 @@ databaseChangeLog:
       file: db/changelog/changeset/004-create-order-item-table.yml
   - include:
       file: db/changelog/changeset/005-create-user-item-table.yml
+  - include:
+      file: db/changelog/changeset/006-fill-users.yml
+  - include:
+      file: db/changelog/changeset/007-fill-goods.yml
