@@ -1,0 +1,32 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-order-table
+      author: Arsenii Alhimovici
+      changes:
+        - createTable:
+            tableName: orders
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_user_id
+                    references: users(id)
+              - column:
+                  name: status
+                  type: varchar(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_price
+                  type: float
+                  constraints:
+                    nullable: false

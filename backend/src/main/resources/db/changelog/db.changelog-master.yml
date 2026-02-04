@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changeset/001-create-user-table.yml
+  - include:
+      file: db/changelog/changeset/002-create-goods-table.yml
+  - include:
+      file: db/changelog/changeset/003-create-order-table.yml
+  - include:
+      file: db/changelog/changeset/004-create-order-item-table.yml
+  - include:
+      file: db/changelog/changeset/005-create-user-item-table.yml

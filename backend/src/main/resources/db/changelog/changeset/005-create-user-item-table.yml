@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-user-item-table
+      author: Arsenii Alhimovici
+      changes:
+        - createTable:
+            tableName: user-items
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cart_user
+                    references: user(id)
+              - column:
+                  name: product_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cart_product
+                    references: goods(id)
