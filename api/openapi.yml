@@ -123,7 +123,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Product"
-  
+
   /orders:
     post:
       summary: Создать заказ
@@ -167,7 +167,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/OrderResponse"
 
-  /order/{order_id}:
+  /orders/{order_id}:
     get:
       summary: Получить детали конкретного заказа
       tags:
@@ -188,7 +188,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderResponse'
 
-  /order/{order_id}/payment:
+  /orders/{order_id}/payment:
     post:
       summary: Оплата заказа (Ввод данных карты)
       tags:
@@ -282,7 +282,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Product"
-    
+
     PaymentRequest:
       type: object
       required:
