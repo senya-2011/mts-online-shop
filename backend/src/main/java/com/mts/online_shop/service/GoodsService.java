@@ -29,6 +29,8 @@ public class GoodsService {
     }
 
     public List<Product> findUserGoods(Long userId) {
+        userRepository.findById(userId).
+                orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
         return userItemRepository.findByUser_Id(userId).stream()
                 .map(UserItem::getProduct)
                 .toList();
@@ -42,6 +44,4 @@ public class GoodsService {
         userItemRepository.save(new UserItem(user, product));
         return product;
     }
-
-
 }
