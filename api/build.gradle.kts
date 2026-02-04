@@ -48,8 +48,10 @@ openApiGenerate {
     )
 }
 
-tasks.compileJava {
+tasks.register("generateApi") {
     dependsOn(tasks.openApiGenerate)
+    group = "openapi"
+    description = "Generate API classes from openapi.yml"
 }
 
 sourceSets {

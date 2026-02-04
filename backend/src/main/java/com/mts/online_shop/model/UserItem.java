@@ -28,5 +28,10 @@ public class UserItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    public UserItem(User user, Product product) {
+        this.user = user;
+        this.product = product;
+    }
 }
 
