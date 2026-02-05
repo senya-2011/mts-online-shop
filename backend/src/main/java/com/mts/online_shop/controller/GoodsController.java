@@ -34,14 +34,18 @@ public class GoodsController implements GoodsApi {
         return ResponseEntity.ok(goodsService.addProductInUserCart(userId, productId));
     }
 
+    //DELETE
     @Override
-    public ResponseEntity<Void> clearCart(Long userId) {
-        return null;
+    public ResponseEntity<String> clearCart(Long userId) {
+        goodsService.clearCart(userId);
+        return ResponseEntity.ok("Корзина очищена");
     }
 
+    //DELETE
     @Override
-    public ResponseEntity<List<Product>> deleteItemFromCart(Long userId, Long itemId) {
-        return null;
+    public ResponseEntity<String> deleteItemFromCart(Long userId, Long itemId) {
+        goodsService.deleteProductFromCart(userId, itemId);
+        return ResponseEntity.ok("Товар удален из корзины");
     }
 
 

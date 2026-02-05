@@ -1,6 +1,7 @@
 package com.mts.online_shop.controller;
 
 import com.mts.online_shop.exception.ProductNotFoundException;
+import com.mts.online_shop.exception.ProductNotInCartException;
 import com.mts.online_shop.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<?> handleUserNotFound(UserNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ProductNotInCartException.class)
+    public ResponseEntity<?> handleProductNotInCart(ProductNotInCartException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
     }
 }

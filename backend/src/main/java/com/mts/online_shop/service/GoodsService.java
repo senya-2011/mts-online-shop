@@ -1,5 +1,6 @@
 package com.mts.online_shop.service;
 
+import com.mts.online_shop.exception.ProductNotInCartException;
 import com.mts.online_shop.exception.ProductNotFoundException;
 import com.mts.online_shop.exception.UserNotFoundException;
 import com.mts.online_shop.model.Product;
@@ -9,6 +10,7 @@ import com.mts.online_shop.repository.GoodsRepository;
 import com.mts.online_shop.repository.UserItemRepository;
 import com.mts.online_shop.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -43,5 +45,24 @@ public class GoodsService {
                 orElseThrow(() -> new ProductNotFoundException("Product with id: " + productId + " not found"));
         userItemRepository.save(new UserItem(user, product));
         return product;
+    }
+
+    @Transactional
+    public void deleteProductFromCart(Long userId, Long productId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
+        goodsRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product with id: " + productId + " not found"));
+        if (!userItemRepository.existsByUser_IdAndProduct_Id(userId, productId)) {
+            throw new ProductNotInCartException("Product with id: " + productId + " is not in cart");
+        }
+        userItemRepository.deleteByUser_IdAndProduct_Id(userId, productId);
+    }
+
+    @Transactional
+    public void clearCart(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
+        userItemRepository.deleteAllByUser(user);
     }
 }
