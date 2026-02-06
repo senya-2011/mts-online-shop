@@ -14,7 +14,7 @@ public class Order {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+private Long id;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -27,7 +27,7 @@ public class Order {
     @Column(name = "total_price", nullable = false)
     private float totalPrice;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
 
     @PrePersist

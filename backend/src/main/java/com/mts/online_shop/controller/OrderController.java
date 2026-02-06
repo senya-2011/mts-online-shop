@@ -30,9 +30,11 @@ public class OrderController implements OrdersApi {
         return ResponseEntity.ok(orderMapper.toOrderResponse(order));
     }
 
+    //POST
     @Override
     public ResponseEntity<OrderResponse> createOrder(OrderRequest orderRequest) {
-        return null;
+        Order order = orderService.createOrder(orderRequest);
+        return ResponseEntity.ok(orderMapper.toOrderResponse(order));
     }
 
     @Override

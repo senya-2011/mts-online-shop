@@ -1,5 +1,6 @@
 package com.mts.online_shop.controller;
 
+import com.mts.online_shop.exception.EmptyCartException;
 import com.mts.online_shop.exception.OrderNotFoundException;
 import com.mts.online_shop.exception.ProductNotFoundException;
 import com.mts.online_shop.exception.ProductNotInCartException;
@@ -32,5 +33,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(OrderNotFoundException.class)
     public ResponseEntity<?> handleOrderNotFound(OrderNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    }
+
+    @ExceptionHandler(EmptyCartException.class)
+    public ResponseEntity<?> handleEmptyCart(EmptyCartException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
     }
 }
