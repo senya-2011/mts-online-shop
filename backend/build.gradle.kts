@@ -30,12 +30,15 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-liquibase")
     implementation("org.springframework.boot:spring-boot-starter-web")
 
+    implementation("org.mapstruct:mapstruct:1.6.3")
+
     implementation("io.swagger.core.v3:swagger-annotations:2.2.41")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1")
 
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("org.postgresql:postgresql")
 	annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")

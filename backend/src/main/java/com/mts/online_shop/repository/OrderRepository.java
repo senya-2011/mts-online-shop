@@ -1,13 +1,12 @@
 package com.mts.online_shop.repository;
 
-
-import com.mts.online_shop.model.User;
+import com.mts.online_shop.model.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findById(Long id);
+public interface OrderRepository extends JpaRepository<Order,Long> {
+    Optional<Order> getOrderById(Long id);
 }
