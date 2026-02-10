@@ -4,10 +4,7 @@ import com.mts.online_shop.exception.EmptyCartException;
 import com.mts.online_shop.exception.OrderNotFoundException;
 import com.mts.online_shop.exception.UserNotFoundException;
 import com.mts.online_shop.mapper.OrderMapper;
-import com.mts.online_shop.model.Order;
-import com.mts.online_shop.model.OrderItem;
-import com.mts.online_shop.model.OrderRequest;
-import com.mts.online_shop.model.Product;
+import com.mts.online_shop.model.*;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -33,13 +30,14 @@ public class OrderService {
         this.userRepository = userRepository;
     }
 
-    public Order getOrderByOrderId(Long orderId) {
-        return orderRepository.getOrderById(orderId)
+    public OrderResponse getOrderByOrderId(Long orderId) {
+        Order order = orderRepository.getOrderById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        return orderMapper.toOrderResponse(order);
     }
 
     @Transactional
-    public Order createOrder(OrderRequest orderRequest) {
+    public OrderResponse createOrder(OrderRequest orderRequest) {
         Long userId = orderRequest.getUserId();
         userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
@@ -59,6 +57,6 @@ public class OrderService {
 
         goodsService.clearCart(userId);
 
-        return savedOrder;
+        return orderMapper.toOrderResponse(savedOrder);
     }
 }
