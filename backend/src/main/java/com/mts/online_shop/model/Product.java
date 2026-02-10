@@ -1,5 +1,6 @@
 package com.mts.online_shop.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Entity
 @Table(name = "goods")
+@JsonIgnoreProperties({"hibernateLazyInitializer"})
 public class Product {
 
     @Id
