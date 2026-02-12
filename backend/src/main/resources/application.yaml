@@ -16,6 +16,6 @@ server:
     context-path: /api
 logging:
   level:
-    root: WARN
+    root: INFO
     liquibase: INFO
     org.springframework.boot.autoconfigure.liquibase: INFO
