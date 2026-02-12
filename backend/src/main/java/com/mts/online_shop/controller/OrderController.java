@@ -23,7 +23,6 @@ public class OrderController implements OrdersApi {
         this.orderService = orderService;
     }
 
-    //GET
     @Override
     public ResponseEntity<OrderResponse> getOrderById(Long orderId) {
         log.info("GET order id={}", orderId);

@@ -9,6 +9,7 @@ import com.mts.online_shop.model.*;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
 import com.mts.online_shop.simulator.bank.BankSimulator;
+import com.mts.online_shop.simulator.mail.MailSimulator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,17 +26,20 @@ public class OrderService {
     private final GoodsService goodsService;
     private final UserRepository userRepository;
     private final BankSimulator bankSimulator;
+    private final MailSimulator mailSimulator;
 
     public OrderService(OrderRepository orderRepository,
                         OrderMapper orderMapper,
                         GoodsService goodsService,
                         UserRepository userRepository,
-                        BankSimulator bankSimulator) {
+                        BankSimulator bankSimulator,
+                        MailSimulator mailSimulator) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.goodsService = goodsService;
         this.userRepository = userRepository;
         this.bankSimulator = bankSimulator;
+        this.mailSimulator = mailSimulator;
     }
 
     public OrderResponse getOrderByOrderId(Long orderId) {
@@ -83,7 +87,7 @@ public class OrderService {
         log.info("payOrder orderId={}", orderId);
         Order order = orderRepository.getOrderById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
-
+        
         boolean paymentResult = bankSimulator.doPayment(paymentRequest, order.getTotalPrice());
         if (!paymentResult) {
             log.warn("payment failed orderId={}", orderId);
@@ -93,6 +97,11 @@ public class OrderService {
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
         log.info("order paid orderId={}", orderId);
+
+        if (order.getUser() != null) {
+            mailSimulator.sendOrderPaidEmail(order.getUser().getEmail(), order.getId(), order.getTotalPrice());
+        }
+
         return orderMapper.toOrderResponse(order);
     }
 }
