@@ -27,6 +27,13 @@ public class OrderController implements OrdersApi {
         return ResponseEntity.ok(order);
     }
 
+    //GET
+    @Override
+    public ResponseEntity<List<OrderResponse>> getUserOrders(Long userId) {
+        List<OrderResponse> orders = orderService.getOrdersByUserId(userId);
+        return ResponseEntity.ok(orders);
+    }
+
     //POST
     @Override
     public ResponseEntity<OrderResponse> createOrder(OrderRequest orderRequest) {
@@ -34,10 +41,7 @@ public class OrderController implements OrdersApi {
         return ResponseEntity.ok(order);
     }
 
-    @Override
-    public ResponseEntity<List<OrderResponse>> getUserOrders(Long userId) {
-        return null;
-    }
+
 
     @Override
     public ResponseEntity<OrderResponse> payOrder(Long orderId, PaymentRequest paymentRequest) {

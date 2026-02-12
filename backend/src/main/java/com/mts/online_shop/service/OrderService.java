@@ -59,4 +59,11 @@ public class OrderService {
 
         return orderMapper.toOrderResponse(savedOrder);
     }
+
+    public List<OrderResponse> getOrdersByUserId(Long userId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
+        List<Order> orders = orderRepository.getOrdersByUserId(userId);
+        return orderMapper.toOrderResponseList(orders);
+    }
 }

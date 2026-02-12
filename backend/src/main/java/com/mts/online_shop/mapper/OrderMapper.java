@@ -22,6 +22,15 @@ public interface OrderMapper {
     @Mapping(target = "goods", expression = "java(mapItems(order.getItems()))")
     OrderResponse toOrderResponse(Order order);
 
+    default List<OrderResponse> toOrderResponseList(List<Order> orders) {
+        if (orders == null || orders.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return orders.stream()
+                .map(this::toOrderResponse)
+                .toList();
+    }
+
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", constant = "CREATED")
     @Mapping(target = "totalPrice", ignore = true)
