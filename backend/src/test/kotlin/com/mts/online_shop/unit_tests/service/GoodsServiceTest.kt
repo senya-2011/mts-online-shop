@@ -16,7 +16,6 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
-import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -26,7 +25,7 @@ import java.util.Optional
 class GoodsServiceTest(): BehaviorSpec({
 
     isolationMode = IsolationMode.InstancePerTest
-    
+
     val goodsRepository = mockk<GoodsRepository>()
     val userItemRepository = mockk<UserItemRepository>()
     val userRepository = mockk<UserRepository>()

@@ -101,7 +101,7 @@ public class OrderService {
         orderRepository.save(order);
         log.info("order paid orderId={}", orderId);
 
-        mailSimulator.sendOrderPaidEmail(order.getUser().getEmail(), order.getId(), order.getTotalPrice());
+        mailSimulator.sendOrderPaidEmail(user.getEmail(), order.getId(), order.getTotalPrice());
 
         return orderMapper.toOrderResponse(order);
     }
