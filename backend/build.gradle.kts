@@ -1,7 +1,9 @@
 plugins {
 	java
+	kotlin("jvm") version "2.0.21"
 	id("org.springframework.boot") version "4.0.2"
 	id("io.spring.dependency-management") version "1.1.7"
+	id("io.kotest") version "6.1.3"
 }
 
 group = "com.mts"
@@ -43,6 +45,11 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+	testImplementation("io.kotest:kotest-runner-junit5:6.1.3")
+	testImplementation("io.kotest:kotest-assertions-core-jvm:6.1.3")
+
+    testImplementation("io.mockk:mockk:1.14.9")
 }
 
 tasks.withType<Test> {
