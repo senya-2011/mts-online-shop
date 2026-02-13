@@ -87,7 +87,10 @@ public class OrderService {
         log.info("payOrder orderId={}", orderId);
         Order order = orderRepository.getOrderById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
-        
+
+        User user = userRepository.findById(order.getUser().getId())
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + order.getUser().getId() + " not found"));
+
         boolean paymentResult = bankSimulator.doPayment(paymentRequest, order.getTotalPrice());
         if (!paymentResult) {
             log.warn("payment failed orderId={}", orderId);
@@ -98,9 +101,7 @@ public class OrderService {
         orderRepository.save(order);
         log.info("order paid orderId={}", orderId);
 
-        if (order.getUser() != null) {
-            mailSimulator.sendOrderPaidEmail(order.getUser().getEmail(), order.getId(), order.getTotalPrice());
-        }
+        mailSimulator.sendOrderPaidEmail(order.getUser().getEmail(), order.getId(), order.getTotalPrice());
 
         return orderMapper.toOrderResponse(order);
     }
