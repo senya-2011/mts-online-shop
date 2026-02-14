@@ -6,12 +6,10 @@ on:
   pull_request:
     branches: [ dev, main ]
 
-concurrency:
-  group: ci-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
 
 jobs:
   test:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,4 +22,4 @@ jobs:
 
       - name: Generate API and run tests
         working-directory: backend
-        run: chmod +x gradlew && ./gradlew :api:openApiGenerate test
+        run: chmod +x gradlew && ./gradlew test
