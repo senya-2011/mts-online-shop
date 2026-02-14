@@ -61,3 +61,7 @@ sourceSets {
         }
     }
 }
+
+tasks.named("compileJava") {
+    dependsOn(tasks.openApiGenerate)
+}
