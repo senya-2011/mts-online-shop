@@ -12,8 +12,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.mail.ru}
     port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:noreply@localhost}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -34,4 +34,4 @@ logging:
     org.springframework.boot.autoconfigure.liquibase: INFO
 
 mail:
-  from: ${MAIL_USERNAME}
+  from: ${MAIL_USERNAME:noreply@localhost}
