@@ -1,7 +1,9 @@
 package com.mts.online_shop.exception;
 
-public class ProductNotInCartException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class ProductNotInCartException extends ApiException {
     public ProductNotInCartException(String message) {
-        super(message);
+        super(HttpStatus.NOT_FOUND, "Not Found", "product-not-in-cart", message);
     }
 }

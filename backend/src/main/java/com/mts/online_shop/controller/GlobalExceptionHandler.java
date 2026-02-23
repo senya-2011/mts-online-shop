@@ -1,69 +1,86 @@
 package com.mts.online_shop.controller;
 
-import com.mts.online_shop.exception.EmptyCartException;
-import com.mts.online_shop.exception.InvalidPaymentDataException;
-import com.mts.online_shop.exception.OrderNotFoundException;
-import com.mts.online_shop.exception.ProductNotFoundException;
-import com.mts.online_shop.exception.ProductNotInCartException;
-import com.mts.online_shop.exception.UserNotFoundException;
+import com.mts.online_shop.exception.ApiException;
+import com.mts.online_shop.model.Problem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.WebRequest;
 
-import java.util.Map;
+import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String PROBLEM_TYPE_URI = "https://api.mts-online-shop.example/errors";
 
-    @ExceptionHandler(ProductNotFoundException.class)
-    public ResponseEntity<?> handleProductNotFound(ProductNotFoundException e) {
-        log.warn("ProductNotFound: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-    }
-
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<?> handleUserNotFound(UserNotFoundException e) {
-        log.warn("UserNotFound: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-    }
-
-    @ExceptionHandler(ProductNotInCartException.class)
-    public ResponseEntity<?> handleProductNotInCart(ProductNotInCartException e) {
-        log.warn("ProductNotInCart: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-    }
-
-    @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<?> handleOrderNotFound(OrderNotFoundException e) {
-        log.warn("OrderNotFound: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
-    }
-
-    @ExceptionHandler(EmptyCartException.class)
-    public ResponseEntity<?> handleEmptyCart(EmptyCartException e) {
-        log.warn("EmptyCart: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidPaymentDataException.class)
-    public ResponseEntity<?> handleInvalidPaymentData(InvalidPaymentDataException e) {
-        log.warn("InvalidPaymentData: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", e.getMessage()));
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Problem> handleApiException(ApiException e, WebRequest request) {
+        if (e.getStatus().is5xxServerError()) {
+            log.error("API error: {}", e.getMessage(), e);
+        } else {
+            log.warn("API error: {}", e.getMessage());
+        }
+        return problem(e.getStatus(), e.getTitle(), e.getType(), e.getMessage(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<?> handleValidation(MethodArgumentNotValidException e) {
-        String message = e.getBindingResult().getFieldErrors().stream()
+    public ResponseEntity<Problem> handleValidation(MethodArgumentNotValidException e, WebRequest request) {
+        String detail = e.getBindingResult().getFieldErrors().stream()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .collect(Collectors.joining("; "));
-        log.warn("Validation: {}", message);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", message));
+        log.warn("Validation error: {}", detail);
+        return problem(HttpStatus.BAD_REQUEST, "Bad Request", "validation-error", detail, request);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Problem> handleConstraintViolation(ConstraintViolationException e, WebRequest request) {
+        String detail = e.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                .collect(Collectors.joining("; "));
+        log.warn("Constraint violation: {}", detail);
+        return problem(HttpStatus.BAD_REQUEST, "Bad Request", "validation-error", detail, request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Problem> handleIllegalArgument(IllegalArgumentException e, WebRequest request) {
+        log.warn("Bad request: {}", e.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, "Bad Request", "bad-request", e.getMessage(), request);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Problem> handleGeneric(Exception e, WebRequest request) {
+        log.error("Unhandled error", e);
+        return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "internal-error", null, request);
+    }
+
+    private static ResponseEntity<Problem> problem(HttpStatus status,
+                                                   String title,
+                                                   String typeSuffix,
+                                                   String detail,
+                                                   WebRequest request) {
+        Problem p = new Problem();
+        p.setType(PROBLEM_TYPE_URI + "/" + typeSuffix);
+        p.setTitle(title);
+        p.setStatus(status.value());
+        p.setDetail(detail);
+        if (request != null && request.getDescription(false) != null) {
+            p.setInstance(request.getDescription(false).replace("uri=", ""));
+        }
+        String traceId = MDC.get("traceId");
+        if (traceId != null && !traceId.isBlank()) {
+            p.setTraceId(traceId);
+        }
+        return ResponseEntity.status(status)
+                .contentType(MediaType.parseMediaType("application/problem+json"))
+                .body(p);
     }
 }

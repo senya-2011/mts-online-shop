@@ -1,7 +1,9 @@
 package com.mts.online_shop.exception;
 
-public class OrderNotFoundException extends RuntimeException{
+import org.springframework.http.HttpStatus;
+
+public class OrderNotFoundException extends ApiException {
     public OrderNotFoundException(String message) {
-        super(message);
+        super(HttpStatus.NOT_FOUND, "Not Found", "order-not-found", message);
     }
 }

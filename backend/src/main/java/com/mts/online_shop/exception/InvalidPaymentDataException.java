@@ -1,8 +1,9 @@
 package com.mts.online_shop.exception;
 
-public class InvalidPaymentDataException extends RuntimeException {
+import org.springframework.http.HttpStatus;
 
+public class InvalidPaymentDataException extends ApiException {
     public InvalidPaymentDataException(String message) {
-        super(message);
+        super(HttpStatus.BAD_REQUEST, "Bad Request", "invalid-payment-data", message);
     }
 }

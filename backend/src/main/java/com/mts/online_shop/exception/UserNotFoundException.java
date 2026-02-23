@@ -1,7 +1,9 @@
 package com.mts.online_shop.exception;
 
-public class UserNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class UserNotFoundException extends ApiException {
     public UserNotFoundException(String message) {
-        super(message);
+        super(HttpStatus.NOT_FOUND, "Not Found", "user-not-found", message);
     }
 }
