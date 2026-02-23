@@ -5,12 +5,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @Entity
 @Table(name = "goods")
 @JsonIgnoreProperties({"hibernateLazyInitializer"})
-public class Product {
+public class ProductEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,10 +21,10 @@ public class Product {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "price", nullable = false)
-    private float price;
+    @Column(name = "price", nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
 
-    public Product(String name, float price) {
+    public ProductEntity(String name, BigDecimal price) {
         this.name = name;
         this.price = price;
     }

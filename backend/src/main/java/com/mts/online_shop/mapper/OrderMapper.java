@@ -2,48 +2,70 @@ package com.mts.online_shop.mapper;
 
 import com.mts.online_shop.model.Order;
 import com.mts.online_shop.model.OrderItem;
-import com.mts.online_shop.model.OrderRequest;
-import com.mts.online_shop.model.OrderResponse;
+import com.mts.online_shop.model.OrderStatus;
 import com.mts.online_shop.model.Product;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import com.mts.online_shop.model.ProductEntity;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring")
-public interface OrderMapper {
+@Component
+public class OrderMapper {
 
-    @Mapping(target = "orderId", source = "id")
-    @Mapping(target = "userId", source = "user.id")
-    @Mapping(target = "status", source = "status")
-    @Mapping(target = "totalPrice", source = "totalPrice")
-    @Mapping(target = "goods", expression = "java(mapItems(order.getItems()))")
-    OrderResponse toOrderResponse(Order order);
+    public com.mts.online_shop.model.OrderResponse toOrderResponse(Order order, ProductMapper productMapper) {
+        if (order == null) {
+            return null;
+        }
 
-    default List<OrderResponse> toOrderResponseList(List<Order> orders) {
+        com.mts.online_shop.model.OrderResponse response = new com.mts.online_shop.model.OrderResponse();
+        response.setOrderId(order.getId());
+        response.setUserId(order.getUser() != null ? order.getUser().getId() : null);
+        response.setStatus(mapStatus(order.getStatus()));
+        response.setTotalPrice(order.getTotalPrice());
+        response.setItems(mapItems(order.getItems(), productMapper));
+        return response;
+    }
+
+    private com.mts.online_shop.model.OrderResponse.StatusEnum mapStatus(OrderStatus status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status) {
+            case CREATED -> com.mts.online_shop.model.OrderResponse.StatusEnum.PENDING;
+            case PAID, DELIVERED -> com.mts.online_shop.model.OrderResponse.StatusEnum.PAID;
+            case CANCELLED -> com.mts.online_shop.model.OrderResponse.StatusEnum.CANCELLED;
+        };
+    }
+
+    private List<Product> mapItems(List<OrderItem> items, ProductMapper productMapper) {
+        if (items == null || items.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return items.stream()
+                .map(oi -> productMapper.toDto(oi.getProduct()))
+                .toList();
+    }
+
+    public List<com.mts.online_shop.model.OrderResponse> toOrderResponseList(
+            List<Order> orders,
+            ProductMapper productMapper) {
         if (orders == null || orders.isEmpty()) {
             return Collections.emptyList();
         }
         return orders.stream()
-                .map(this::toOrderResponse)
+                .map(o -> toOrderResponse(o, productMapper))
                 .toList();
     }
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "status", constant = "CREATED")
-    @Mapping(target = "totalPrice", ignore = true)
-    @Mapping(target = "items", ignore = true)
-    @Mapping(target = "user.id", source = "userId")
-    Order toOrder(OrderRequest orderRequest);
+    private OrderItem toOrderItem(Order order, ProductEntity product) {
+        OrderItem orderItem = new OrderItem();
+        orderItem.setOrder(order);
+        orderItem.setProduct(product);
+        return orderItem;
+    }
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "order", source = "order")
-    @Mapping(target = "product", source = "product")
-    OrderItem toOrderItem(Order order, Product product);
-
-    default List<OrderItem> toOrderItems(Order order, List<Product> products) {
+    public List<OrderItem> toOrderItems(Order order, List<ProductEntity> products) {
         if (products == null || products.isEmpty()) {
             return Collections.emptyList();
         }
@@ -51,14 +73,4 @@ public interface OrderMapper {
                 .map(product -> toOrderItem(order, product))
                 .toList();
     }
-
-    default List<Product> mapItems(List<OrderItem> items) {
-        if (items == null || items.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return items.stream()
-                .map(OrderItem::getProduct)
-                .collect(Collectors.toList());
-    }
 }
-

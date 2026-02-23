@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.regex.Pattern;
 
 @Service
@@ -16,18 +17,18 @@ public class BankSimulator {
     private static final Pattern EXPIRES_AT = Pattern.compile("^\\d{2}/\\d{2}$");
     private static final Pattern CVV = Pattern.compile("^[0-9]{3,4}$");
 
-    public boolean doPayment(PaymentRequest paymentRequest, float totalPrice) {
+    public boolean doPayment(PaymentRequest paymentRequest, BigDecimal totalPrice) {
         validatePaymentRequest(paymentRequest, totalPrice);
         boolean ok = bankLogic(paymentRequest, totalPrice);
         log.debug("doPayment totalPrice={} result={}", totalPrice, ok);
         return ok;
     }
 
-    private void validatePaymentRequest(PaymentRequest paymentRequest, float totalPrice) {
+    private void validatePaymentRequest(PaymentRequest paymentRequest, BigDecimal totalPrice) {
         if (paymentRequest == null) {
             throw new InvalidPaymentDataException("Payment data is required");
         }
-        if (totalPrice < 0) {
+        if (totalPrice == null || totalPrice.signum() < 0) {
             throw new InvalidPaymentDataException("Total price must be non-negative");
         }
 
@@ -56,7 +57,7 @@ public class BankSimulator {
         }
     }
 
-    private boolean bankLogic(PaymentRequest paymentRequest, float totalPrice) {
+    private boolean bankLogic(PaymentRequest paymentRequest, BigDecimal totalPrice) {
         return "111".equals(paymentRequest.getCvv());
     }
 }

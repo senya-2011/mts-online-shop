@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Data
@@ -24,8 +26,8 @@ public class Order {
     @Column(name = "status", nullable = false)
     private OrderStatus status;
 
-    @Column(name = "total_price", nullable = false)
-    private float totalPrice;
+    @Column(name = "total_price", nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalPrice;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
@@ -33,13 +35,14 @@ public class Order {
     @PrePersist
     private void calculateTotalPriceOnCreate() {
         if (items == null || items.isEmpty()) {
-            totalPrice = 0f;
+            totalPrice = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
             return;
         }
-        totalPrice = (float) items.stream()
+        totalPrice = items.stream()
                 .map(OrderItem::getProduct)
-                .mapToDouble(Product::getPrice)
-                .sum();
+                .map(ProductEntity::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }
 

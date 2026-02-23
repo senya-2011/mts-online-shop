@@ -27,6 +27,10 @@ server:
   port: ${MY_PORT:8080}
   servlet:
     context-path: /api
+jwt:
+  secret: ${JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
+  expiration-ms: ${JWT_EXPIRATION_MS:1800000}
+
 logging:
   level:
     root: INFO

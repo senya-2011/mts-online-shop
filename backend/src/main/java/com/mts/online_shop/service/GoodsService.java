@@ -3,7 +3,7 @@ package com.mts.online_shop.service;
 import com.mts.online_shop.exception.ProductNotInCartException;
 import com.mts.online_shop.exception.ProductNotFoundException;
 import com.mts.online_shop.exception.UserNotFoundException;
-import com.mts.online_shop.model.Product;
+import com.mts.online_shop.model.ProductEntity;
 import com.mts.online_shop.model.User;
 import com.mts.online_shop.model.UserItem;
 import com.mts.online_shop.repository.GoodsRepository;
@@ -30,12 +30,17 @@ public class GoodsService {
         this.userRepository = userRepository;
     }
 
-    public List<Product> findAllGoods() {
+    public List<ProductEntity> findAllGoods() {
         log.debug("findAllGoods");
         return goodsRepository.findAll();
     }
 
-    public List<Product> findUserGoods(Long userId) {
+    public ProductEntity getProductById(Long productId) {
+        return goodsRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product with id: " + productId + " not found"));
+    }
+
+    public List<ProductEntity> findUserGoods(Long userId) {
         log.debug("findUserGoods userId={}", userId);
         userRepository.findById(userId).
                 orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
@@ -44,14 +49,24 @@ public class GoodsService {
                 .toList();
     }
 
-    public Product addProductInUserCart(Long userId, Long productId) {
+    public UserItem addProductInUserCart(Long userId, Long productId) {
         log.info("addProductInUserCart userId={} productId={}", userId, productId);
         User user = userRepository.findById(userId).
                 orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
-        Product product = goodsRepository.findById(productId).
+        ProductEntity product = goodsRepository.findById(productId).
                 orElseThrow(() -> new ProductNotFoundException("Product with id: " + productId + " not found"));
-        userItemRepository.save(new UserItem(user, product));
-        return product;
+        return userItemRepository.save(new UserItem(user, product));
+    }
+
+    public List<UserItem> getCartItems(Long userId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
+        return userItemRepository.findByUser_Id(userId);
+    }
+
+    public UserItem getCartItem(Long userId, Long itemId) {
+        return userItemRepository.findByIdAndUser_Id(itemId, userId)
+                .orElseThrow(() -> new ProductNotInCartException("Cart item with id: " + itemId + " not found"));
     }
 
     @Transactional
@@ -65,6 +80,12 @@ public class GoodsService {
             throw new ProductNotInCartException("Product with id: " + productId + " is not in cart");
         }
         userItemRepository.deleteByUser_IdAndProduct_Id(userId, productId);
+    }
+
+    @Transactional
+    public void removeCartItem(Long userId, Long itemId) {
+        UserItem item = getCartItem(userId, itemId);
+        userItemRepository.delete(item);
     }
 
     @Transactional

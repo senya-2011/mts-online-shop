@@ -1,53 +1,60 @@
 package com.mts.online_shop.controller;
 
 import com.mts.online_shop.api.OrdersApi;
-import com.mts.online_shop.mapper.OrderMapper;
-import com.mts.online_shop.model.OrderRequest;
+import com.mts.online_shop.model.MessageResponse;
+import com.mts.online_shop.model.OrderListResponse;
 import com.mts.online_shop.model.OrderResponse;
 import com.mts.online_shop.model.PaymentRequest;
+import com.mts.online_shop.security.CurrentUserService;
 import com.mts.online_shop.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 public class OrderController implements OrdersApi {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
+    private final CurrentUserService currentUserService;
 
-    public OrderController(OrderService orderService, OrderMapper orderMapper) {
+    public OrderController(OrderService orderService, CurrentUserService currentUserService) {
         this.orderService = orderService;
+        this.currentUserService = currentUserService;
     }
 
     @Override
     public ResponseEntity<OrderResponse> getOrderById(Long orderId) {
-        log.info("GET order id={}", orderId);
-        OrderResponse order = orderService.getOrderByOrderId(orderId);
+        Long userId = currentUserService.getCurrentUserIdOrThrow();
+        OrderResponse order = orderService.getOrderByOrderId(orderId, userId);
         return ResponseEntity.ok(order);
     }
 
     @Override
-    public ResponseEntity<List<OrderResponse>> getUserOrders(Long userId) {
-        log.info("GET user orders userId={}", userId);
-        List<OrderResponse> orders = orderService.getOrdersByUserId(userId);
-        return ResponseEntity.ok(orders);
+    public ResponseEntity<OrderListResponse> getOrders() {
+        Long userId = currentUserService.getCurrentUserIdOrThrow();
+        OrderListResponse response = new OrderListResponse();
+        response.setItems(orderService.getOrdersByUserId(userId));
+        return ResponseEntity.ok(response);
     }
 
     @Override
-    public ResponseEntity<OrderResponse> createOrder(OrderRequest orderRequest) {
-        log.info("POST create order userId={}", orderRequest.getUserId());
-        OrderResponse order = orderService.createOrder(orderRequest);
-        return ResponseEntity.ok(order);
+    public ResponseEntity<MessageResponse> createOrder() {
+        Long userId = currentUserService.getCurrentUserIdOrThrow();
+        orderService.createOrder(userId);
+        MessageResponse msg = new MessageResponse();
+        msg.setMessage("Заказ создан");
+        return ResponseEntity.status(HttpStatus.CREATED).body(msg);
     }
 
     @Override
-    public ResponseEntity<OrderResponse> payOrder(Long orderId, PaymentRequest paymentRequest) {
-        log.info("POST pay order id={}", orderId);
-        OrderResponse order = orderService.payOrder(orderId, paymentRequest);
-        return ResponseEntity.ok(order);
+    public ResponseEntity<MessageResponse> payOrder(Long orderId, PaymentRequest paymentRequest) {
+        Long userId = currentUserService.getCurrentUserIdOrThrow();
+        orderService.payOrder(orderId, paymentRequest, userId);
+        MessageResponse msg = new MessageResponse();
+        msg.setMessage("Оплата прошла успешно");
+        return ResponseEntity.ok(msg);
     }
 }

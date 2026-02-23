@@ -7,6 +7,8 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 public class MailSimulator {
 
@@ -21,7 +23,7 @@ public class MailSimulator {
         this.mailSender = mailSender;
     }
 
-    public void sendOrderPaidEmail(String toEmail, Long orderId, float totalPrice) {
+    public void sendOrderPaidEmail(String toEmail, Long orderId, BigDecimal totalPrice) {
         if (toEmail.equals("artemdab228@mail.ru")) {
             String body = "Hello!\n\nYour order #" + orderId + " has been paid.\nTotal: " + totalPrice + "\n\nRegards,\nMTS demo Online Shop";
 
