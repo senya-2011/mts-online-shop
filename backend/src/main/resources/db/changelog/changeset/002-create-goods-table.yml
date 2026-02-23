@@ -20,6 +20,6 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: price
-                  type: float
+                  type: decimal(19,2)
                   constraints:
                     nullable: false

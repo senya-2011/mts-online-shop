@@ -21,7 +21,23 @@ databaseChangeLog:
                     nullable: false
 
               - column:
+                  name: login
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_users_login
+
+              - column:
                   name: email
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_users_email
+
+              - column:
+                  name: password_hash
                   type: varchar(255)
                   constraints:
                     nullable: false
