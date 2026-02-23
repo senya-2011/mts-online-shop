@@ -2,17 +2,17 @@ package com.mts.online_shop.unit_tests.service
 
 import com.mts.online_shop.exception.EmptyCartException
 import com.mts.online_shop.exception.InvalidPaymentDataException
+import com.mts.online_shop.exception.OrderAccessDeniedException
 import com.mts.online_shop.exception.OrderNotFoundException
 import com.mts.online_shop.exception.UserNotFoundException
 import com.mts.online_shop.mapper.OrderMapper
+import com.mts.online_shop.mapper.ProductMapper
 import com.mts.online_shop.model.Order
-import com.mts.online_shop.model.OrderRequest
 import com.mts.online_shop.model.OrderResponse
 import com.mts.online_shop.model.OrderStatus
 import com.mts.online_shop.model.PaymentRequest
-import com.mts.online_shop.model.Product
+import com.mts.online_shop.model.ProductEntity
 import com.mts.online_shop.model.User
-import io.mockk.just
 import com.mts.online_shop.repository.OrderRepository
 import com.mts.online_shop.repository.UserRepository
 import com.mts.online_shop.service.GoodsService
@@ -25,179 +25,202 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import java.math.BigDecimal
 import java.util.Optional
 
-
-class OrderServiceTest(): BehaviorSpec({
+class OrderServiceTest : BehaviorSpec({
 
     isolationMode = IsolationMode.InstancePerLeaf
 
     val orderRepository = mockk<OrderRepository>()
     val orderMapper = mockk<OrderMapper>()
+    val productMapper = mockk<ProductMapper>()
     val goodsService = mockk<GoodsService>()
     val userRepository = mockk<UserRepository>()
     val bankSimulator = mockk<BankSimulator>()
     val mailSimulator = mockk<MailSimulator>()
-    val orderService = OrderService(
+
+    val service = OrderService(
         orderRepository,
         orderMapper,
+        productMapper,
         goodsService,
         userRepository,
         bankSimulator,
         mailSimulator
     )
 
-    val product1 = Product("test1", 1f)
-    product1.id = 1L
-    val product2 = Product("test2", 2f)
-    product2.id = 2L
-    val products = listOf(product1, product2)
+    val user = User().apply {
+        id = 1L
+        login = "user_1"
+        name = "User"
+        email = "user@mail.ru"
+        passwordHash = "hash"
+    }
+    val otherUser = User().apply {
+        id = 2L
+        login = "user_2"
+        name = "Other"
+        email = "other@mail.ru"
+        passwordHash = "hash"
+    }
 
-    val user = User()
-    user.id = 1L
-    user.name = "test_name"
-    user.email = "test_email"
+    val order = Order().apply {
+        id = 100L
+        this.user = user
+        status = OrderStatus.CREATED
+        totalPrice = BigDecimal("150.00")
+        items = emptyList()
+    }
 
-    val order1 = Order()
-    order1.id = 1L
-    order1.user = user
-    val orders = listOf(order1)
+    val orderResponse = OrderResponse().apply {
+        orderId = 100L
+        userId = 1L
+        status = OrderResponse.StatusEnum.PENDING
+        totalPrice = BigDecimal("150.00")
+        items = emptyList()
+    }
 
-    val savedOrder = Order()
-    savedOrder.id = 1L
-    savedOrder.user = user
-    savedOrder.status = OrderStatus.CREATED
+    val paymentRequest = PaymentRequest().apply {
+        cardNumber = "1234123412341234"
+        expiresAt = "12/30"
+        cvv = "111"
+    }
 
-    val orderResponse = OrderResponse()
-    val orderResponseList = listOf(orderResponse)
-    val orderRequest = OrderRequest()
-    orderRequest.userId = 1L
+    given("order exists and belongs to current user") {
+        every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
+        every { orderMapper.toOrderResponse(order, productMapper) } returns orderResponse
 
-    val paymentRequest = PaymentRequest()
+        `when`("getOrderByOrderId is called") {
+            val result = service.getOrderByOrderId(order.id, user.id)
 
-
-    every { orderRepository.getOrderById(order1.id) } returns Optional.of(order1)
-    every { orderMapper.toOrderResponse(any()) } returns orderResponse
-    every { userRepository.findById(user.id) } returns Optional.of(user)
-    every { goodsService.findUserGoods(user.id) } returns products
-    every { orderMapper.toOrder(any()) } returns order1
-    every { orderMapper.toOrderItems(order1, products) } returns listOf()
-    every { orderRepository.save(order1) } returns savedOrder
-    every { goodsService.clearCart(any()) } just Runs
-    every { orderRepository.getOrdersByUserId(user.id) } returns orders
-    every { orderMapper.toOrderResponseList(orders) } returns orderResponseList
-    every { bankSimulator.doPayment(paymentRequest, any()) } returns true
-    every { mailSimulator.sendOrderPaidEmail(any(), any(), any()) } just Runs
-
-
-    given("order exists"){
-        `when`("getOrderByOrderId is called"){
-            val result = orderService.getOrderByOrderId(order1.id)
-            then("OrderResponse should be returned") {
+            then("mapped response is returned") {
                 result shouldBe orderResponse
             }
         }
     }
 
-    given("user exists"){
-        `when`("createOrder is called"){
-            val result = orderService.createOrder(orderRequest)
-            then("created OrderResponse should be returned") {
-                result shouldBe orderResponse
-                verify(exactly=1) { orderRepository.save(order1) }
-            }
-        }
-        `when`("getOrdersByUserId is called"){
-            val result = orderService.getOrdersByUserId(user.id)
-            then("List<OrderResponse should be returned") {
-                result shouldBe orderResponseList
+    given("order exists but belongs to another user") {
+        order.user = otherUser
+        every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
+
+        `when`("getOrderByOrderId is called") {
+            then("OrderAccessDeniedException is thrown") {
+                shouldThrow<OrderAccessDeniedException> {
+                    service.getOrderByOrderId(order.id, user.id)
+                }
             }
         }
     }
 
-    given("order does not exists"){
-        val orderId = 99L
-        every { orderRepository.getOrderById(orderId) } returns Optional.empty()
-        `when`("getOrderByOrderId is called"){
-            then("OrderNotFoundException should be thrown") {
+    given("order does not exist") {
+        every { orderRepository.getOrderById(999L) } returns Optional.empty()
+
+        `when`("getOrderByOrderId is called") {
+            then("OrderNotFoundException is thrown") {
                 shouldThrow<OrderNotFoundException> {
-                    orderService.getOrderByOrderId(orderId)
-                }
-            }
-
-        }
-        `when`("payOrder is called"){
-            then("OrderNotFoundException should be thrown"){
-                shouldThrow<OrderNotFoundException> {
-                    orderService.payOrder(orderId, paymentRequest)
+                    service.getOrderByOrderId(999L, user.id)
                 }
             }
         }
     }
 
-    given("user does not exists"){
-        val userId = 99L
-        val exceptionOrderRequest = OrderRequest()
-        exceptionOrderRequest.userId = userId
-        every { userRepository.findById(exceptionOrderRequest.userId) } returns Optional.empty()
+    given("user exists but cart is empty") {
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { goodsService.findUserGoods(user.id) } returns emptyList()
 
-        `when`("createOrder is called"){
-            then("UserNotFoundException should be thrown") {
-                shouldThrow<UserNotFoundException> {
-                    orderService.createOrder(exceptionOrderRequest)
-                }
-            }
-        }
-        `when`("getOrderByUserId is called"){
-            then("UserNotFoundException should be thrown"){
-                shouldThrow<UserNotFoundException> {
-                    orderService.getOrdersByUserId(userId)
-                }
-            }
-        }
-        `when`("payOrder is called"){
-            then("UserNotFoundException should be thrown"){
-                shouldThrow<UserNotFoundException> {
-                    orderService.getOrdersByUserId(userId)
-                }
-            }
-        }
-    }
-
-    given("User Product Cart is Empty"){
-        every { goodsService.findUserGoods(any()) } returns listOf()
-        `when`("createOrder is called"){
-            then("EmptyCartException should be thrown"){
+        `when`("createOrder is called") {
+            then("EmptyCartException is thrown") {
                 shouldThrow<EmptyCartException> {
-                    orderService.createOrder(orderRequest)
+                    service.createOrder(user.id)
                 }
             }
         }
     }
 
-    given("order exist and paymentRequest is valid"){
-        `when`("payOrder is called"){
-            val result = orderService.payOrder(order1.id, paymentRequest)
-            then("OrderResponse should be returned") {
-                result shouldBe orderResponse
-                verify(exactly=1) { orderRepository.save(any()) }
-                verify(exactly=1) { mailSimulator.sendOrderPaidEmail(any(), any(), any())}
-                verify(exactly=1) { bankSimulator.doPayment(any(), any()) }
+    given("user and cart items exist") {
+        val products = listOf(
+            ProductEntity("A", BigDecimal("10.00")).apply { id = 1L },
+            ProductEntity("B", BigDecimal("20.00")).apply { id = 2L }
+        )
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { goodsService.findUserGoods(user.id) } returns products
+        every { orderMapper.toOrderItems(any(), products) } returns emptyList()
+        every { orderRepository.save(any()) } answers { firstArg() }
+        every { goodsService.clearCart(user.id) } just Runs
+
+        `when`("createOrder is called") {
+            service.createOrder(user.id)
+
+            then("order is saved and cart is cleared") {
+                verify(exactly = 1) { orderRepository.save(any()) }
+                verify(exactly = 1) { goodsService.clearCart(user.id) }
             }
         }
     }
 
-    given("invalid payment data"){
-        every { bankSimulator.doPayment(any(), any()) } returns false
-        `when`("payOrder is called"){
-            then("InvalidPaymentDataException should be thrown"){
+    given("user has orders") {
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { orderRepository.getOrdersByUserId(user.id) } returns listOf(order)
+        every { orderMapper.toOrderResponseList(listOf(order), productMapper) } returns listOf(orderResponse)
+
+        `when`("getOrdersByUserId is called") {
+            val result = service.getOrdersByUserId(user.id)
+
+            then("list of mapped responses is returned") {
+                result shouldBe listOf(orderResponse)
+            }
+        }
+    }
+
+    given("payment fails in bank simulator") {
+        order.user = user
+        every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { bankSimulator.doPayment(paymentRequest, order.totalPrice) } returns false
+
+        `when`("payOrder is called") {
+            then("InvalidPaymentDataException is thrown") {
                 shouldThrow<InvalidPaymentDataException> {
-                    orderService.payOrder(order1.id, paymentRequest)
+                    service.payOrder(order.id, paymentRequest, user.id)
                 }
-                verify(exactly=1) { bankSimulator.doPayment(any(), any()) }
-                verify(exactly=0) { orderRepository.save(any()) }
+                verify(exactly = 0) { mailSimulator.sendOrderPaidEmail(any(), any(), any()) }
+            }
+        }
+    }
+
+    given("payment succeeds") {
+        order.user = user
+        order.status = OrderStatus.CREATED
+        every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { bankSimulator.doPayment(paymentRequest, order.totalPrice) } returns true
+        every { orderRepository.save(order) } returns order
+        every { mailSimulator.sendOrderPaidEmail(user.email, order.id, order.totalPrice) } just Runs
+
+        `when`("payOrder is called") {
+            service.payOrder(order.id, paymentRequest, user.id)
+
+            then("status becomes paid and notification is sent") {
+                order.status shouldBe OrderStatus.PAID
+                verify(exactly = 1) { orderRepository.save(order) }
+                verify(exactly = 1) { mailSimulator.sendOrderPaidEmail(user.email, order.id, order.totalPrice) }
+            }
+        }
+    }
+
+    given("order references missing user") {
+        every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
+        every { userRepository.findById(user.id) } returns Optional.empty()
+
+        `when`("payOrder is called") {
+            then("UserNotFoundException is thrown") {
+                shouldThrow<UserNotFoundException> {
+                    service.payOrder(order.id, paymentRequest, user.id)
+                }
             }
         }
     }

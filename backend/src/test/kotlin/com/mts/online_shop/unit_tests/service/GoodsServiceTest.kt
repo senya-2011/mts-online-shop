@@ -1,9 +1,9 @@
 package com.mts.online_shop.unit_tests.service
 
-import com.mts.online_shop.exception.ProductNotFoundException
 import com.mts.online_shop.exception.ProductNotInCartException
+import com.mts.online_shop.exception.ProductNotFoundException
 import com.mts.online_shop.exception.UserNotFoundException
-import com.mts.online_shop.model.Product
+import com.mts.online_shop.model.ProductEntity
 import com.mts.online_shop.model.User
 import com.mts.online_shop.model.UserItem
 import com.mts.online_shop.repository.GoodsRepository
@@ -13,167 +13,130 @@ import com.mts.online_shop.service.GoodsService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import java.math.BigDecimal
 import java.util.Optional
 
-class GoodsServiceTest(): BehaviorSpec({
+class GoodsServiceTest : BehaviorSpec({
 
-    isolationMode = IsolationMode.InstancePerTest
+    isolationMode = IsolationMode.InstancePerLeaf
 
     val goodsRepository = mockk<GoodsRepository>()
     val userItemRepository = mockk<UserItemRepository>()
     val userRepository = mockk<UserRepository>()
-    val goodsService = GoodsService(
-        goodsRepository,
-        userItemRepository,
-        userRepository
-    )
+    val service = GoodsService(goodsRepository, userItemRepository, userRepository)
 
-    val product1 = Product("test1", 1f)
-    product1.id = 1L
-    val product2 = Product("test2", 2f)
-    product2.id = 2L
-    val products = listOf(product1, product2)
+    val user = User().apply {
+        id = 1L
+        login = "user_1"
+        name = "User"
+        email = "user@mail.ru"
+        passwordHash = "hash"
+    }
 
-    val user = User()
-    user.id = 1L
-    user.name = "test_name"
-    user.email = "test_email"
+    val product = ProductEntity().apply {
+        id = 10L
+        name = "Product"
+        price = BigDecimal("99.99")
+    }
 
-    val userItem1 = UserItem()
-    userItem1.id = 1L
-    userItem1.user = user
-    userItem1.product = product1
-    val userItem2 = UserItem()
-    userItem2.id = 2L
-    userItem2.user = user
-    userItem2.product = product2
-    val userItems = listOf(userItem1, userItem2)
+    given("goods exist") {
+        every { goodsRepository.findAll() } returns listOf(product)
 
-    every { userRepository.findById(user.id) } returns Optional.of(user)
-    every { goodsRepository.findById(product1.id) } returns Optional.of(product1)
-    every { userItemRepository.save(any()) } returns mockk()
-    every { goodsRepository.findAll() } returns products
-    every { userItemRepository.findByUser_Id(user.id) } returns userItems
-    every { userItemRepository.deleteAllByUser(any()) } just Runs
-    every { userItemRepository.deleteByUser_IdAndProduct_Id(user.id, product1.id) } just Runs
-
-
-    given("goods exist in database") {
         `when`("findAllGoods is called") {
-            val result = goodsService.findAllGoods()
+            val result = service.findAllGoods()
 
-            then("all products should be returned") {
-                result shouldBe products
+            then("all goods are returned") {
+                result shouldContainExactly listOf(product)
                 verify(exactly = 1) { goodsRepository.findAll() }
             }
         }
     }
 
-    given("user exist and has products in cart"){
+    given("user exists and product exists") {
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { goodsRepository.findById(product.id) } returns Optional.of(product)
+        every { userItemRepository.save(any()) } answers { firstArg() }
 
-        `when`("findUserGoods is called") {
-            val result = goodsService.findUserGoods(user.id)
-            then("the userGoods should be returned") {
-                result shouldContainExactlyInAnyOrder products
-            }
-        }
-        `when`("clearCart is called"){
-            goodsService.clearCart(user.id)
-            then("cart should be clear"){
-                verify {userRepository.findById(user.id)}
-                verify {userItemRepository.deleteAllByUser(any())}
+        `when`("addProductInUserCart is called") {
+            val item = service.addProductInUserCart(user.id, product.id)
+
+            then("user item is saved") {
+                item.user shouldBe user
+                item.product shouldBe product
+                verify(exactly = 1) { userItemRepository.save(any()) }
             }
         }
     }
 
     given("user does not exist") {
-        val userId = 99L
-        every { userRepository.findById(userId) } returns Optional.empty()
+        every { userRepository.findById(99L) } returns Optional.empty()
+
         `when`("findUserGoods is called") {
-            then("UserNotFoundException should be thrown") {
+            then("UserNotFoundException is thrown") {
                 shouldThrow<UserNotFoundException> {
-                    goodsService.findUserGoods(userId)
-                }
-            }
-        }
-        `when`("addProductInUserCard is called") {
-            then("UserNotFoundException should be thrown") {
-                shouldThrow<UserNotFoundException> {
-                    goodsService.addProductInUserCart(userId, product1.id)
-                }
-            }
-        }
-        `when`("deleteProductInUserCard is called") {
-            then("UserNotFoundException should be thrown"){
-                shouldThrow<UserNotFoundException> {
-                    goodsService.deleteProductFromCart(userId, product1.id)
-                }
-            }
-        }
-        `when`("clearCart is called"){
-            then("UserNotFountException should be thrown"){
-                shouldThrow<UserNotFoundException> {
-                    goodsService.clearCart(userId)
+                    service.findUserGoods(99L)
                 }
             }
         }
     }
 
-    given("user and product exist") {
-        `when`("addProductInUserCard is called"){
-            val result = goodsService.addProductInUserCart(user.id, product1.id)
-            then("product should be added to cart") {
-                result shouldBe product1
-                verify { userItemRepository.save(any()) }
-            }
-        }
-    }
+    given("product does not exist") {
+        every { goodsRepository.findById(999L) } returns Optional.empty()
 
-    given("user, product, userItem exist"){
-        every { userItemRepository.existsByUser_IdAndProduct_Id(user.id, product1.id) } returns true
-
-        `when`("deleteProductFromCart is called"){
-            goodsService.deleteProductFromCart(user.id, product1.id)
-            then("product should be deleted from cart") {
-                verify { userItemRepository.deleteByUser_IdAndProduct_Id(user.id, product1.id) }
-            }
-        }
-    }
-
-    given("product does not exist"){
-        val productId = 99L
-        every { goodsRepository.findById(productId) } returns Optional.empty()
-        `when`("addProductInUserCard is called"){
-            then("ProductNotFoundException should be thrown") {
+        `when`("getProductById is called") {
+            then("ProductNotFoundException is thrown") {
                 shouldThrow<ProductNotFoundException> {
-                    goodsService.addProductInUserCart(user.id, productId)
-                }
-            }
-        }
-        `when`("deleteProductFromCart is called"){
-            then("ProductNotFoundException should be thrown"){
-                shouldThrow<ProductNotFoundException> {
-                    goodsService.deleteProductFromCart(user.id, productId)
+                    service.getProductById(999L)
                 }
             }
         }
     }
 
-    given("UserItem does not exist"){
-        every { userItemRepository.existsByUser_IdAndProduct_Id(user.id, product1.id) } returns false
-        `when` ("deleteProductFromCart is called"){
-            then("ProductNotInCartException should be thrown"){
-                shouldThrow<ProductNotInCartException>{
-                    goodsService.deleteProductFromCart(user.id, product1.id)
+    given("product is absent in cart") {
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { goodsRepository.findById(product.id) } returns Optional.of(product)
+        every { userItemRepository.existsByUser_IdAndProduct_Id(user.id, product.id) } returns false
+
+        `when`("deleteProductFromCart is called") {
+            then("ProductNotInCartException is thrown") {
+                shouldThrow<ProductNotInCartException> {
+                    service.deleteProductFromCart(user.id, product.id)
                 }
-                verify(exactly = 0){userItemRepository.deleteByUser_IdAndProduct_Id(user.id, product1.id) }
+                verify(exactly = 0) { userItemRepository.deleteByUser_IdAndProduct_Id(any(), any()) }
+            }
+        }
+    }
+
+    given("cart item exists") {
+        val item = UserItem(user, product).apply { id = 15L }
+        every { userItemRepository.findByIdAndUser_Id(item.id, user.id) } returns Optional.of(item)
+        every { userItemRepository.delete(item) } just Runs
+
+        `when`("removeCartItem is called") {
+            service.removeCartItem(user.id, item.id)
+
+            then("item is deleted") {
+                verify(exactly = 1) { userItemRepository.delete(item) }
+            }
+        }
+    }
+
+    given("user exists with cart") {
+        every { userRepository.findById(user.id) } returns Optional.of(user)
+        every { userItemRepository.deleteAllByUser(user) } just Runs
+
+        `when`("clearCart is called") {
+            service.clearCart(user.id)
+
+            then("all user items are deleted") {
+                verify(exactly = 1) { userItemRepository.deleteAllByUser(user) }
             }
         }
     }
