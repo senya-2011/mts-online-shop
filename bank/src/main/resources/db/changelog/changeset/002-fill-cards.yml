@@ -1,0 +1,84 @@
+databaseChangeLog:
+  - changeSet:
+      id: fill-cards
+      author: bank-simulator
+      changes:
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "1111222233334444"
+              - column:
+                  name: cvv
+                  value: "111"
+              - column:
+                  name: expires_at
+                  value: "12/30"
+              - column:
+                  name: balance
+                  valueNumeric: 0.00
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "5555666677778888"
+              - column:
+                  name: cvv
+                  value: "222"
+              - column:
+                  name: expires_at
+                  value: "11/29"
+              - column:
+                  name: balance
+                  valueNumeric: 500.00
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "9999000011112222"
+              - column:
+                  name: cvv
+                  value: "333"
+              - column:
+                  name: expires_at
+                  value: "10/28"
+              - column:
+                  name: balance
+                  valueNumeric: 2000.00
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "1234123412341234"
+              - column:
+                  name: cvv
+                  value: "444"
+              - column:
+                  name: expires_at
+                  value: "09/30"
+              - column:
+                  name: balance
+                  valueNumeric: 15000.00
+
+        - insert:
+            tableName: cards
+            columns:
+              - column:
+                  name: number
+                  value: "4321432143214321"
+              - column:
+                  name: cvv
+                  value: "555"
+              - column:
+                  name: expires_at
+                  value: "08/27"
+              - column:
+                  name: balance
+                  valueNumeric: 20000.00

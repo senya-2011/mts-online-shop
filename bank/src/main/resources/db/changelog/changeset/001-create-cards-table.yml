@@ -1,0 +1,40 @@
+databaseChangeLog:
+  - changeSet:
+      id: create-cards-table
+      author: bank-simulator
+      changes:
+        - createTable:
+            tableName: cards
+            columns:
+              - column:
+                  name: id
+                  type: BIGSERIAL
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: number
+                  type: VARCHAR(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cvv
+                  type: VARCHAR(4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: VARCHAR(5)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance
+                  type: NUMERIC(19,2)
+                  constraints:
+                    nullable: false
+
+        - addUniqueConstraint:
+            tableName: cards
+            columnNames: number
+            constraintName: uq_cards_number
