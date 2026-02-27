@@ -1,19 +1,19 @@
 spring:
   application:
-    name: online-shop
+    name: ${MTS_APP_NAME:online-shop}
   liquibase:
-    enabled: true
+    enabled: ${MTS_LIQUIBASE_ENABLED:true}
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}
-    username: ${DB_USERNAME:user}
-    password: ${DB_PASSWORD:pass}
+    url: jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db}
+    username: ${MTS_DB_USERNAME:user}
+    password: ${MTS_DB_PASSWORD:pass}
   mail:
-    host: ${MAIL_HOST:smtp.mail.ru}
-    port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME:noreply@localhost}
-    password: ${MAIL_PASSWORD:}
+    host: ${MTS_MAIL_HOST:smtp.mail.ru}
+    port: ${MTS_MAIL_PORT:465}
+    username: ${MTS_MAIL_USERNAME:noreply@localhost}
+    password: ${MTS_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -24,18 +24,22 @@ spring:
             enable: false
 
 server:
-  port: ${MY_PORT:8080}
+  port: ${MTS_PORT:8080}
   servlet:
-    context-path: /api
+    context-path: ${MTS_CONTEXT_PATH:/api}
+
 jwt:
-  secret: ${JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
-  expiration-ms: ${JWT_EXPIRATION_MS:1800000}
+  secret: ${MTS_JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
+  expiration-ms: ${MTS_JWT_EXPIRATION_MS:1800000}
+
+bank:
+  base-url: ${BANK_URL:http://localhost:8081}
 
 logging:
   level:
-    root: INFO
+    root: ${MTS_LOG_LEVEL:INFO}
     liquibase: INFO
     org.springframework.boot.autoconfigure.liquibase: INFO
 
 mail:
-  from: ${MAIL_USERNAME:noreply@localhost}
+  from: ${MTS_MAIL_USERNAME:noreply@localhost}

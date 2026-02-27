@@ -1,19 +1,19 @@
 spring:
   application:
-    name: bank-simulator
+    name: ${BANK_APP_NAME:bank-simulator}
   liquibase:
-    enabled: true
+    enabled: ${BANK_LIQUIBASE_ENABLED:true}
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:db}
-    username: ${DB_USERNAME:user}
-    password: ${DB_PASSWORD:pass}
+    url: jdbc:postgresql://${BANK_DB_HOST:localhost}:${BANK_DB_PORT:5432}/${BANK_DB_NAME:db}
+    username: ${BANK_DB_USERNAME:user}
+    password: ${BANK_DB_PASSWORD:pass}
 
 server:
   port: ${BANK_PORT:8081}
   servlet:
-    context-path: /api
+    context-path: ${BANK_CONTEXT_PATH:/api}
 
 springdoc:
   api-docs:
@@ -23,6 +23,6 @@ springdoc:
 
 logging:
   level:
-    root: INFO
+    root: ${BANK_LOG_LEVEL:INFO}
     liquibase: INFO
     org.springframework.boot.autoconfigure.liquibase: INFO
