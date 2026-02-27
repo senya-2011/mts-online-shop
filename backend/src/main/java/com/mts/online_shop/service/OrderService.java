@@ -10,7 +10,7 @@ import com.mts.online_shop.mapper.ProductMapper;
 import com.mts.online_shop.model.*;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
-import com.mts.online_shop.simulator.bank.BankSimulator;
+import com.mts.online_shop.client.bank.BankClient;
 import com.mts.online_shop.simulator.mail.MailSimulator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +28,7 @@ public class OrderService {
     private final ProductMapper productMapper;
     private final GoodsService goodsService;
     private final UserRepository userRepository;
-    private final BankSimulator bankSimulator;
+    private final BankClient bankClient;
     private final MailSimulator mailSimulator;
 
     public OrderService(OrderRepository orderRepository,
@@ -36,14 +36,14 @@ public class OrderService {
                         ProductMapper productMapper,
                         GoodsService goodsService,
                         UserRepository userRepository,
-                        BankSimulator bankSimulator,
+                        BankClient bankClient,
                         MailSimulator mailSimulator) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.productMapper = productMapper;
         this.goodsService = goodsService;
         this.userRepository = userRepository;
-        this.bankSimulator = bankSimulator;
+        this.bankClient = bankClient;
         this.mailSimulator = mailSimulator;
     }
 
@@ -100,7 +100,7 @@ public class OrderService {
         User user = userRepository.findById(order.getUser().getId())
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + order.getUser().getId() + " not found"));
 
-        boolean paymentResult = bankSimulator.doPayment(paymentRequest, order.getTotalPrice());
+        boolean paymentResult = bankClient.doPayment(paymentRequest, order.getTotalPrice());
         if (!paymentResult) {
             log.warn("payment failed orderId={}", orderId);
             throw new InvalidPaymentDataException("Payment failed");

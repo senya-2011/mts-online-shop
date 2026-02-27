@@ -17,7 +17,7 @@ import com.mts.online_shop.repository.OrderRepository
 import com.mts.online_shop.repository.UserRepository
 import com.mts.online_shop.service.GoodsService
 import com.mts.online_shop.service.OrderService
-import com.mts.online_shop.simulator.bank.BankSimulator
+import com.mts.online_shop.client.bank.BankClient
 import com.mts.online_shop.simulator.mail.MailSimulator
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
@@ -40,7 +40,7 @@ class OrderServiceTest : BehaviorSpec({
     val productMapper = mockk<ProductMapper>()
     val goodsService = mockk<GoodsService>()
     val userRepository = mockk<UserRepository>()
-    val bankSimulator = mockk<BankSimulator>()
+    val bankClient = mockk<BankClient>()
     val mailSimulator = mockk<MailSimulator>()
 
     val service = OrderService(
@@ -49,7 +49,7 @@ class OrderServiceTest : BehaviorSpec({
         productMapper,
         goodsService,
         userRepository,
-        bankSimulator,
+        bankClient,
         mailSimulator
     )
 
@@ -176,11 +176,11 @@ class OrderServiceTest : BehaviorSpec({
         }
     }
 
-    given("payment fails in bank simulator") {
+    given("payment fails in bank client") {
         order.user = user
         every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
         every { userRepository.findById(user.id) } returns Optional.of(user)
-        every { bankSimulator.doPayment(paymentRequest, order.totalPrice) } returns false
+        every { bankClient.doPayment(paymentRequest, order.totalPrice) } returns false
 
         `when`("payOrder is called") {
             then("InvalidPaymentDataException is thrown") {
@@ -197,7 +197,7 @@ class OrderServiceTest : BehaviorSpec({
         order.status = OrderStatus.CREATED
         every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
         every { userRepository.findById(user.id) } returns Optional.of(user)
-        every { bankSimulator.doPayment(paymentRequest, order.totalPrice) } returns true
+        every { bankClient.doPayment(paymentRequest, order.totalPrice) } returns true
         every { orderRepository.save(order) } returns order
         every { mailSimulator.sendOrderPaidEmail(user.email, order.id, order.totalPrice) } just Runs
 
