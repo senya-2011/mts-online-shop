@@ -695,3 +695,41 @@ components:
           type: string
           description: Код на обороте карты
           example: "123"
+
+    BankPaymentRequest:
+      type: object
+      description: Тело запроса к банку POST /api/cards/payments
+      required: [cardNumber, cvv, expiresAt, amount]
+      properties:
+        cardNumber:
+          type: string
+          description: Номер карты, 16 цифр
+          example: "1111222233334444"
+        cvv:
+          type: string
+          description: CVV, 3–4 цифры
+          example: "111"
+        expiresAt:
+          type: string
+          description: Срок действия ММ/ГГ
+          example: "12/30"
+        amount:
+          type: number
+          format: float
+          description: Сумма платежа
+          example: 150.50
+    BankPaymentResponse:
+      type: object
+      description: Ответ банка на платёж
+      required: [approved, message]
+      properties:
+        approved:
+          type: boolean
+          description: Платёж одобрен
+        message:
+          type: string
+          description: Сообщение от банка
+        remainingBalance:
+          type: number
+          format: float
+          description: Оставшийся баланс по карте
