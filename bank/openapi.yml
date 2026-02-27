@@ -12,9 +12,7 @@ servers:
 
 tags:
   - name: Cards
-    description: Просмотр и управление тестовыми картами
-  - name: Payments
-    description: Проверка платежей
+    description: Просмотр и управление тестовыми картами, проведение платежей
 
 paths:
   /cards:
@@ -50,7 +48,7 @@ paths:
       summary: Выполнить платёж по карте
       description: |
         Проверяет, хватает ли средств на карте, и при успехе списывает сумму.
-      tags: [Payments]
+      tags: [Cards]
       operationId: pay
       requestBody:
         required: true
