@@ -80,7 +80,7 @@ public class OrderService {
         log.info("order created id={}", savedOrder.getId());
     }
 
-    public List<com.mts.online_shop.model.OrderResponse> getOrdersByUserId(Long userId) {
+    public List<OrderResponse> getOrdersByUserId(Long userId) {
         log.debug("getOrdersByUserId userId={}", userId);
         userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
