@@ -73,7 +73,7 @@ jobs:
         run: |
           scp -P 2222 backend/build/libs/online-shop-0.0.1-SNAPSHOT.jar ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru:~/MTS/online-shop.jar
           scp -P 2222 bank/build/libs/bank-simulator-0.0.1-SNAPSHOT.jar ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru:~/MTS/bank-simulator.jar
-          ssh -p 2222 ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru 'cd ~/MTS && set -a && [ -f .env ] && . ./.env; set +a && export MTS_PORT=13228 BANK_PORT=13229 BANK_URL=http://localhost:13229 && pkill -f online-shop.jar || true; pkill -f bank-simulator.jar || true; sleep 2 && nohup java -jar bank-simulator.jar > bank-simulator.log 2>&1 & sleep 2 && nohup java -jar online-shop.jar > online-shop.log 2>&1 & echo "Deployment completed"'
+          ssh -p 2222 ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru 'cd ~/MTS && [ -f .env ] && export $(xargs < .env); export MTS_PORT=13228 BANK_PORT=13229 BANK_URL=http://localhost:13229; pkill -f online-shop.jar || true; pkill -f bank-simulator.jar || true; sleep 2; nohup java -Xmx512m -Xms256m -jar bank-simulator.jar > bank-simulator.log 2>&1 & sleep 2; nohup java -Xmx512m -Xms256m -jar online-shop.jar > online-shop.log 2>&1 & echo "Deployment completed"'
 
       - name: Verify deployment
         run: |
