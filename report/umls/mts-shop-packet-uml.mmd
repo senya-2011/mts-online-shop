@@ -3,51 +3,79 @@ config:
   layout: elk
 ---
 flowchart LR
- subgraph Controller_Pkg["📂 com.mts.shop.controller"]
+ subgraph Controller_Pkg["📂 com.mts.online_shop.controller"]
     direction LR
         OrderController["OrderController"]
-        GoodsController["GoodsController"]
-        GlobalExceptionHandler["GlobalExceptionHandler"]
+        ProductsController["ProductsController"]
+        CartController["CartController"]
         AuthController["AuthController"]
+        GlobalExceptionHandler["GlobalExceptionHandler"]
   end
- subgraph Service_Pkg["📂 com.mts.shop.service"]
+ subgraph Service_Pkg["📂 com.mts.online_shop.service"]
     direction LR
         OrderService["OrderService"]
         GoodsService["GoodsService"]
-        PaymentService["PaymentService"]
-        NotificationService["NotificationService"]
-        OrderMapper["OrderMapper"]
+        AuthService["AuthService"]
   end
- subgraph Repository_Pkg["📂 com.mts.shop.repository"]
+ subgraph Mapper_Pkg["📂 com.mts.online_shop.mapper"]
+    direction LR
+        OrderMapper["OrderMapper"]
+        ProductMapper["ProductMapper"]
+  end
+ subgraph Client_Pkg["📂 com.mts.online_shop.client.bank"]
+    direction LR
+        BankClient["BankClient"]
+        BankApiClient["BankApiClient"]
+  end
+ subgraph Repository_Pkg["📂 com.mts.online_shop.repository"]
     direction LR
         OrderRepository["OrderRepository"]
         GoodsRepository["GoodsRepository"]
         UserRepository["UserRepository"]
         UserItemRepository["UserItemRepository"]
   end
- subgraph Model_Pkg["📂 com.mts.shop.model"]
+ subgraph Model_Pkg["📂 com.mts.online_shop.model"]
     direction LR
         Order["Order"]
         OrderItem["OrderItem"]
         User["User"]
-        Product["Product"]
+        UserItem["UserItem"]
+        ProductEntity["ProductEntity"]
         OrderStatus["OrderStatus"]
   end
+ subgraph Security_Pkg["📂 com.mts.online_shop.security"]
+    direction LR
+        JwtService["JwtService"]
+        CurrentUserService["CurrentUserService"]
+  end
+ subgraph Simulator_Pkg["📂 com.mts.online_shop.simulator.mail"]
+    direction LR
+        MailSimulator["MailSimulator"]
+  end
     Controller_Pkg --> Service_Pkg
+    Controller_Pkg --> Security_Pkg
     Service_Pkg --> Repository_Pkg
+    Service_Pkg --> Mapper_Pkg
+    Service_Pkg --> Client_Pkg
+    Service_Pkg --> Simulator_Pkg
     Repository_Pkg -.-> Model_Pkg
     Service_Pkg -.-> Model_Pkg
+    Mapper_Pkg -.-> Model_Pkg
     Controller_Pkg -.-> Model_Pkg
 
      OrderController:::cls
-     GoodsController:::cls
-     GlobalExceptionHandler:::cls
+     ProductsController:::cls
+     CartController:::cls
      AuthController:::cls
+     GlobalExceptionHandler:::cls
      OrderService:::cls
      GoodsService:::cls
-     PaymentService:::cls
-     NotificationService:::cls
+     AuthService:::cls
      OrderMapper:::cls
+     ProductMapper:::cls
+     BankClient:::cls
+     BankApiClient:::cls
+     MailSimulator:::cls
      OrderRepository:::cls
      GoodsRepository:::cls
      UserRepository:::cls
@@ -55,11 +83,18 @@ flowchart LR
      Order:::cls
      OrderItem:::cls
      User:::cls
-     Product:::cls
+     UserItem:::cls
+     ProductEntity:::cls
      OrderStatus:::cls
+     JwtService:::cls
+     CurrentUserService:::cls
      Controller_Pkg:::pkg
      Service_Pkg:::pkg
+     Mapper_Pkg:::pkg
+     Client_Pkg:::pkg
      Repository_Pkg:::pkg
      Model_Pkg:::pkg
+     Security_Pkg:::pkg
+     Simulator_Pkg:::pkg
     classDef pkg fill:#fdfdfd,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
     classDef cls fill:#e3f2fd,stroke:#1565c0,stroke-width:1px
