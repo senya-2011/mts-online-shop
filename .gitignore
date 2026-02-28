@@ -1,7 +1,35 @@
-.idea/
-**/.kotlin/
+
+.env
+
+# Kotlin / Gradle
 .gradle/
 build/
-generated/
+**/.kotlin/
+out/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.settings/
+.classpath
+.project
+.springBeans
+.sts4-cache
+
+# Eclipse / NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+
+**/generated/
+
+# Misc
 bin/
-.env
+*.log
+.DS_Store
+
