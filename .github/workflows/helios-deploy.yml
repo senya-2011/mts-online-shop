@@ -1,3 +1,4 @@
+# Что вставить в секрет HELIOS_ENV — см. docs/HELIOS_ENV.md
 name: Helios Deploy
 
 on:

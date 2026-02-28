@@ -6,7 +6,8 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db}
+    # Полный URL (с currentSchema и т.д.) или соберётся из MTS_DB_HOST/PORT/NAME
+    url: ${MTS_DB_URL:jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db}}
     username: ${MTS_DB_USERNAME:user}
     password: ${MTS_DB_PASSWORD:pass}
   mail:
