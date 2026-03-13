@@ -4,7 +4,6 @@ import com.mts.online_shop.exception.ApiException;
 import com.mts.online_shop.model.Problem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 
 import jakarta.validation.ConstraintViolationException;
 import java.util.stream.Collectors;
@@ -56,6 +57,18 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.BAD_REQUEST, "Bad Request", "bad-request", e.getMessage(), request);
     }
 
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<Problem> handleNoHandlerFound(NoHandlerFoundException e, WebRequest request) {
+        log.warn("No handler found: {} {}", e.getHttpMethod(), e.getRequestURL());
+        return problem(HttpStatus.NOT_FOUND, "Not Found", "not-found", "No handler for this request", request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Problem> handleMethodNotAllowed(HttpRequestMethodNotSupportedException e, WebRequest request) {
+        log.warn("Method not supported: {} {}", e.getMethod(), request.getDescription(false));
+        return problem(HttpStatus.NOT_FOUND, "Not Found", "not-found", "Method not supported", request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Problem> handleGeneric(Exception e, WebRequest request) {
         log.error("Unhandled error", e);
@@ -74,10 +87,6 @@ public class GlobalExceptionHandler {
         p.setDetail(detail);
         if (request != null && request.getDescription(false) != null) {
             p.setInstance(request.getDescription(false).replace("uri=", ""));
-        }
-        String traceId = MDC.get("traceId");
-        if (traceId != null && !traceId.isBlank()) {
-            p.setTraceId(traceId);
         }
         return ResponseEntity.status(status)
                 .contentType(MediaType.parseMediaType("application/problem+json"))

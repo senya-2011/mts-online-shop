@@ -11,6 +11,8 @@ import com.mts.online_shop.repository.UserItemRepository;
 import com.mts.online_shop.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,14 @@ public class GoodsService {
     public List<ProductEntity> findAllGoods() {
         log.debug("findAllGoods");
         return goodsRepository.findAll();
+    }
+
+    public Page<ProductEntity> findProducts(Pageable pageable, String search) {
+        log.debug("findProducts page={} size={} search={}", pageable.getPageNumber(), pageable.getPageSize(), search);
+        if (search != null && !search.isBlank()) {
+            return goodsRepository.findByNameContainingIgnoreCase(search.trim(), pageable);
+        }
+        return goodsRepository.findAll(pageable);
     }
 
     public ProductEntity getProductById(Long productId) {
@@ -62,6 +72,12 @@ public class GoodsService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
         return userItemRepository.findByUser_Id(userId);
+    }
+
+    public Page<UserItem> getCartItemsPage(Long userId, Pageable pageable) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
+        return userItemRepository.findByUser_Id(userId, pageable);
     }
 
     public UserItem getCartItem(Long userId, Long itemId) {

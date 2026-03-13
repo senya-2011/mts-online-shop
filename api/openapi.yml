@@ -99,6 +99,32 @@ paths:
       tags: [Products]
       operationId: getProducts
       security: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          description: Номер страницы (0-based)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Размер страницы
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Поиск по названию товара (подстрока, без учёта регистра)
       responses:
         "200":
           description: Успешный ответ со списком товаров
@@ -153,6 +179,26 @@ paths:
       operationId: getCart
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          description: Номер страницы (0-based)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Размер страницы
       responses:
         "200":
           description: Корзина пользователя
@@ -296,6 +342,26 @@ paths:
       operationId: getOrders
       security:
         - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          description: Номер страницы (0-based)
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Размер страницы
       responses:
         "200":
           description: Список заказов
@@ -510,9 +576,6 @@ components:
           type: string
           format: uri-reference
           description: URI конкретного запроса
-        traceId:
-          type: string
-          description: Идентификатор трассировки (расширение)
 
     MessageResponse:
       type: object
@@ -580,12 +643,24 @@ components:
 
     ProductListResponse:
       type: object
-      required: [items]
+      required: [items, total, page, size]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+          format: int64
+          description: Общее количество элементов
+        page:
+          type: integer
+          format: int32
+          description: Номер страницы (0-based)
+        size:
+          type: integer
+          format: int32
+          description: Размер страницы
 
     Product:
       type: object
@@ -626,12 +701,24 @@ components:
 
     CartResponse:
       type: object
-      required: [items]
+      required: [items, total, page, size]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/CartItem"
+        total:
+          type: integer
+          format: int64
+          description: Общее количество позиций в корзине
+        page:
+          type: integer
+          format: int32
+          description: Номер страницы (0-based)
+        size:
+          type: integer
+          format: int32
+          description: Размер страницы
 
     CartItemResponse:
       type: object
@@ -671,12 +758,24 @@ components:
 
     OrderListResponse:
       type: object
-      required: [items]
+      required: [items, total, page, size]
       properties:
         items:
           type: array
           items:
             $ref: "#/components/schemas/OrderResponse"
+        total:
+          type: integer
+          format: int64
+          description: Общее количество заказов
+        page:
+          type: integer
+          format: int32
+          description: Номер страницы (0-based)
+        size:
+          type: integer
+          format: int32
+          description: Размер страницы
 
     PaymentRequest:
       type: object

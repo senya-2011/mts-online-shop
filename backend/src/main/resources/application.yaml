@@ -1,6 +1,11 @@
 spring:
   application:
     name: ${MTS_APP_NAME:online-shop}
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
   liquibase:
     enabled: ${MTS_LIQUIBASE_ENABLED:true}
     change-log: classpath:db/changelog/db.changelog-master.yml

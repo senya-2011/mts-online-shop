@@ -3,6 +3,7 @@ package com.bank_simulator.demo.service
 import com.bank_simulator.demo.exception.CardNotFoundException
 import com.bank_simulator.demo.exception.InsufficientFundsException
 import com.bank_simulator.demo.exception.InvalidAmountException
+import com.bank_simulator.demo.exception.InvalidCardDataException
 import com.bank_simulator.demo.mapper.CardMapper
 import com.bank_simulator.demo.model.Card
 import com.bank_simulator.demo.model.CardsResponse
@@ -91,6 +92,54 @@ class CardServiceTest : BehaviorSpec({
                     amount = 0f
                 }
                 shouldThrow<InvalidAmountException> {
+                    service.processPayment(request)
+                }
+            }
+        }
+    }
+
+    given("processPayment with invalid card number") {
+        `when`("processPayment is called with 15 digits") {
+            then("InvalidCardDataException is thrown") {
+                val request = PaymentRequest().apply {
+                    cardNumber = "111122223333444"
+                    cvv = "111"
+                    expiresAt = "12/30"
+                    amount = 50f
+                }
+                shouldThrow<InvalidCardDataException> {
+                    service.processPayment(request)
+                }
+            }
+        }
+    }
+
+    given("processPayment with invalid CVV") {
+        `when`("processPayment is called with 2-digit CVV") {
+            then("InvalidCardDataException is thrown") {
+                val request = PaymentRequest().apply {
+                    cardNumber = "1111222233334444"
+                    cvv = "11"
+                    expiresAt = "12/30"
+                    amount = 50f
+                }
+                shouldThrow<InvalidCardDataException> {
+                    service.processPayment(request)
+                }
+            }
+        }
+    }
+
+    given("processPayment with invalid expiresAt format") {
+        `when`("processPayment is called with wrong format") {
+            then("InvalidCardDataException is thrown") {
+                val request = PaymentRequest().apply {
+                    cardNumber = "1111222233334444"
+                    cvv = "111"
+                    expiresAt = "13/30"
+                    amount = 50f
+                }
+                shouldThrow<InvalidCardDataException> {
                     service.processPayment(request)
                 }
             }

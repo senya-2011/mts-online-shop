@@ -14,14 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/**
- * Аутентификация и регистрация.
- */
+
 @Service
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Pattern LOGIN_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]{3,64}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@]+@[^@]+\\.[^@]+$");
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -88,7 +87,7 @@ public class AuthService {
             throw new BadRequestException("Email обязателен");
         }
         String normalized = email.trim().toLowerCase(Locale.ROOT);
-        if (normalized.length() > 255 || !normalized.contains("@")) {
+        if (normalized.length() > 255 || !EMAIL_PATTERN.matcher(normalized).matches()) {
             throw new BadRequestException("Некорректный email");
         }
         return normalized;
