@@ -1,16 +1,16 @@
-package com.mts.online_shop.service;
+package com.mts.online_shop.service
 
-import com.mts.online_shop.exception.EmptyCartException;
-import com.mts.online_shop.exception.InvalidPaymentDataException;
-import com.mts.online_shop.exception.OrderNotFoundException;
-import com.mts.online_shop.exception.UserNotFoundException;
-import com.mts.online_shop.mapper.OrderMapper;
-import com.mts.online_shop.mapper.ProductMapper;
-import com.mts.online_shop.model.*;
-import com.mts.online_shop.repository.OrderRepository;
-import com.mts.online_shop.repository.UserRepository;
-import com.mts.online_shop.client.bank.BankClient;
-import com.mts.online_shop.simulator.mail.MailSimulator;
+import com.mts.online_shop.exception.EmptyCartException
+import com.mts.online_shop.exception.InvalidPaymentDataException
+import com.mts.online_shop.exception.OrderNotFoundException
+import com.mts.online_shop.exception.UserNotFoundException
+import com.mts.online_shop.mapper.OrderMapper
+import com.mts.online_shop.mapper.ProductMapper
+import com.mts.online_shop.model.*
+import com.mts.online_shop.repository.OrderRepository
+import com.mts.online_shop.repository.UserRepository
+import com.mts.online_shop.client.bank.BankClient
+import com.mts.online_shop.simulator.mail.MailSimulator
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -20,11 +20,11 @@ import org.junit.jupiter.api.assertThrows
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import jakarta.transaction.Transactional
+import org.springframework.transaction.annotation.Transactional as SpringTransactional
 
 @SpringBootTest
 @ActiveProfiles("test")
-class JtaTransactionTest {
+class NarayanaTransactionTest {
 
     private lateinit var orderService: OrderService
     private lateinit var orderRepository: OrderRepository
@@ -54,8 +54,8 @@ class JtaTransactionTest {
     }
 
     @Test
-    @Transactional(rollbackFor = Exception.class)
-    fun `should rollback transaction when payment fails`() {
+    @SpringTransactional(rollbackFor = [Exception::class])
+    fun `should rollback transaction when payment fails with Narayana`() {
         val userId = 1L
         val orderId = 1L
         val paymentRequest = PaymentRequest()
@@ -81,8 +81,8 @@ class JtaTransactionTest {
     }
 
     @Test
-    @Transactional(rollbackFor = Exception.class)
-    fun `should complete transaction successfully when payment succeeds`() {
+    @SpringTransactional(rollbackFor = [Exception::class])
+    fun `should complete transaction successfully when payment succeeds with Narayana`() {
         val userId = 1L
         val orderId = 1L
         val paymentRequest = PaymentRequest()
@@ -106,8 +106,8 @@ class JtaTransactionTest {
     }
 
     @Test
-    @Transactional(rollbackFor = Exception.class)
-    fun `should rollback order creation when cart is empty`() {
+    @SpringTransactional(rollbackFor = [Exception::class])
+    fun `should rollback order creation when cart is empty with Narayana`() {
         val userId = 1L
         val user = User().apply { id = userId }
 

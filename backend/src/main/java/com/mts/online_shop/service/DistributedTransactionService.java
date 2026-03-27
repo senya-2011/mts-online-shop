@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import jakarta.transaction.Transactional;
 
 @Service
@@ -23,7 +24,7 @@ public class DistributedTransactionService {
         this.bankClient = bankClient;
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
+    @org.springframework.transaction.annotation.Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public void executePaymentTransaction(Long orderId, PaymentRequest paymentRequest) {
         log.info("Executing distributed payment transaction for orderId={}", orderId);
         

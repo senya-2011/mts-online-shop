@@ -29,7 +29,7 @@ public class CartTransactionService {
         this.goodsService = goodsService;
     }
 
-    @Transactional(rollbackFor = {UserNotFoundException.class, RuntimeException.class})
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {UserNotFoundException.class, RuntimeException.class})
     public void clearCartCompletely(Long userId) {
         log.info("clearCartCompletely userId={}", userId);
         
@@ -44,7 +44,7 @@ public class CartTransactionService {
         }
     }
 
-    @Transactional(rollbackFor = {UserNotFoundException.class, RuntimeException.class})
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {UserNotFoundException.class, RuntimeException.class})
     public void removeMultipleItems(Long userId, List<Long> itemIds) {
         log.info("removeMultipleItems userId={} items={}", userId, itemIds.size());
         
@@ -64,7 +64,7 @@ public class CartTransactionService {
         log.info("Removed {} items from cart for user {}", itemsToRemove.size(), userId);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void mergeCarts(Long targetUserId, Long sourceUserId) {
         log.info("mergeCarts targetUserId={} sourceUserId={}", targetUserId, sourceUserId);
         

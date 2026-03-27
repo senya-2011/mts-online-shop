@@ -58,7 +58,7 @@ public class OrderService {
         return orderMapper.toOrderResponse(order, productMapper);
     }
 
-    @Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})
     public Long createOrder(Long userId) {
         log.info("createOrder userId={}", userId);
         
@@ -92,7 +92,7 @@ public class OrderService {
         return orderMapper.toOrderResponseList(orders, productMapper);
     }
 
-    @Transactional(rollbackFor = {InvalidPaymentDataException.class, OrderNotFoundException.class, 
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {InvalidPaymentDataException.class, OrderNotFoundException.class, 
                               OrderAccessDeniedException.class, UserNotFoundException.class, RuntimeException.class})
     public void payOrder(Long orderId, com.mts.online_shop.model.PaymentRequest paymentRequest, Long currentUserId) {
         log.info("payOrder orderId={}", orderId);

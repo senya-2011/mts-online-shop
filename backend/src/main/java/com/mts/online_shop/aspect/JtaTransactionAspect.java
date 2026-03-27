@@ -1,5 +1,6 @@
 package com.mts.online_shop.aspect;
 
+import com.arjuna.ats.jta.common.jtaPropertyManager;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -11,20 +12,30 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Aspect
 @Component
-public class JtaTransactionAspect {
+public class NarayanaTransactionAspect {
 
-    private static final Logger log = LoggerFactory.getLogger(JtaTransactionAspect.class);
+    private static final Logger log = LoggerFactory.getLogger(NarayanaTransactionAspect.class);
 
-    @Around("@annotation(jakarta.transaction.Transactional)")
-    public Object aroundJtaTransaction(ProceedingJoinPoint joinPoint) throws Throwable {
+    @Around("@annotation(org.springframework.transaction.annotation.Transactional)")
+    public Object aroundNarayanaTransaction(ProceedingJoinPoint joinPoint) throws Throwable {
         String methodName = joinPoint.getSignature().getName();
         String className = joinPoint.getTarget().getClass().getSimpleName();
         
         boolean isTransactionActive = TransactionSynchronizationManager.isActualTransactionActive();
         String transactionName = TransactionSynchronizationManager.getCurrentTransactionName();
         
-        log.info("Starting JTA transaction - {}.{} (Active: {}, Transaction: {})", 
-                className, methodName, isTransactionActive, transactionName);
+        // Get Narayana transaction info
+        String narayanaTxId = null;
+        try {
+            if (isTransactionActive) {
+                narayanaTxId = com.arjuna.ats.arjuna.coordinator.TxControl.getCurrentTx().get_uid().toString();
+            }
+        } catch (Exception e) {
+            // Ignore if transaction not available
+        }
+        
+        log.info("Starting Narayana transaction - {}.{} (Active: {}, Transaction: {}, NarayanaTxId: {})", 
+                className, methodName, isTransactionActive, transactionName, narayanaTxId);
         
         long startTime = System.currentTimeMillis();
         
@@ -32,14 +43,14 @@ public class JtaTransactionAspect {
             Object result = joinPoint.proceed();
             
             long duration = System.currentTimeMillis() - startTime;
-            log.info("JTA transaction completed successfully - {}.{} (Duration: {}ms)", 
-                    className, methodName, duration);
+            log.info("Narayana transaction completed successfully - {}.{} (Duration: {}ms, NarayanaTxId: {})", 
+                    className, methodName, duration, narayanaTxId);
             
             return result;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("JTA transaction failed - {}.{} (Duration: {}ms, Error: {})", 
-                    className, methodName, duration, e.getMessage());
+            log.error("Narayana transaction failed - {}.{} (Duration: {}ms, Error: {}, NarayanaTxId: {})", 
+                    className, methodName, duration, e.getMessage(), narayanaTxId);
             throw e;
         }
     }

@@ -45,7 +45,7 @@ public class AuthService {
         return user.getId();
     }
 
-    @Transactional(rollbackFor = {UserAlreadyExistsException.class, BadRequestException.class, RuntimeException.class})
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {UserAlreadyExistsException.class, BadRequestException.class, RuntimeException.class})
     public Long register(String login, String email, String password, String name) {
         String normalizedLogin = normalizeLogin(login);
         String normalizedEmail = normalizeEmail(email);

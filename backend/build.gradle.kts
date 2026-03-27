@@ -34,11 +34,12 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     
-    // JTA dependencies
-    implementation("org.springframework.boot:spring-boot-starter-jta-atomikos")
-    implementation("com.atomikos:transactions-jta:6.0.0")
-    implementation("com.atomikos:transactions-jdbc:6.0.0")
+    // JTA dependencies with Narayana
+    implementation("org.springframework.boot:spring-boot-starter-jta-narayana")
+    implementation("org.jboss.narayana.jta:narayana-jta:7.0.0.Final")
+    implementation("org.jboss.narayana.jta:jdbc:7.0.0.Final")
     implementation("jakarta.transaction:jakarta.transaction-api:2.0.1")
+    implementation("org.jboss.logging:jboss-logging:3.6.0.Final")
 
     implementation("org.mapstruct:mapstruct:1.6.3")
 

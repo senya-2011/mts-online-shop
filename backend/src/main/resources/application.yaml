@@ -10,18 +10,22 @@ spring:
     username: ${MTS_DB_USERNAME:user}
     password: ${MTS_DB_PASSWORD:pass}
   jta:
-    atomikos:
-      datasource:
-        xa-data-source-class-name: org.postgresql.xa.PGXADataSource
-        xa-properties:
-          url: jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db_backend}
-          user: ${MTS_DB_USERNAME:user}
-          password: ${MTS_DB_PASSWORD:pass}
-      connectionfactory:
-        xa-properties:
-          com.atomikos.icatch.serial_jta_transactions: false
-          com.atomikos.icatch.force_shutdown: true
-          com.atomikos.icatch.default_jta_timeout: 300000
+    enabled: true
+    transaction-manager-id: narayana-transaction-manager
+    allow-custom-isolation-levels: true
+    default-transaction-timeout: 300
+    narayana:
+      log-dir: ./target/tx-object-store
+      node-identifier: mts-online-shop
+      periodic-recovery-period: 120
+      recovery-backoff-period: 10
+      status-port: 4712
+      socket-process-id-port: 4713
+      socket-process-id-max-ports: 10
+      xa-resource-orphan-filters:
+        - com.arjuna.ats.internal.jta.recovery.arjunacore.JTATransactionLogXAResourceOrphanFilter
+        - com.arjuna.ats.internal.jta.recovery.arjunacore.JTANonXAResourceOrphanFilter
+        - com.arjuna.ats.jta.recovery.SerializableXAResourceOrphanFilter
   mail:
     host: ${MTS_MAIL_HOST:smtp.mail.ru}
     port: ${MTS_MAIL_PORT:465}

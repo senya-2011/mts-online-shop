@@ -50,7 +50,7 @@ public class GoodsService {
                 .toList();
     }
 
-    @Transactional(rollbackFor = {UserNotFoundException.class, ProductNotFoundException.class, RuntimeException.class})
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {UserNotFoundException.class, ProductNotFoundException.class, RuntimeException.class})
     public UserItem addProductInUserCart(Long userId, Long productId) {
         log.info("addProductInUserCart userId={} productId={}", userId, productId);
         
@@ -84,7 +84,7 @@ public class GoodsService {
                 .orElseThrow(() -> new ProductNotInCartException("Cart item with id: " + itemId + " not found"));
     }
 
-    @Transactional(rollbackFor = {ProductNotInCartException.class, RuntimeException.class})
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {ProductNotInCartException.class, RuntimeException.class})
     public void deleteProductFromCart(Long userId, Long productId) {
         log.info("deleteProductFromCart userId={} productId={}", userId, productId);
         userRepository.findById(userId)
@@ -97,13 +97,13 @@ public class GoodsService {
         userItemRepository.deleteByUser_IdAndProduct_Id(userId, productId);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void removeCartItem(Long userId, Long itemId) {
         UserItem item = getCartItem(userId, itemId);
         userItemRepository.delete(item);
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void clearCart(Long userId) {
         log.debug("clearCart userId={}", userId);
         User user = userRepository.findById(userId)

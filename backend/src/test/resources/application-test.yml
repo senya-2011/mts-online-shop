@@ -1,17 +1,17 @@
 spring:
   jta:
-    atomikos:
-      datasource:
-        xa-data-source-class-name: org.postgresql.xa.PGXADataSource
-        xa-properties:
-          url: jdbc:h2:mem:testdb
-          user: sa
-          password: ""
-      connectionfactory:
-        xa-properties:
-          com.atomikos.icatch.serial_jta_transactions: false
-          com.atomikos.icatch.force_shutdown: true
-          com.atomikos.icatch.default_jta_timeout: 300000
+    enabled: true
+    transaction-manager-id: narayana-transaction-manager
+    allow-custom-isolation-levels: true
+    default-transaction-timeout: 300
+    narayana:
+      log-dir: ./target/test-tx-object-store
+      node-identifier: mts-online-shop-test
+      periodic-recovery-period: 60
+      recovery-backoff-period: 5
+      status-port: 4714
+      socket-process-id-port: 4715
+      socket-process-id-max-ports: 5
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:mem:testdb
@@ -25,6 +25,6 @@ spring:
 
 logging:
   level:
-    com.atomikos: DEBUG
+    com.arjuna: DEBUG
     com.mts.online_shop: DEBUG
     org.springframework.transaction: DEBUG
