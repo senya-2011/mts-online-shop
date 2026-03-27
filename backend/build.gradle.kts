@@ -33,6 +33,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-mail")
+    
+    // JTA dependencies
+    implementation("org.springframework.boot:spring-boot-starter-jta-atomikos")
+    implementation("com.atomikos:transactions-jta:6.0.0")
+    implementation("com.atomikos:transactions-jdbc:6.0.0")
+    implementation("jakarta.transaction:jakarta.transaction-api:2.0.1")
 
     implementation("org.mapstruct:mapstruct:1.6.3")
 

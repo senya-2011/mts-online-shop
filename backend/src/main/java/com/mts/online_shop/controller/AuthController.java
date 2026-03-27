@@ -38,14 +38,14 @@ public class AuthController implements AuthApi {
     @Override
     public ResponseEntity<MessageResponse> register(RegisterRequest registerRequest) {
         log.info("POST register login={} email={}", registerRequest.getLogin(), registerRequest.getEmail());
-        authService.register(
+        Long userId = authService.register(
                 registerRequest.getLogin(),
                 registerRequest.getEmail(),
                 registerRequest.getPassword(),
                 registerRequest.getName()
         );
         MessageResponse response = new MessageResponse();
-        response.setMessage("Пользователь зарегистрирован");
+        response.setMessage("Пользователь #" + userId + " зарегистрирован");
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

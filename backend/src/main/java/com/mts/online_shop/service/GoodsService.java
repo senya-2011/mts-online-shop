@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 
@@ -49,13 +50,27 @@ public class GoodsService {
                 .toList();
     }
 
+    @Transactional(rollbackFor = {UserNotFoundException.class, ProductNotFoundException.class, RuntimeException.class})
     public UserItem addProductInUserCart(Long userId, Long productId) {
         log.info("addProductInUserCart userId={} productId={}", userId, productId);
-        User user = userRepository.findById(userId).
-                orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
-        ProductEntity product = goodsRepository.findById(productId).
-                orElseThrow(() -> new ProductNotFoundException("Product with id: " + productId + " not found"));
-        return userItemRepository.save(new UserItem(user, product));
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
+        
+        ProductEntity product = goodsRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product with id: " + productId + " not found"));
+        
+        if (userItemRepository.existsByUser_IdAndProduct_Id(userId, productId)) {
+            log.warn("Product {} already in cart for user {}", productId, userId);
+            return userItemRepository.findByUser_IdAndProduct_Id(userId, productId)
+                    .orElseThrow(() -> new RuntimeException("Unexpected error finding existing cart item"));
+        }
+        
+        UserItem userItem = new UserItem(user, product);
+        UserItem savedItem = userItemRepository.save(userItem);
+        
+        log.info("Product {} added to cart for user {}", productId, userId);
+        return savedItem;
     }
 
     public List<UserItem> getCartItems(Long userId) {
@@ -69,7 +84,7 @@ public class GoodsService {
                 .orElseThrow(() -> new ProductNotInCartException("Cart item with id: " + itemId + " not found"));
     }
 
-    @Transactional
+    @Transactional(rollbackFor = {ProductNotInCartException.class, RuntimeException.class})
     public void deleteProductFromCart(Long userId, Long productId) {
         log.info("deleteProductFromCart userId={} productId={}", userId, productId);
         userRepository.findById(userId)
@@ -82,13 +97,13 @@ public class GoodsService {
         userItemRepository.deleteByUser_IdAndProduct_Id(userId, productId);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void removeCartItem(Long userId, Long itemId) {
         UserItem item = getCartItem(userId, itemId);
         userItemRepository.delete(item);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void clearCart(Long userId) {
         log.debug("clearCart userId={}", userId);
         User user = userRepository.findById(userId)

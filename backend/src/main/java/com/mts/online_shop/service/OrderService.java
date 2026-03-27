@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 
@@ -57,9 +58,10 @@ public class OrderService {
         return orderMapper.toOrderResponse(order, productMapper);
     }
 
-    @Transactional
-    public void createOrder(Long userId) {
+    @Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})
+    public Long createOrder(Long userId) {
         log.info("createOrder userId={}", userId);
+        
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
 
@@ -77,7 +79,9 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
 
         goodsService.clearCart(userId);
-        log.info("order created id={}", savedOrder.getId());
+        
+        log.info("order created id={} for user={}", savedOrder.getId(), userId);
+        return savedOrder.getId();
     }
 
     public List<com.mts.online_shop.model.OrderResponse> getOrdersByUserId(Long userId) {
@@ -88,13 +92,20 @@ public class OrderService {
         return orderMapper.toOrderResponseList(orders, productMapper);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = {InvalidPaymentDataException.class, OrderNotFoundException.class, 
+                              OrderAccessDeniedException.class, UserNotFoundException.class, RuntimeException.class})
     public void payOrder(Long orderId, com.mts.online_shop.model.PaymentRequest paymentRequest, Long currentUserId) {
         log.info("payOrder orderId={}", orderId);
+        
         Order order = orderRepository.getOrderById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
         if (!order.getUser().getId().equals(currentUserId)) {
             throw new OrderAccessDeniedException("Order does not belong to current user");
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new InvalidPaymentDataException("Order is not in payment status. Current status: " + order.getStatus());
         }
 
         User user = userRepository.findById(order.getUser().getId())
@@ -108,7 +119,8 @@ public class OrderService {
 
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
-        log.info("order paid orderId={}", orderId);
+        
+        log.info("order paid orderId={} for user={}", orderId, user.getId());
 
         mailSimulator.sendOrderPaidEmail(user.getEmail(), order.getId(), order.getTotalPrice());
     }

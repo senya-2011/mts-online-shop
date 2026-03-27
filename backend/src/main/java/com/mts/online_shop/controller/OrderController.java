@@ -43,9 +43,9 @@ public class OrderController implements OrdersApi {
     @Override
     public ResponseEntity<MessageResponse> createOrder() {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
-        orderService.createOrder(userId);
+        Long orderId = orderService.createOrder(userId);
         MessageResponse msg = new MessageResponse();
-        msg.setMessage("Заказ создан");
+        msg.setMessage("Заказ #" + orderId + " создан");
         return ResponseEntity.status(HttpStatus.CREATED).body(msg);
     }
 

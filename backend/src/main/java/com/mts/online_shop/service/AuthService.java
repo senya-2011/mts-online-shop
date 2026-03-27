@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.transaction.Transactional;
 
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -44,8 +45,8 @@ public class AuthService {
         return user.getId();
     }
 
-    @Transactional
-    public void register(String login, String email, String password, String name) {
+    @Transactional(rollbackFor = {UserAlreadyExistsException.class, BadRequestException.class, RuntimeException.class})
+    public Long register(String login, String email, String password, String name) {
         String normalizedLogin = normalizeLogin(login);
         String normalizedEmail = normalizeEmail(email);
         String rawPassword = normalizePassword(password);
@@ -68,8 +69,10 @@ public class AuthService {
         user.setName(normalizedName);
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
 
-        userRepository.save(user);
-        log.info("Registered user id={} login={} email={}", user.getId(), normalizedLogin, normalizedEmail);
+        User savedUser = userRepository.save(user);
+        log.info("Registered user id={} login={} email={}", savedUser.getId(), normalizedLogin, normalizedEmail);
+        
+        return savedUser.getId();
     }
 
     private String normalizeLogin(String login) {
