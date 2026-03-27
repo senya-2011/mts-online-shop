@@ -1,12 +1,16 @@
 spring:
   application:
     name: ${MTS_APP_NAME:online-shop}
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
   liquibase:
     enabled: ${MTS_LIQUIBASE_ENABLED:true}
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db_backend}
     username: ${MTS_DB_USERNAME:user}
     password: ${MTS_DB_PASSWORD:pass}
   jta:

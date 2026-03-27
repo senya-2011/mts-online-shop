@@ -22,6 +22,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import java.math.BigDecimal
 import java.util.Optional
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
 
 class GoodsServiceTest : BehaviorSpec({
 
@@ -55,6 +57,35 @@ class GoodsServiceTest : BehaviorSpec({
             then("all goods are returned") {
                 result shouldContainExactly listOf(product)
                 verify(exactly = 1) { goodsRepository.findAll() }
+            }
+        }
+    }
+
+    given("findProducts without search") {
+        val pageable = PageRequest.of(0, 20)
+        every { goodsRepository.findAll(pageable) } returns PageImpl(listOf(product), pageable, 1L)
+
+        `when`("findProducts is called with null search") {
+            val result = service.findProducts(pageable, null)
+
+            then("page of products is returned") {
+                result.content shouldContainExactly listOf(product)
+                result.totalElements shouldBe 1L
+                verify(exactly = 1) { goodsRepository.findAll(pageable) }
+            }
+        }
+    }
+
+    given("findProducts with search") {
+        val pageable = PageRequest.of(0, 20)
+        every { goodsRepository.findByNameContainingIgnoreCase("prod", pageable) } returns PageImpl(listOf(product), pageable, 1L)
+
+        `when`("findProducts is called with search string") {
+            val result = service.findProducts(pageable, "prod")
+
+            then("matching products are returned") {
+                result.content shouldContainExactly listOf(product)
+                verify(exactly = 1) { goodsRepository.findByNameContainingIgnoreCase("prod", pageable) }
             }
         }
     }

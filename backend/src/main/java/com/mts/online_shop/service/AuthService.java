@@ -22,14 +22,13 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-/**
- * Аутентификация и регистрация с JAAS и JWT.
- */
+
 @Service
 public class AuthService {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final Pattern LOGIN_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]{3,64}$");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@]+@[^@]+\\.[^@]+$");
 
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
@@ -137,7 +136,7 @@ public class AuthService {
             throw new BadRequestException("Email обязателен");
         }
         String normalized = email.trim().toLowerCase(Locale.ROOT);
-        if (normalized.length() > 255 || !normalized.contains("@")) {
+        if (normalized.length() > 255 || !EMAIL_PATTERN.matcher(normalized).matches()) {
             throw new BadRequestException("Некорректный email");
         }
         return normalized;

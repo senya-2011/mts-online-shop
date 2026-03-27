@@ -7,6 +7,8 @@ import com.mts.online_shop.model.Product;
 import com.mts.online_shop.service.GoodsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,12 +27,17 @@ public class ProductsController implements ProductsApi {
     }
 
     @Override
-    public ResponseEntity<ProductListResponse> getProducts() {
-        log.debug("GET products");
+    public ResponseEntity<ProductListResponse> getProducts(Integer page, Integer size, String search) {
+        log.debug("GET products page={} size={} search={}", page, size, search);
+        Pageable pageable = PageRequest.of(page != null ? page : 0, size != null ? size : 20);
+        var productsPage = goodsService.findProducts(pageable, search);
         ProductListResponse response = new ProductListResponse();
-        response.setItems(goodsService.findAllGoods().stream()
+        response.setItems(productsPage.getContent().stream()
                 .map(productMapper::toDto)
                 .collect(Collectors.toList()));
+        response.setTotal(productsPage.getTotalElements());
+        response.setPage(productsPage.getNumber());
+        response.setSize(productsPage.getSize());
         return ResponseEntity.ok(response);
     }
 
