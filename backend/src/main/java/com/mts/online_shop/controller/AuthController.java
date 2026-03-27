@@ -28,8 +28,7 @@ public class AuthController implements AuthApi {
     @Override
     public ResponseEntity<LoginResponse> login(LoginRequest loginRequest) {
         log.info("POST login login={}", loginRequest.getLogin());
-        Long userId = authService.authenticate(loginRequest.getLogin(), loginRequest.getPassword());
-        String token = jwtService.generateToken(userId);
+        String token = authService.authenticate(loginRequest.getLogin(), loginRequest.getPassword());
         LoginResponse response = new LoginResponse();
         response.setAccessToken(token);
         return ResponseEntity.ok(response);

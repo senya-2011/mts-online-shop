@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<users xmlns="http://mts-online-shop/users">
+    
+    <!-- Администраторы -->
+    <user username="admin" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>ADMIN</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="admin@mtsonline.ru"/>
+            <attribute name="name" value="System Administrator"/>
+            <attribute name="created" value="2024-01-01T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+    <!-- Менеджеры -->
+    <user username="manager1" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>MANAGER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="manager1@mtsonline.ru"/>
+            <attribute name="name" value="Store Manager"/>
+            <attribute name="created" value="2024-01-15T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+    <user username="manager2" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>MANAGER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="manager2@mtsonline.ru"/>
+            <attribute name="name" value="Sales Manager"/>
+            <attribute name="created" value="2024-02-01T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+    <!-- Покупатели -->
+    <user username="customer1" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>CUSTOMER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="customer1@example.com"/>
+            <attribute name="name" value="John Doe"/>
+            <attribute name="created" value="2024-03-01T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+    <user username="customer2" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>CUSTOMER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="customer2@example.com"/>
+            <attribute name="name" value="Jane Smith"/>
+            <attribute name="created" value="2024-03-15T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+    <user username="customer3" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>CUSTOMER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="customer3@example.com"/>
+            <attribute name="name" value="Bob Wilson"/>
+            <attribute name="created" value="2024-03-20T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+    <!-- Заблокированные пользователи -->
+    <user username="blocked_user" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="false">
+        <roles>
+            <role>CUSTOMER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="blocked@example.com"/>
+            <attribute name="name" value="Blocked User"/>
+            <attribute name="created" value="2024-02-10T00:00:00Z"/>
+            <attribute name="blocked" value="2024-03-01T00:00:00Z"/>
+            <attribute name="block_reason" value="Policy violation"/>
+        </attributes>
+    </user>
+    
+    <!-- Пользователь с несколькими ролями -->
+    <user username="super_manager" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+        <roles>
+            <role>MANAGER</role>
+            <role>CUSTOMER</role>
+        </roles>
+        <attributes>
+            <attribute name="email" value="super@mtsonline.ru"/>
+            <attribute name="name" value="Super Manager"/>
+            <attribute name="created" value="2024-01-20T00:00:00Z"/>
+        </attributes>
+    </user>
+    
+</users>
