@@ -1,0 +1,95 @@
+databaseChangeLog:
+  - changeSet:
+      id: fill-goods
+      author: Arsenii Alhimovici
+      changes:
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Роуминг 3 дня"
+              - column:
+                  name: price
+                  value: 499.99
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Роуминг неделя"
+              - column:
+                  name: price
+                  value: 799.99
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Роуминг месяц"
+              - column:
+                  name: price
+                  value: 1300.00
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Пакет интернета 5Gb"
+              - column:
+                  name: price
+                  value: 199.99
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Пакет интернета 10Gb"
+              - column:
+                  name: price
+                  value: 299.99
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Пакет интернета 30Gb"
+              - column:
+                  name: price
+                  value: 500.00
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Безлимит интернета на месяц"
+              - column:
+                  name: price
+                  value: 749.99
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "10 SMS"
+              - column:
+                  name: price
+                  value: 29.99
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "10 минут звонков"
+              - column:
+                  name: price
+                  value: 50.00
+        - insert:
+            tableName: goods
+            columns:
+              - column:
+                  name: name
+                  value: "Безлимит звонков и SMS"
+              - column:
+                  name: price
+                  value: 399.99

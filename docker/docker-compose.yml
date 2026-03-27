@@ -1,0 +1,21 @@
+networks:
+  mts-net:
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: db-psql
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${POSTGRES_PORT}:13300"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - mts-net
+
+
+volumes:
+  pgdata:

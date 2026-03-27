@@ -1,3 +1,4 @@
+
 .env
 
 # Kotlin / Gradle
@@ -25,10 +26,10 @@ out/
 /dist/
 /nbdist/
 
-# Generated (OpenAPI, etc.) — убери строку ниже, если коммитишь сгенерированный API
 **/generated/
 
 # Misc
 bin/
 *.log
 .DS_Store
+

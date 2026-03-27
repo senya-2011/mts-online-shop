@@ -1,0 +1,149 @@
+openapi: 3.1.0
+info:
+  title: Bank Simulator API
+  version: 0.1.0
+  description: |
+    Простой симулятор банка для MTS Online Shop.
+    Без аутентификации, только тестовые карты и проверки баланса.
+
+servers:
+  - url: http://localhost:8081/api
+    description: Bank Simulator Dev
+
+tags:
+  - name: Cards
+    description: Просмотр и управление тестовыми картами, проведение платежей
+
+paths:
+  /cards:
+    get:
+      summary: Список всех тестовых карт
+      tags: [Cards]
+      operationId: getCards
+      responses:
+        "200":
+          description: Успешный ответ со списком карт
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardsResponse"
+
+  /cards/randomize-balances:
+    post:
+      summary: Рандомизировать балансы на всех картах
+      description: |
+        Устанавливает случайные балансы в диапазоне [0, 20000] для всех тестовых карт.
+      tags: [Cards]
+      operationId: randomizeBalances
+      responses:
+        "200":
+          description: Обновлённые данные по картам
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CardsResponse"
+
+  /cards/payments:
+    post:
+      summary: Выполнить платёж по карте
+      description: |
+        Проверяет, хватает ли средств на карте, и при успехе списывает сумму.
+      tags: [Cards]
+      operationId: pay
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+      responses:
+        "200":
+          description: Платёж успешно проведён
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+              example:
+                approved: true
+                message: "Payment approved"
+                remainingBalance: 950.00
+        "400":
+          description: Платёж отклонён (недостаточно средств или некорректные данные)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+              example:
+                approved: false
+                message: "Insufficient funds"
+                remainingBalance: 10.00
+
+components:
+  schemas:
+    CardsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CardInfo"
+
+    CardInfo:
+      type: object
+      required: [cardNumber, expiresAt, balance]
+      properties:
+        cardNumber:
+          type: string
+          description: Номер карты (16 цифр)
+          example: "1111222233334444"
+        expiresAt:
+          type: string
+          description: Срок действия в формате ММ/ГГ
+          example: "12/30"
+        balance:
+          type: number
+          format: float
+          description: Баланс карты
+          example: 1500.50
+
+    PaymentRequest:
+      type: object
+      required: [cardNumber, cvv, expiresAt, amount]
+      properties:
+        cardNumber:
+          type: string
+          description: Номер карты, 16 цифр
+          example: "1111222233334444"
+        cvv:
+          type: string
+          description: CVV-код, 3–4 цифры
+          example: "111"
+        expiresAt:
+          type: string
+          description: Срок действия (ММ/ГГ)
+          example: "12/30"
+        amount:
+          type: number
+          format: float
+          description: Сумма платежа
+          example: 50.00
+
+    PaymentResponse:
+      type: object
+      required: [approved, message]
+      properties:
+        approved:
+          type: boolean
+          description: Признак успешного платежа
+          example: true
+        message:
+          type: string
+          description: Описание результата
+          example: "Payment approved"
+        remainingBalance:
+          type: number
+          format: float
+          description: Оставшийся баланс после списания (если карта найдена)
+          example: 950.00
+

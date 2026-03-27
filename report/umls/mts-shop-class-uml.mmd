@@ -1,0 +1,74 @@
+---
+config:
+  layout: elk
+---
+flowchart LR
+ subgraph Controllers["Web / API Layer"]
+    direction TB
+        OrderController["OrderController"]
+        ProductsController["ProductsController"]
+        CartController["CartController"]
+        AuthController["AuthController"]
+  end
+ subgraph Services["Service Layer"]
+    direction TB
+        OrderService["OrderService"]
+        GoodsService["GoodsService"]
+        AuthService["AuthService"]
+        OrderMapper["OrderMapper"]
+        ProductMapper["ProductMapper"]
+        BankClient["BankClient"]
+        MailSimulator["MailSimulator"]
+        JwtService["JwtService"]
+        CurrentUserService["CurrentUserService"]
+  end
+ subgraph Repositories["Repository Layer"]
+    direction TB
+        OrderRepository["OrderRepository"]
+        GoodsRepository["GoodsRepository"]
+        UserItemRepository["UserItemRepository"]
+        UserRepository["UserRepository"]
+  end
+ subgraph Entities["Domain / Entity Layer"]
+    direction TB
+        Order["Order"]
+        OrderItem["OrderItem"]
+        User["User"]
+        UserItem["UserItem"]
+        ProductEntity["ProductEntity"]
+        OrderStatus["OrderStatus"]
+  end
+    OrderController --> OrderService
+    OrderController --> CurrentUserService
+    ProductsController --> GoodsService
+    ProductsController --> ProductMapper
+    CartController --> GoodsService
+    CartController --> ProductMapper
+    CartController --> CurrentUserService
+    AuthController --> AuthService
+    AuthController --> JwtService
+    OrderService --> OrderRepository
+    OrderService --> GoodsService
+    OrderService --> OrderMapper
+    OrderService --> ProductMapper
+    OrderService --> UserRepository
+    OrderService --> BankClient
+    OrderService --> MailSimulator
+    GoodsService --> GoodsRepository
+    GoodsService --> UserItemRepository
+    GoodsService --> UserRepository
+    AuthService --> UserRepository
+    OrderRepository --> Order
+    UserItemRepository --> UserItem
+    GoodsRepository --> ProductEntity
+    UserRepository --> User
+    OrderMapper --> Order
+    OrderMapper --> OrderItem
+    OrderMapper --> ProductMapper
+    ProductMapper --> ProductEntity
+    Order --> OrderItem
+    Order --> User
+    Order --> OrderStatus
+    OrderItem --> ProductEntity
+    UserItem --> User
+    UserItem --> ProductEntity

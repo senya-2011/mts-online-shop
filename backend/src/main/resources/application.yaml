@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: ${MTS_APP_NAME:online-shop}
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  liquibase:
+    enabled: ${MTS_LIQUIBASE_ENABLED:true}
+    change-log: classpath:db/changelog/db.changelog-master.yml
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${MTS_DB_URL:jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:13300}/${MTS_DB_NAME:db}}
+    username: ${MTS_DB_USERNAME:user}
+    password: ${MTS_DB_PASSWORD:pass}
+  mail:
+    host: ${MTS_MAIL_HOST:smtp.mail.ru}
+    port: ${MTS_MAIL_PORT:465}
+    username: ${MTS_MAIL_USERNAME:noreply@localhost}
+    password: ${MTS_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
+
+server:
+  port: ${MTS_PORT:8080}
+  servlet:
+    context-path: ${MTS_CONTEXT_PATH:/api}
+
+jwt:
+  secret: ${MTS_JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
+  expiration-ms: ${MTS_JWT_EXPIRATION_MS:1800000}
+
+bank:
+  base-url: ${BANK_URL:http://localhost:8081}
+
+logging:
+  level:
+    root: ${MTS_LOG_LEVEL:INFO}
+    liquibase: INFO
+    org.springframework.boot.autoconfigure.liquibase: INFO
+
+mail:
+  from: ${MTS_MAIL_USERNAME:noreply@localhost}
