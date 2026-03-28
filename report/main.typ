@@ -69,24 +69,62 @@
 
 = Спецификация REST API
 
-Спецификация REST API для всех публичных интерфейсов приложения задана в формате OpenAPI 3.1 (файл #raw("api/openapi.yml")). Контроллеры реализуют сгенерированные интерфейсы. 
+Спецификация REST API задана в формате OpenAPI 3.1 (файл #raw("api/openapi.yml")). Контроллеры реализуют сгенерированные интерфейсы. Авторизация: Bearer JWT (кроме Auth и Products).
 
 #v(0.5cm)
 
+*Auth* (без авторизации)
+
 #table(
-  columns: (auto, 1fr, 2fr),
+  columns: (auto, 1.2fr, 2fr),
   align: (center, left, left),
   stroke: 0.5pt,
   [*Метод*], [*Путь*], [*Описание*],
-  [GET], [/goods], [Получение всех доступных товаров. Ответ: 200, массив Product.],
-  [GET], [/goods/\{user_id\}], [Товары в корзине пользователя. Ответ: 200, массив Product.],
-  [DELETE], [/goods/\{user_id\}], [Очистить корзину пользователя. Ответ: 200, строка.],
-  [POST], [/goods/\{user_id\}/\{product_id\}], [Добавить товар в корзину. Ответ: 200, Product.],
-  [DELETE], [/goods/\{user_id\}/\{item_id\}], [Удалить товар из корзины. Ответ: 200, строка.],
-  [POST], [/orders], [Создать заказ из корзины. Тело: OrderRequest (user_id). Ответ: 200, OrderResponse.],
-  [GET], [/orders/user/\{user_id\}], [Заказы пользователя. Ответ: 200, массив OrderResponse.],
-  [GET], [/orders/\{order_id\}], [Детали заказа. Ответ: 200, OrderResponse.],
-  [POST], [/orders/\{order_id\}/payment], [Оплата заказа. Тело: PaymentRequest (card_number, expires_at, cvv). Ответ: 200 OrderResponse; 400 ошибка оплаты; 404 заказ не найден.],
+  [POST], [/auth/login], [Вход. Тело: LoginRequest (login, password). Ответ: 200 LoginResponse (accessToken); 401 неверный логин/пароль; 500.],
+  [POST], [/auth/register], [Регистрация. Тело: RegisterRequest (login, email, password, name). Ответ: 201 MessageResponse; 400/409/500.],
+)
+
+#v(0.3cm)
+
+*Products* (без авторизации)
+
+#table(
+  columns: (auto, 1.2fr, 2fr),
+  align: (center, left, left),
+  stroke: 0.5pt,
+  [*Метод*], [*Путь*], [*Описание*],
+  [GET], [/products], [Список товаров. Ответ: 200 ProductListResponse (items); 500.],
+  [GET], [/products/\{productId\}], [Товар по id. Ответ: 200 Product; 404/500.],
+)
+
+#v(0.3cm)
+
+*Cart* (требуется Bearer JWT)
+
+#table(
+  columns: (auto, 1.2fr, 2fr),
+  align: (center, left, left),
+  stroke: 0.5pt,
+  [*Метод*], [*Путь*], [*Описание*],
+  [GET], [/cart], [Содержимое корзины текущего пользователя. Ответ: 200 CartResponse (items); 401/500.],
+  [DELETE], [/cart], [Очистить корзину. Ответ: 200 MessageResponse; 401/500.],
+  [POST], [/cart/items], [Добавить товар. Тело: AddCartItemRequest (productId). Ответ: 201 MessageResponse; 400/401/404/500.],
+  [DELETE], [/cart/items/\{itemId\}], [Удалить позицию из корзины. Ответ: 200 MessageResponse; 401/404/500.],
+)
+
+#v(0.3cm)
+
+*Orders* (требуется Bearer JWT)
+
+#table(
+  columns: (auto, 1.2fr, 2fr),
+  align: (center, left, left),
+  stroke: 0.5pt,
+  [*Метод*], [*Путь*], [*Описание*],
+  [GET], [/orders], [Список заказов текущего пользователя. Ответ: 200 OrderListResponse (items); 401/500.],
+  [POST], [/orders], [Создать заказ из корзины. Ответ: 201 MessageResponse; 400/401/409/500.],
+  [GET], [/orders/\{orderId\}], [Заказ по id. Ответ: 200 OrderResponse; 401/403/404/500.],
+  [POST], [/orders/\{orderId\}/payment], [Оплатить заказ. Тело: PaymentRequest (cardNumber, expiresAt, cvv). Ответ: 200 MessageResponse; 400/401/403/404/409/422/500.],
 )
 
 

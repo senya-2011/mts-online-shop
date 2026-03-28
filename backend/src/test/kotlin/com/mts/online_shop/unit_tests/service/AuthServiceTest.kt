@@ -70,4 +70,24 @@ class AuthServiceTest : BehaviorSpec({
             }
         }
     }
+
+    given("email has no at-sign") {
+        `when`("register is called") {
+            then("BadRequestException is thrown") {
+                shouldThrow<BadRequestException> {
+                    service.register("new_user", "invalidemail", "StrongPass123", "Name")
+                }
+            }
+        }
+    }
+
+    given("email has no dot in domain") {
+        `when`("register is called") {
+            then("BadRequestException is thrown") {
+                shouldThrow<BadRequestException> {
+                    service.register("new_user", "user@nodot", "StrongPass123", "Name")
+                }
+            }
+        }
+    }
 })

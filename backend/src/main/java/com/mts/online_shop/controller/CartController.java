@@ -7,7 +7,8 @@ import com.mts.online_shop.security.CurrentUserService;
 import com.mts.online_shop.service.GoodsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,11 +31,13 @@ public class CartController implements CartApi {
     }
 
     @Override
-    public ResponseEntity<CartResponse> getCart() {
+    public ResponseEntity<CartResponse> getCart(Integer page, Integer size) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
-        log.debug("GET cart userId={}", userId);
+        log.debug("GET cart userId={} page={} size={}", userId, page, size);
+        Pageable pageable = PageRequest.of(page != null ? page : 0, size != null ? size : 20);
+        var cartPage = goodsService.getCartItemsPage(userId, pageable);
         CartResponse response = new CartResponse();
-        response.setItems(goodsService.getCartItems(userId).stream()
+        response.setItems(cartPage.getContent().stream()
                 .map(item -> {
                     CartItem ci = new CartItem();
                     ci.setItemId(item.getId());
@@ -42,6 +45,9 @@ public class CartController implements CartApi {
                     return ci;
                 })
                 .collect(Collectors.toList()));
+        response.setTotal(cartPage.getTotalElements());
+        response.setPage(cartPage.getNumber());
+        response.setSize(cartPage.getSize());
         return ResponseEntity.ok(response);
     }
 

@@ -14,6 +14,8 @@ import com.mts.online_shop.client.bank.BankClient;
 import com.mts.online_shop.simulator.mail.MailSimulator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,7 +85,7 @@ public class OrderService {
         return savedOrder.getId();
     }
 
-    public List<com.mts.online_shop.model.OrderResponse> getOrdersByUserId(Long userId) {
+    public List<OrderResponse> getOrdersByUserId(Long userId) {
         log.debug("getOrdersByUserId userId={}", userId);
         userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
@@ -91,8 +93,7 @@ public class OrderService {
         return orderMapper.toOrderResponseList(orders, productMapper);
     }
 
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = {InvalidPaymentDataException.class, OrderNotFoundException.class, 
-                              OrderAccessDeniedException.class, UserNotFoundException.class, RuntimeException.class})
+
     public void payOrder(Long orderId, com.mts.online_shop.model.PaymentRequest paymentRequest, Long currentUserId) {
         log.info("payOrder orderId={}", orderId);
         
