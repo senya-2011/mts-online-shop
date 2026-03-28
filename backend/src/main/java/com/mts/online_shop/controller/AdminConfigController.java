@@ -4,6 +4,7 @@ import com.mts.online_shop.model.MessageResponse;
 import com.mts.online_shop.security.annotation.RequirePrivilege;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/config")
+@SecurityRequirement(name = "basicAuth")
 public class AdminConfigController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminConfigController.class);

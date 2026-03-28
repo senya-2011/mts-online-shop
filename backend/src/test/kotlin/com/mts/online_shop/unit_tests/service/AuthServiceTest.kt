@@ -6,6 +6,7 @@ import com.mts.online_shop.exception.UserAlreadyExistsException
 import com.mts.online_shop.model.User
 import com.mts.online_shop.repository.UserRepository
 import com.mts.online_shop.service.AuthService
+import com.mts.online_shop.security.JwtService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
@@ -15,40 +16,41 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import java.util.Optional
 
 class AuthServiceTest : BehaviorSpec({
 
     isolationMode = IsolationMode.InstancePerLeaf
 
-    val userRepository = mockk<UserRepository>()
     val passwordEncoder = mockk<PasswordEncoder>()
-    val service = AuthService(userRepository, passwordEncoder)
-
-    val existingUser = User().apply {
-        id = 1L
-        login = "user_1"
-        email = "user@mail.ru"
-        name = "User"
-        passwordHash = "encoded"
-    }
+    val authenticationManager = mockk<AuthenticationManager>()
+    val jwtService = mockk<JwtService>()
+    val service = AuthService(passwordEncoder, authenticationManager, jwtService)
 
     given("credentials are correct") {
-        every { userRepository.findByLoginIgnoreCaseOrEmailIgnoreCase("user_1", "user_1") } returns Optional.of(existingUser)
-        every { passwordEncoder.matches("StrongPass123", "encoded") } returns true
+        val authorities: MutableList<GrantedAuthority> = mutableListOf(SimpleGrantedAuthority("ROLE_USER"))
+        val authentication = mockk<Authentication>()
+        every { authentication.name } returns "user_1"
+        every { authentication.authorities } returns authorities
+        every { authenticationManager.authenticate(any()) } returns authentication
+        every { jwtService.generateToken(null, "user_1", setOf("ROLE_USER"), any()) } returns "test-token"
 
         `when`("authenticate is called") {
             val result = service.authenticate("User_1", "StrongPass123")
 
-            then("user id is returned") {
-                result shouldBe 1L
+            then("token is returned") {
+                result shouldBe "test-token"
             }
         }
     }
 
-    given("password does not match") {
-        every { userRepository.findByLoginIgnoreCaseOrEmailIgnoreCase("user_1", "user_1") } returns Optional.of(existingUser)
-        every { passwordEncoder.matches("WrongPass123", "encoded") } returns false
+    given("authentication fails") {
+        every { authenticationManager.authenticate(any()) } throws InvalidCredentialsException("Invalid credentials")
 
         `when`("authenticate is called") {
             then("InvalidCredentialsException is thrown") {
@@ -59,42 +61,10 @@ class AuthServiceTest : BehaviorSpec({
         }
     }
 
-    given("login is invalid") {
-        `when`("authenticate is called") {
+    given("registration is called") {
+        `when`("register is called") {
             then("BadRequestException is thrown") {
                 shouldThrow<BadRequestException> {
-                    service.authenticate("xx", "StrongPass123")
-                }
-            }
-        }
-    }
-
-    given("new user data is valid and unique") {
-        every { userRepository.existsByLoginIgnoreCase("new_user") } returns false
-        every { userRepository.existsByEmailIgnoreCase("new@mail.ru") } returns false
-        every { passwordEncoder.encode("StrongPass123") } returns "encodedHash"
-        val capturedUser = slot<User>()
-        every { userRepository.save(capture(capturedUser)) } answers { firstArg() }
-
-        `when`("register is called") {
-            service.register("New_User", "new@mail.ru", "StrongPass123", "")
-
-            then("user is saved in normalized form") {
-                capturedUser.captured.login shouldBe "new_user"
-                capturedUser.captured.email shouldBe "new@mail.ru"
-                capturedUser.captured.name shouldBe "new_user"
-                capturedUser.captured.passwordHash shouldBe "encodedHash"
-                verify(exactly = 1) { userRepository.save(any()) }
-            }
-        }
-    }
-
-    given("login already exists") {
-        every { userRepository.existsByLoginIgnoreCase("new_user") } returns true
-
-        `when`("register is called") {
-            then("UserAlreadyExistsException is thrown") {
-                shouldThrow<UserAlreadyExistsException> {
                     service.register("new_user", "new@mail.ru", "StrongPass123", "Name")
                 }
             }

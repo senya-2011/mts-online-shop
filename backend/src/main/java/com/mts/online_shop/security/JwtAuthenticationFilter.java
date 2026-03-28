@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -13,6 +15,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -30,9 +34,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            resolveBearerToken(request)
-                    .flatMap(jwtService::extractUserId)
-                    .ifPresent(this::authenticateByUserId);
+            resolveBearerToken(request).ifPresent(token -> {
+                jwtService.extractUserId(token).ifPresent(userId -> {
+                    Set<String> roles = jwtService.extractRoles(token).orElse(Collections.emptySet());
+                    authenticate(userId, roles);
+                });
+            });
         }
         filterChain.doFilter(request, response);
     }
@@ -45,11 +52,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return Optional.of(authHeader.substring(BEARER_PREFIX.length()).trim());
     }
 
-    private void authenticateByUserId(Long userId) {
+    private void authenticate(Long userId, Set<String> roles) {
+        var authorities = roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+        
         var authentication = UsernamePasswordAuthenticationToken.authenticated(
                 userId,
                 null,
-                Collections.emptyList()
+                authorities
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }

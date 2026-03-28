@@ -20,6 +20,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.slot
 import java.math.BigDecimal
 import java.util.Optional
 
@@ -62,7 +63,9 @@ class GoodsServiceTest : BehaviorSpec({
     given("user exists and product exists") {
         every { userRepository.findById(user.id) } returns Optional.of(user)
         every { goodsRepository.findById(product.id) } returns Optional.of(product)
-        every { userItemRepository.save(any()) } answers { firstArg() }
+        
+        val savedItem = UserItem(user, product).apply { id = 1L }
+        every { userItemRepository.save(match { it.user.id == user.id && it.product.id == product.id }) } returns savedItem
 
         `when`("addProductInUserCart is called") {
             val item = service.addProductInUserCart(user.id, product.id)
@@ -70,7 +73,7 @@ class GoodsServiceTest : BehaviorSpec({
             then("user item is saved") {
                 item.user shouldBe user
                 item.product shouldBe product
-                verify(exactly = 1) { userItemRepository.save(any()) }
+                verify(exactly = 1) { userItemRepository.save(match { it.user.id == user.id && it.product.id == product.id }) }
             }
         }
     }
@@ -109,7 +112,7 @@ class GoodsServiceTest : BehaviorSpec({
                 shouldThrow<ProductNotInCartException> {
                     service.deleteProductFromCart(user.id, product.id)
                 }
-                verify(exactly = 0) { userItemRepository.deleteByUser_IdAndProduct_Id(any(), any()) }
+                verify(exactly = 0) { userItemRepository.deleteByUser_IdAndProduct_Id(user.id, product.id) }
             }
         }
     }

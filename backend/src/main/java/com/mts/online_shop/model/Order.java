@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Date;
 import java.util.List;
 
 @Getter
@@ -34,7 +35,27 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
 
+    @Column(name = "created_at")
+    private Date createdAt;
+
+    @Column(name = "updated_at")
+    private Date updatedAt;
+
+    @Column(name = "order_number", unique = true)
+    private String orderNumber;
+
     @PrePersist
+    private void onCreate() {
+        createdAt = new Date();
+        updatedAt = new Date();
+        calculateTotalPriceOnCreate();
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = new Date();
+    }
+
     private void calculateTotalPriceOnCreate() {
         if (items == null || items.isEmpty()) {
             totalPrice = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);

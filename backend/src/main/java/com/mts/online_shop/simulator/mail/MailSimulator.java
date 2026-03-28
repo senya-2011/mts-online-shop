@@ -30,11 +30,26 @@ public class MailSimulator {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(from);
             message.setTo(toEmail);
-            message.setSubject("Your order has been paid");
+            message.setSubject("Order Paid - #" + orderId);
             message.setText(body);
 
-            log.info("Sending email from='{}' to='{}' subject='{}'", from, toEmail, message.getSubject());
             mailSender.send(message);
+        }
+    }
+
+    public void sendOrderConfirmation(String toEmail, String orderNumber) {
+        log.info("Sending order confirmation to {} for order {}", toEmail, orderNumber);
+        // Simulate email sending
+        if (toEmail != null && orderNumber != null) {
+            log.info("Order confirmation sent successfully");
+        }
+    }
+
+    public void sendOrderCancellation(String toEmail, String orderNumber) {
+        log.info("Sending order cancellation to {} for order {}", toEmail, orderNumber);
+        // Simulate email sending
+        if (toEmail != null && orderNumber != null) {
+            log.info("Order cancellation sent successfully");
         }
     }
 }

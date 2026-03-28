@@ -5,6 +5,7 @@ import com.mts.online_shop.service.CartTransactionService;
 import com.mts.online_shop.security.CurrentUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/cart-transaction")
+@SecurityRequirement(name = "basicAuth")
 public class CartTransactionController {
 
     private static final Logger log = LoggerFactory.getLogger(CartTransactionController.class);

@@ -2,6 +2,7 @@ package com.mts.online_shop.service;
 
 import com.mts.online_shop.exception.InvalidPaymentDataException;
 import com.mts.online_shop.model.Order;
+import com.mts.online_shop.model.OrderStatus;
 import com.mts.online_shop.model.PaymentRequest;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.client.bank.BankClient;
@@ -10,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.transaction.Transactional;
 
 @Service
 public class DistributedTransactionService {

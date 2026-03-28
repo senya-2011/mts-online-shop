@@ -1,0 +1,424 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI" xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0" id="sid-38422fae-e03e-43a3-bef4-bd33b32041b2" targetNamespace="http://mts-online-shop/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.12.0">
+  
+  <!-- Главный пул процесса -->
+  <collaboration id="Collaboration_Main">
+    <!-- Пул покупки -->
+    <participant id="Participant_Customer" name="CUSTOMER (Покупатель)&#10;Роль: покупка товаров&#10;Привилегии: READ_PRODUCTS, READ_ORDERS, WRITE_ORDERS, CANCEL_ORDERS, READ_CART, WRITE_CART" processRef="Process_Customer" />
+    
+    <!-- Пул менеджера/оператора -->
+    <participant id="Participant_Manager" name="MANAGER/OPERATOR&#10;Роль: управление заказами&#10;Привилегии: READ_ORDERS, PROCESS_ORDERS, CANCEL_ORDERS, READ_CART, CLEAR_CART" processRef="Process_Manager" />
+    
+    <!-- Пул администратора -->
+    <participant id="Participant_Admin" name="ADMIN (Администратор)&#10;Роль: полный доступ&#10;Привилегии: все операции" processRef="Process_Admin" />
+    
+    <!-- Пул системы с Narayana JTA -->
+    <participant id="Participant_System" name="Система обработки заказов&#10;Narayana JTA Transaction Manager&#10;XML-based аутентификация (HTTP Basic)" processRef="Process_System" />
+    
+    <!-- Пул банка -->
+    <participant id="Participant_Bank" name="Банк / Платежная система" processRef="Process_Bank" />
+    
+    <!-- Message flows для транзакционных операций -->
+    <messageFlow id="Flow_Payment_Request" sourceRef="Activity_ProcessPayment" targetRef="Participant_Bank" />
+    <messageFlow id="Flow_Payment_Response" sourceRef="Participant_Bank" targetRef="Activity_ProcessPayment" />
+    <messageFlow id="Flow_Refund_Request" sourceRef="Activity_ProcessRefund" targetRef="Participant_Bank" />
+    <messageFlow id="Flow_Refund_Response" sourceRef="Participant_Bank" targetRef="Activity_ProcessRefund" />
+    <messageFlow id="Flow_OrderToSystem" sourceRef="Activity_CreateOrder" targetRef="Activity_JTA_CreateOrder" />
+    <messageFlow id="Flow_CancelToSystem" sourceRef="Activity_CancelOwnOrder" targetRef="Activity_JTA_CancelOrder" />
+  </collaboration>
+
+  <!-- ========== ПРОЦЕСС CUSTOMER ========== -->
+  <process id="Process_Customer" isExecutable="false">
+    <laneSet id="LaneSet_Customer">
+      <lane id="Lane_Customer_User" name="Пользователь (HTTP Basic Auth)">
+        <flowNodeRef>Event_StartShopping</flowNodeRef>
+        <flowNodeRef>Activity_BrowseProducts</flowNodeRef>
+        <flowNodeRef>Activity_AddToCart</flowNodeRef>
+        <flowNodeRef>Gateway_CartCheck</flowNodeRef>
+        <flowNodeRef>Activity_Checkout</flowNodeRef>
+        <flowNodeRef>Activity_EnterCard</flowNodeRef>
+        <flowNodeRef>Activity_ViewOrders</flowNodeRef>
+        <flowNodeRef>Activity_CancelOwnOrder</flowNodeRef>
+        <flowNodeRef>Event_EndShopping</flowNodeRef>
+      </lane>
+    </laneSet>
+    
+    <!-- Авторизация через HTTP Basic -->
+    <startEvent id="Event_StartShopping" name="Авторизация&#10;HTTP Basic (XML users)">
+      <outgoing>Flow_C1</outgoing>
+    </startEvent>
+    
+    <sequenceFlow id="Flow_C1" sourceRef="Event_StartShopping" targetRef="Activity_BrowseProducts" />
+    
+    <userTask id="Activity_BrowseProducts" name="Просмотр товаров&#10;GET /products&#10;[PRIVILEGE_READ_PRODUCTS]">
+      <incoming>Flow_C1</incoming>
+      <outgoing>Flow_C2</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_C2" sourceRef="Activity_BrowseProducts" targetRef="Activity_AddToCart" />
+    
+    <userTask id="Activity_AddToCart" name="Добавление в корзину&#10;POST /cart/items&#10;[PRIVILEGE_WRITE_CART]">
+      <incoming>Flow_C2</incoming>
+      <outgoing>Flow_C3</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_C3" sourceRef="Activity_AddToCart" targetRef="Gateway_CartCheck" />
+    
+    <exclusiveGateway id="Gateway_CartCheck" name="Продолжить покупки?">
+      <incoming>Flow_C3</incoming>
+      <outgoing>Flow_C4_Yes</outgoing>
+      <outgoing>Flow_C4_No</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_C4_Yes" name="да" sourceRef="Gateway_CartCheck" targetRef="Activity_BrowseProducts" />
+    <sequenceFlow id="Flow_C4_No" name="нет" sourceRef="Gateway_CartCheck" targetRef="Activity_Checkout" />
+    
+    <userTask id="Activity_Checkout" name="Оформление заказа&#10;POST /orders/create&#10;[PRIVILEGE_WRITE_ORDERS]">
+      <incoming>Flow_C4_No</incoming>
+      <outgoing>Flow_C5</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_C5" sourceRef="Activity_Checkout" targetRef="Activity_EnterCard" />
+    
+    <userTask id="Activity_EnterCard" name="Ввод данных карты&#10;(Narayana JTA транзакция)">
+      <incoming>Flow_C5</incoming>
+      <outgoing>Flow_C6</outgoing>
+    </userTask>
+    
+    <!-- Передача в системную транзакцию -->
+    <sequenceFlow id="Flow_C6" sourceRef="Activity_EnterCard" targetRef="Activity_CreateOrder" />
+    
+    <!-- Транзакционная операция создания заказа -->
+    <serviceTask id="Activity_CreateOrder" name="Создание заказа с оплатой&#10;POST /transactions/orders/create&#10;@Transactional (Narayana JTA)&#10;[PRIVILEGE_WRITE_ORDERS + PROCESS_PAYMENTS]">
+      <incoming>Flow_C6</incoming>
+      <outgoing>Flow_C7</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_C7" sourceRef="Activity_CreateOrder" targetRef="Activity_ViewOrders" />
+    
+    <userTask id="Activity_ViewOrders" name="Просмотр заказов&#10;GET /orders&#10;[PRIVILEGE_READ_ORDERS]">
+      <incoming>Flow_C7</incoming>
+      <outgoing>Flow_C8</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_C8" sourceRef="Activity_ViewOrders" targetRef="Gateway_CancelDecision" />
+    
+    <exclusiveGateway id="Gateway_CancelDecision" name="Отменить заказ?">
+      <incoming>Flow_C8</incoming>
+      <outgoing>Flow_C9_Yes</outgoing>
+      <outgoing>Flow_C9_No</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_C9_Yes" name="да" sourceRef="Gateway_CancelDecision" targetRef="Activity_CancelOwnOrder" />
+    <sequenceFlow id="Flow_C9_No" name="нет" sourceRef="Gateway_CancelDecision" targetRef="Event_EndShopping" />
+    
+    <userTask id="Activity_CancelOwnOrder" name="Отмена своего заказа&#10;POST /orders/{id}/cancel&#10;[PRIVILEGE_CANCEL_ORDERS]">
+      <incoming>Flow_C9_Yes</incoming>
+      <outgoing>Flow_C10</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_C10" sourceRef="Activity_CancelOwnOrder" targetRef="Event_EndShopping" />
+    
+    <endEvent id="Event_EndShopping" name="Завершение">
+      <incoming>Flow_C9_No</incoming>
+      <incoming>Flow_C10</incoming>
+    </endEvent>
+  </process>
+
+  <!-- ========== ПРОЦЕСС MANAGER/OPERATOR ========== -->
+  <process id="Process_Manager" isExecutable="false">
+    <laneSet id="LaneSet_Manager">
+      <lane id="Lane_Manager_User" name="Менеджер/Оператор (HTTP Basic Auth)">
+        <flowNodeRef>Event_StartManager</flowNodeRef>
+        <flowNodeRef>Activity_ViewAllOrders</flowNodeRef>
+        <flowNodeRef>Activity_ProcessOrders</flowNodeRef>
+        <flowNodeRef>Activity_ClearCart</flowNodeRef>
+        <flowNodeRef>Activity_CancelAnyOrder</flowNodeRef>
+        <flowNodeRef>Event_EndManager</flowNodeRef>
+      </lane>
+    </laneSet>
+    
+    <startEvent id="Event_StartManager" name="Авторизация&#10;MANAGER/OPERATOR&#10;XML users.xml">
+      <outgoing>Flow_M1</outgoing>
+    </startEvent>
+    
+    <sequenceFlow id="Flow_M1" sourceRef="Event_StartManager" targetRef="Activity_ViewAllOrders" />
+    
+    <userTask id="Activity_ViewAllOrders" name="Просмотр всех заказов&#10;GET /orders (все)&#10;[PRIVILEGE_READ_ORDERS]">
+      <incoming>Flow_M1</incoming>
+      <outgoing>Flow_M2</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_M2" sourceRef="Activity_ViewAllOrders" targetRef="Activity_ProcessOrders" />
+    
+    <userTask id="Activity_ProcessOrders" name="Обработка заказов&#10;[PRIVILEGE_PROCESS_ORDERS]">
+      <incoming>Flow_M2</incoming>
+      <outgoing>Flow_M3</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_M3" sourceRef="Activity_ProcessOrders" targetRef="Gateway_ManagerDecision" />
+    
+    <exclusiveGateway id="Gateway_ManagerDecision" name="Действие">
+      <incoming>Flow_M3</incoming>
+      <outgoing>Flow_M4_Clear</outgoing>
+      <outgoing>Flow_M4_Cancel</outgoing>
+      <outgoing>Flow_M4_End</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_M4_Clear" name="очистить корзину" sourceRef="Gateway_ManagerDecision" targetRef="Activity_ClearCart" />
+    <sequenceFlow id="Flow_M4_Cancel" name="отменить заказ" sourceRef="Gateway_ManagerDecision" targetRef="Activity_CancelAnyOrder" />
+    <sequenceFlow id="Flow_M4_End" name="завершить" sourceRef="Gateway_ManagerDecision" targetRef="Event_EndManager" />
+    
+    <userTask id="Activity_ClearCart" name="Очистка корзины&#10;POST /cart/{id}/clear&#10;[PRIVILEGE_CLEAR_CART]">
+      <incoming>Flow_M4_Clear</incoming>
+      <outgoing>Flow_M5</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_M5" sourceRef="Activity_ClearCart" targetRef="Activity_ViewAllOrders" />
+    
+    <userTask id="Activity_CancelAnyOrder" name="Отмена любого заказа с возвратом&#10;POST /transactions/orders/{id}/cancel&#10;[PRIVILEGE_CANCEL_ORDERS]&#10;Narayana JTA транзакция">
+      <incoming>Flow_M4_Cancel</incoming>
+      <outgoing>Flow_M6</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_M6" sourceRef="Activity_CancelAnyOrder" targetRef="Event_EndManager" />
+    
+    <endEvent id="Event_EndManager" name="Завершение">
+      <incoming>Flow_M4_End</incoming>
+      <incoming>Flow_M6</incoming>
+    </endEvent>
+  </process>
+
+  <!-- ========== ПРОЦЕСС ADMIN ========== -->
+  <process id="Process_Admin" isExecutable="false">
+    <laneSet id="LaneSet_Admin">
+      <lane id="Lane_Admin_User" name="Администратор (HTTP Basic Auth)">
+        <flowNodeRef>Event_StartAdmin</flowNodeRef>
+        <flowNodeRef>Activity_ManageUsers</flowNodeRef>
+        <flowNodeRef>Activity_ManageProducts</flowNodeRef>
+        <flowNodeRef>Activity_ViewReports</flowNodeRef>
+        <flowNodeRef>Activity_FullOrderControl</flowNodeRef>
+        <flowNodeRef>Activity_SystemConfig</flowNodeRef>
+        <flowNodeRef>Event_EndAdmin</flowNodeRef>
+      </lane>
+    </laneSet>
+    
+    <startEvent id="Event_StartAdmin" name="Авторизация&#10;ADMIN&#10;XML users.xml (admin/password123)">
+      <outgoing>Flow_A1</outgoing>
+    </startEvent>
+    
+    <sequenceFlow id="Flow_A1" sourceRef="Event_StartAdmin" targetRef="Gateway_AdminChoice" />
+    
+    <exclusiveGateway id="Gateway_AdminChoice" name="Выбор действия">
+      <incoming>Flow_A1</incoming>
+      <outgoing>Flow_A2_Users</outgoing>
+      <outgoing>Flow_A2_Products</outgoing>
+      <outgoing>Flow_A2_Reports</outgoing>
+      <outgoing>Flow_A2_Orders</outgoing>
+      <outgoing>Flow_A2_Config</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_A2_Users" name="пользователи" sourceRef="Gateway_AdminChoice" targetRef="Activity_ManageUsers" />
+    <sequenceFlow id="Flow_A2_Products" name="товары" sourceRef="Gateway_AdminChoice" targetRef="Activity_ManageProducts" />
+    <sequenceFlow id="Flow_A2_Reports" name="отчеты" sourceRef="Gateway_AdminChoice" targetRef="Activity_ViewReports" />
+    <sequenceFlow id="Flow_A2_Orders" name="заказы" sourceRef="Gateway_AdminChoice" targetRef="Activity_FullOrderControl" />
+    <sequenceFlow id="Flow_A2_Config" name="конфиг" sourceRef="Gateway_AdminChoice" targetRef="Activity_SystemConfig" />
+    
+    <userTask id="Activity_ManageUsers" name="Управление пользователями&#10;GET/POST/PUT/DELETE /users/**&#10;[PRIVILEGE_READ_USERS, WRITE_USERS, DELETE_USERS]">
+      <incoming>Flow_A2_Users</incoming>
+      <outgoing>Flow_A3</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_A3" sourceRef="Activity_ManageUsers" targetRef="Gateway_AdminContinue" />
+    
+    <userTask id="Activity_ManageProducts" name="Управление товарами&#10;GET/POST/PUT/DELETE /admin/products/**&#10;[PRIVILEGE_READ_PRODUCTS, WRITE_PRODUCTS, DELETE_PRODUCTS]">
+      <incoming>Flow_A2_Products</incoming>
+      <outgoing>Flow_A4</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_A4" sourceRef="Activity_ManageProducts" targetRef="Gateway_AdminContinue" />
+    
+    <userTask id="Activity_ViewReports" name="Просмотр отчетов&#10;[PRIVILEGE_VIEW_REPORTS]">
+      <incoming>Flow_A2_Reports</incoming>
+      <outgoing>Flow_A5</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_A5" sourceRef="Activity_ViewReports" targetRef="Gateway_AdminContinue" />
+    
+    <userTask id="Activity_FullOrderControl" name="Полный контроль заказов&#10;Все операции с заказами&#10;[Все PRIVILEGE_ORDERS]">
+      <incoming>Flow_A2_Orders</incoming>
+      <outgoing>Flow_A6</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_A6" sourceRef="Activity_FullOrderControl" targetRef="Gateway_AdminContinue" />
+    
+    <userTask id="Activity_SystemConfig" name="Настройка системы&#10;/admin/config/**&#10;[PRIVILEGE_READ_SYSTEM_CONFIG, WRITE_SYSTEM_CONFIG]">
+      <incoming>Flow_A2_Config</incoming>
+      <outgoing>Flow_A7</outgoing>
+    </userTask>
+    
+    <sequenceFlow id="Flow_A7" sourceRef="Activity_SystemConfig" targetRef="Gateway_AdminContinue" />
+    
+    <exclusiveGateway id="Gateway_AdminContinue" name="Продолжить?">
+      <incoming>Flow_A3</incoming>
+      <incoming>Flow_A4</incoming>
+      <incoming>Flow_A5</incoming>
+      <incoming>Flow_A6</incoming>
+      <incoming>Flow_A7</incoming>
+      <outgoing>Flow_A8_Yes</outgoing>
+      <outgoing>Flow_A8_No</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_A8_Yes" name="да" sourceRef="Gateway_AdminContinue" targetRef="Gateway_AdminChoice" />
+    <sequenceFlow id="Flow_A8_No" name="нет" sourceRef="Gateway_AdminContinue" targetRef="Event_EndAdmin" />
+    
+    <endEvent id="Event_EndAdmin" name="Завершение">
+      <incoming>Flow_A8_No</incoming>
+    </endEvent>
+  </process>
+
+  <process id="Process_System" isExecutable="false">
+    <laneSet id="LaneSet_System">
+      <lane id="Lane_TransactionManager" name="Narayana JTA Transaction Manager">
+        <flowNodeRef>Event_SystemStart</flowNodeRef>
+        <flowNodeRef>Activity_AuthCheck</flowNodeRef>
+        <flowNodeRef>Activity_JTA_CreateOrder</flowNodeRef>
+        <flowNodeRef>Activity_JTA_CancelOrder</flowNodeRef>
+        <flowNodeRef>Activity_ProcessPayment</flowNodeRef>
+        <flowNodeRef>Activity_ProcessRefund</flowNodeRef>
+        <flowNodeRef>Activity_Rollback</flowNodeRef>
+        <flowNodeRef>Activity_Commit</flowNodeRef>
+        <flowNodeRef>Event_SystemEnd</flowNodeRef>
+      </lane>
+    </laneSet>
+    
+    <startEvent id="Event_SystemStart" name="Входящий запрос">
+      <outgoing>Flow_S1</outgoing>
+    </startEvent>
+    
+    <sequenceFlow id="Flow_S1" sourceRef="Event_SystemStart" targetRef="Activity_AuthCheck" />
+    
+    <serviceTask id="Activity_AuthCheck" name="Проверка авторизации&#10;HTTP Basic Auth&#10;XmlUserDetailsService&#10;Проверка PRIVILEGE_*">
+      <incoming>Flow_S1</incoming>
+      <outgoing>Flow_S2</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S2" sourceRef="Activity_AuthCheck" targetRef="Gateway_OperationType" />
+    
+    <exclusiveGateway id="Gateway_OperationType" name="Тип операции">
+      <incoming>Flow_S2</incoming>
+      <outgoing>Flow_S3_Create</outgoing>
+      <outgoing>Flow_S3_Cancel</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_S3_Create" name="создать заказ" sourceRef="Gateway_OperationType" targetRef="Activity_JTA_CreateOrder" />
+    <sequenceFlow id="Flow_S3_Cancel" name="отменить заказ" sourceRef="Gateway_OperationType" targetRef="Activity_JTA_CancelOrder" />
+    
+    <!-- JTA Транзакция создания заказа -->
+    <serviceTask id="Activity_JTA_CreateOrder" name="@Transactional&#10;Создание заказа + Платеж&#10;(Narayana JTA)&#10;&#10;BEGIN TRANSACTION&#10;1. Создать заказ в БД&#10;2. Зарезервировать товары&#10;3. Обработать платеж&#10;4. Подтвердить заказ&#10;&#10;При ошибке - ROLLBACK">
+      <incoming>Flow_S3_Create</incoming>
+      <outgoing>Flow_S4</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S4" sourceRef="Activity_JTA_CreateOrder" targetRef="Activity_ProcessPayment" />
+    
+    <serviceTask id="Activity_ProcessPayment" name="Обработка платежа&#10;Вызов банка&#10;Message Flow&#10;&#10;Успех → COMMIT&#10;Ошибка → ROLLBACK">
+      <incoming>Flow_S4</incoming>
+      <outgoing>Flow_S5</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S5" sourceRef="Activity_ProcessPayment" targetRef="Gateway_PaymentResult" />
+    
+    <!-- JTA Транзакция отмены заказа -->
+    <serviceTask id="Activity_JTA_CancelOrder" name="@Transactional&#10;Отмена заказа + Возврат&#10;(Narayana JTA)&#10;&#10;BEGIN TRANSACTION&#10;1. Изменить статус заказа&#10;2. Вернуть товары на склад&#10;3. Обработать возврат&#10;4. Подтвердить отмену&#10;&#10;При ошибке - ROLLBACK">
+      <incoming>Flow_S3_Cancel</incoming>
+      <outgoing>Flow_S6</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S6" sourceRef="Activity_JTA_CancelOrder" targetRef="Activity_ProcessRefund" />
+    
+    <serviceTask id="Activity_ProcessRefund" name="Обработка возврата&#10;Вызов банка&#10;Message Flow&#10;&#10;Успех → COMMIT&#10;Ошибка → ROLLBACK">
+      <incoming>Flow_S6</incoming>
+      <outgoing>Flow_S7</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S7" sourceRef="Activity_ProcessRefund" targetRef="Gateway_RefundResult" />
+    
+    <exclusiveGateway id="Gateway_PaymentResult" name="Результат платежа">
+      <incoming>Flow_S5</incoming>
+      <outgoing>Flow_S8_Success</outgoing>
+      <outgoing>Flow_S8_Fail</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_S8_Success" name="успех" sourceRef="Gateway_PaymentResult" targetRef="Activity_Commit" />
+    <sequenceFlow id="Flow_S8_Fail" name="ошибка" sourceRef="Gateway_PaymentResult" targetRef="Activity_Rollback" />
+    
+    <exclusiveGateway id="Gateway_RefundResult" name="Результат возврата">
+      <incoming>Flow_S7</incoming>
+      <outgoing>Flow_S9_Success</outgoing>
+      <outgoing>Flow_S9_Fail</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_S9_Success" name="успех" sourceRef="Gateway_RefundResult" targetRef="Activity_Commit" />
+    <sequenceFlow id="Flow_S9_Fail" name="ошибка" sourceRef="Gateway_RefundResult" targetRef="Activity_Rollback" />
+    
+    <serviceTask id="Activity_Commit" name="COMMIT TRANSACTION&#10;(Narayana JTA)&#10;&#10;Фиксация всех изменений&#10;в базе данных">
+      <incoming>Flow_S8_Success</incoming>
+      <incoming>Flow_S9_Success</incoming>
+      <outgoing>Flow_S10</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S10" sourceRef="Activity_Commit" targetRef="Event_SystemEnd" />
+    
+    <serviceTask id="Activity_Rollback" name="ROLLBACK TRANSACTION&#10;(Narayana JTA)&#10;&#10;Откат всех изменений&#10;при ошибке">
+      <incoming>Flow_S8_Fail</incoming>
+      <incoming>Flow_S9_Fail</incoming>
+      <outgoing>Flow_S11</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_S11" sourceRef="Activity_Rollback" targetRef="Event_SystemEnd" />
+    
+    <endEvent id="Event_SystemEnd" name="Завершение операции">
+      <incoming>Flow_S10</incoming>
+      <incoming>Flow_S11</incoming>
+    </endEvent>
+  </process>
+
+  <!-- ========== ПРОЦЕСС БАНКА ========== -->
+  <process id="Process_Bank" isExecutable="false">
+    <startEvent id="Event_BankStart" name="Запрос от системы">
+      <outgoing>Flow_B1</outgoing>
+    </startEvent>
+    
+    <sequenceFlow id="Flow_B1" sourceRef="Event_BankStart" targetRef="Gateway_BankOperation" />
+    
+    <exclusiveGateway id="Gateway_BankOperation" name="Тип запроса">
+      <incoming>Flow_B1</incoming>
+      <outgoing>Flow_B2_Payment</outgoing>
+      <outgoing>Flow_B2_Refund</outgoing>
+    </exclusiveGateway>
+    
+    <sequenceFlow id="Flow_B2_Payment" name="платеж" sourceRef="Gateway_BankOperation" targetRef="Activity_BankPayment" />
+    <sequenceFlow id="Flow_B2_Refund" name="возврат" sourceRef="Gateway_BankOperation" targetRef="Activity_BankRefund" />
+    
+    <serviceTask id="Activity_BankPayment" name="Обработка платежа&#10;Списание средств с карты">
+      <incoming>Flow_B2_Payment</incoming>
+      <outgoing>Flow_B3</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_B3" sourceRef="Activity_BankPayment" targetRef="Event_BankEnd" />
+    
+    <serviceTask id="Activity_BankRefund" name="Обработка возврата&#10;Возврат средств на карту">
+      <incoming>Flow_B2_Refund</incoming>
+      <outgoing>Flow_B4</outgoing>
+    </serviceTask>
+    
+    <sequenceFlow id="Flow_B4" sourceRef="Activity_BankRefund" targetRef="Event_BankEnd" />
+    
+    <endEvent id="Event_BankEnd" name="Ответ системе">
+      <incoming>Flow_B3</incoming>
+      <incoming>Flow_B4</incoming>
+    </endEvent>
+  </process>
+
+</definitions>

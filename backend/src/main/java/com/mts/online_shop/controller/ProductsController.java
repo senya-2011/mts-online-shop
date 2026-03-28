@@ -7,12 +7,14 @@ import com.mts.online_shop.model.Product;
 import com.mts.online_shop.service.GoodsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 @RestController
+@SecurityRequirement(name = "basicAuth")
 public class ProductsController implements ProductsApi {
 
     private static final Logger log = LoggerFactory.getLogger(ProductsController.class);

@@ -16,7 +16,7 @@ class JwtServiceTest : BehaviorSpec({
         val jwtService = JwtService(validSecret, 60_000L)
 
         `when`("token is generated and parsed") {
-            val token = jwtService.generateToken(42L)
+            val token = jwtService.generateToken(42L, "testuser", setOf("USER"))
             val userId = jwtService.extractUserId(token)
 
             then("user id is extracted from token") {
@@ -33,7 +33,7 @@ class JwtServiceTest : BehaviorSpec({
         `when`("user id is null") {
             then("IllegalArgumentException is thrown") {
                 shouldThrow<IllegalArgumentException> {
-                    jwtService.generateToken(null)
+                    jwtService.generateToken(null, "testuser", setOf("USER"))
                 }
             }
         }

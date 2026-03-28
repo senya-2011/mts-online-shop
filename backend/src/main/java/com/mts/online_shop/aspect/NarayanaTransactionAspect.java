@@ -28,10 +28,15 @@ public class NarayanaTransactionAspect {
         String narayanaTxId = null;
         try {
             if (isTransactionActive) {
-                narayanaTxId = com.arjuna.ats.arjuna.coordinator.TxControl.getCurrentTx().get_uid().toString();
+                // Use alternative approach to get transaction info
+                jakarta.transaction.TransactionManager tm = com.arjuna.ats.jta.TransactionManager.transactionManager();
+                if (tm != null && tm.getTransaction() != null) {
+                    narayanaTxId = tm.getTransaction().toString();
+                }
             }
         } catch (Exception e) {
             // Ignore if transaction not available
+            log.debug("Could not get Narayana transaction ID: {}", e.getMessage());
         }
         
         log.info("Starting Narayana transaction - {}.{} (Active: {}, Transaction: {}, NarayanaTxId: {})", 

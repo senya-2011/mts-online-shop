@@ -1,6 +1,6 @@
 plugins {
     java
-    id("org.openapi.generator") version "7.19.0"
+    id("org.openapi.generator") version "6.6.0"
 }
 
 group = "com.mts"
@@ -12,14 +12,24 @@ java {
     }
 }
 
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Javadoc> {
+    options.encoding = "UTF-8"
+}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compileOnly("org.springframework.boot:spring-boot-starter-web:3.5.9")
+    implementation(platform("org.springframework.boot:spring-boot-dependencies:3.2.5"))
+    
+    compileOnly("org.springframework.boot:spring-boot-starter-web")
     implementation("io.swagger.core.v3:swagger-annotations:2.2.41")
-    compileOnly("jakarta.validation:jakarta.validation-api:3.0.2")
+    compileOnly("jakarta.validation:jakarta.validation-api")
     compileOnly("org.openapitools:jackson-databind-nullable:0.2.6")
 }
 
@@ -31,7 +41,6 @@ openApiGenerate {
     outputDir.set(generatedOpenApiDir.asFile.absolutePath)
     apiPackage.set("com.mts.online_shop.api")
     modelPackage.set("com.mts.online_shop.model")
-    cleanupOutput.set(true)
     configOptions.set(
         mapOf(
             "interfaceOnly" to "true",

@@ -9,11 +9,13 @@ import com.mts.online_shop.security.CurrentUserService;
 import com.mts.online_shop.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@SecurityRequirement(name = "basicAuth")
 public class OrderController implements OrdersApi {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);

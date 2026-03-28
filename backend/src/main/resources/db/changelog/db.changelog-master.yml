@@ -10,4 +10,10 @@ databaseChangeLog:
   - include:
       file: db/changelog/changeset/005-create-user-item-table.yml
   - include:
+      file: db/changelog/changeset/006-add-quantity-to-user-items.yml
+  - include:
       file: db/changelog/changeset/007-fill-goods.yml
+  - include:
+      file: db/changelog/changeset/008-add-timestamps-to-orders.yml
+  - include:
+      file: db/changelog/changeset/009-add-role-to-users.yml

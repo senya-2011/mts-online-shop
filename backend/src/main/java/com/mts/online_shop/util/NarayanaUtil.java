@@ -1,12 +1,9 @@
 package com.mts.online_shop.util;
 
-import com.arjuna.ats.arjuna.coordinator.TxControl;
-import com.arjuna.ats.jta.common.jtaPropertyManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import jakarta.transaction.Transaction;
 import jakarta.transaction.TransactionManager;
 
 @Component
@@ -16,8 +13,9 @@ public class NarayanaUtil {
 
     public String getCurrentTransactionId() {
         try {
-            if (TxControl.getCurrentTx() != null) {
-                return TxControl.getCurrentTx().get_uid().toString();
+            TransactionManager tm = com.arjuna.ats.jta.TransactionManager.transactionManager();
+            if (tm != null && tm.getTransaction() != null) {
+                return tm.getTransaction().toString();
             }
         } catch (Exception e) {
             log.debug("Unable to get current transaction ID: {}", e.getMessage());
@@ -27,29 +25,34 @@ public class NarayanaUtil {
 
     public boolean isTransactionActive() {
         try {
-            return TxControl.getCurrentTx() != null && !TxControl.getCurrentTx().equals(TxControl.getNullTx());
+            TransactionManager tm = com.arjuna.ats.jta.TransactionManager.transactionManager();
+            return tm != null && tm.getTransaction() != null;
         } catch (Exception e) {
+            log.debug("Unable to check transaction status: {}", e.getMessage());
             return false;
         }
     }
 
-    public int getTransactionStatus() {
+    public String getTransactionStatus() {
         try {
-            if (TxControl.getCurrentTx() != null) {
-                return TxControl.getCurrentTx().getStatus();
+            TransactionManager tm = com.arjuna.ats.jta.TransactionManager.transactionManager();
+            if (tm != null && tm.getTransaction() != null) {
+                return tm.getTransaction().toString();
             }
         } catch (Exception e) {
             log.debug("Unable to get transaction status: {}", e.getMessage());
         }
-        return -1;
+        return "UNKNOWN";
     }
 
     public void logNarayanaConfiguration() {
-        log.info("Narayana Transaction Manager Configuration:");
-        log.info("  Node Identifier: {}", jtaPropertyManager.getJTAEnvironmentBean().getNodeIdentifier());
-        log.info("  Transaction Timeout: {}s", jtaPropertyManager.getJTAEnvironmentBean().getDefaultTimeout());
-        log.info("  Object Store Dir: {}", jtaPropertyManager.getJTAEnvironmentBean().getObjectStoreDir());
-        log.info("  Recovery Period: {}s", jtaPropertyManager.getJTAEnvironmentBean().getPeriodicRecoveryPeriod());
-        log.info("  Status Port: {}", jtaPropertyManager.getJTAEnvironmentBean().getStatusPort());
+        try {
+            log.info("=== Narayana JTA Configuration ===");
+            log.info("Narayana Transaction Manager: {}", com.arjuna.ats.jta.TransactionManager.transactionManager());
+            log.info("Narayana User Transaction: {}", com.arjuna.ats.jta.UserTransaction.userTransaction());
+            log.info("=====================================");
+        } catch (Exception e) {
+            log.error("Failed to log Narayana configuration", e);
+        }
     }
 }

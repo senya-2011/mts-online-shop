@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-role-to-users
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role'
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: role
+                  type: varchar(20)
+                  defaultValue: 'CUSTOMER'
+                  constraints:
+                    nullable: false

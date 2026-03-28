@@ -1,5 +1,6 @@
 package com.mts.online_shop.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -31,9 +32,18 @@ public class UserItem {
     @JoinColumn(name = "product_id", nullable = false)
     private ProductEntity product;
 
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity = 1;
+
     public UserItem(User user, ProductEntity product) {
         this.user = user;
         this.product = product;
+    }
+
+    public UserItem(User user, ProductEntity product, Integer quantity) {
+        this.user = user;
+        this.product = product;
+        this.quantity = quantity;
     }
 }
 

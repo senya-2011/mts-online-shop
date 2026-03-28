@@ -41,18 +41,20 @@ public class JwtService {
         
         long now = System.currentTimeMillis();
         
-        Claims claims = Jwts.claims()
+        var claimsBuilder = Jwts.claims()
                 .subject(String.valueOf(userId))
-                .claim("userId", userId)
-                .claim("username", username)
-                .claim("roles", roles)
+                .add("userId", userId)
+                .add("username", username)
+                .add("roles", roles)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + expirationMs));
         
-        // Add additional claims
+        // Add additional claims before building
         if (additionalClaims != null) {
-            additionalClaims.forEach(claims::claim);
+            additionalClaims.forEach(claimsBuilder::add);
         }
+        
+        Claims claims = claimsBuilder.build();
         
         return Jwts.builder()
                 .claims(claims)

@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<users xmlns="http://mts-online-shop/users">
+<users>
+    <!-- 
+    Пароли для тестирования (все одинаковые для удобства):
+    - admin / password123
+    - manager1 / password123  
+    - manager2 / password123
+    - customer1 / password123
+    - customer2 / password123
+    - operator1 / password123
+    -->
     
     <!-- Администраторы -->
-    <user username="admin" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="admin" password="password123" enabled="true">
         <roles>
             <role>ADMIN</role>
         </roles>
@@ -14,7 +23,7 @@
     </user>
     
     <!-- Менеджеры -->
-    <user username="manager1" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="manager1" password="password123" enabled="true">
         <roles>
             <role>MANAGER</role>
         </roles>
@@ -25,7 +34,7 @@
         </attributes>
     </user>
     
-    <user username="manager2" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="manager2" password="password123" enabled="true">
         <roles>
             <role>MANAGER</role>
         </roles>
@@ -37,7 +46,7 @@
     </user>
     
     <!-- Покупатели -->
-    <user username="customer1" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="customer1" password="password123" enabled="true">
         <roles>
             <role>CUSTOMER</role>
         </roles>
@@ -48,7 +57,7 @@
         </attributes>
     </user>
     
-    <user username="customer2" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="customer2" password="password123" enabled="true">
         <roles>
             <role>CUSTOMER</role>
         </roles>
@@ -59,7 +68,7 @@
         </attributes>
     </user>
     
-    <user username="customer3" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="customer3" password="password123" enabled="true">
         <roles>
             <role>CUSTOMER</role>
         </roles>
@@ -71,7 +80,7 @@
     </user>
     
     <!-- Заблокированные пользователи -->
-    <user username="blocked_user" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="false">
+    <user username="blocked_user" password="password123" enabled="false">
         <roles>
             <role>CUSTOMER</role>
         </roles>
@@ -85,7 +94,7 @@
     </user>
     
     <!-- Пользователь с несколькими ролями -->
-    <user username="super_manager" password="{bcrypt}$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDa" enabled="true">
+    <user username="super_manager" password="password123" enabled="true">
         <roles>
             <role>MANAGER</role>
             <role>CUSTOMER</role>

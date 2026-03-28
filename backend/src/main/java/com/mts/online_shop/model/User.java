@@ -32,4 +32,7 @@ public class User {
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+
+    @Column(name = "role", nullable = false, length = 20)
+    private String role = "CUSTOMER";
 }

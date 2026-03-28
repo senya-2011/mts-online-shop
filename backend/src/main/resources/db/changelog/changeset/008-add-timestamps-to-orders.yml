@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: add-timestamps-to-orders
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'created_at'
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: true
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  constraints:
+                    nullable: true
+              - column:
+                  name: order_number
+                  type: varchar(50)
+                  constraints:
+                    nullable: true
