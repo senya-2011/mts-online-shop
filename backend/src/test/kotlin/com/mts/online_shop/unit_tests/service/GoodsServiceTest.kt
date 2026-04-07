@@ -72,6 +72,7 @@ class GoodsServiceTest : DescribeSpec({
         context("when user and product exist") {
             every { userRepository.findById(user.id) } returns Optional.of(user)
             every { goodsRepository.findById(product.id) } returns Optional.of(product)
+            every { userItemRepository.existsByUser_IdAndProduct_Id(user.id, product.id) } returns false
             
             val savedItem = UserItem(user, product).apply { id = 1L }
             every { userItemRepository.save(any()) } returns savedItem
@@ -88,7 +89,7 @@ class GoodsServiceTest : DescribeSpec({
 
             it("should throw UserNotFoundException") {
                 shouldThrow<UserNotFoundException> {
-                    service.findUserGoods(99L)
+                    service.addProductInUserCart(99L, product.id)
                 }
             }
         }
@@ -98,11 +99,11 @@ class GoodsServiceTest : DescribeSpec({
         
         context("when user exists") {
             every { userRepository.findById(user.id) } returns Optional.of(user)
-            every { userItemRepository.findAllByUser(user) } returns listOf(UserItem(user, product))
+            every { userItemRepository.findByUser_Id(user.id) } returns listOf(UserItem(user, product))
 
             it("should return user goods") {
                 val result = service.findUserGoods(user.id)
-                result shouldContainExactly listOf(UserItem(user, product))
+                result shouldContainExactly listOf(product)
             }
         }
         
