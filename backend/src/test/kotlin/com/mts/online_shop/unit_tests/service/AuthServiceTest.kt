@@ -13,8 +13,6 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.crypto.password.PasswordEncoder
 
 class AuthServiceTest : DescribeSpec({
@@ -28,12 +26,13 @@ class AuthServiceTest : DescribeSpec({
     describe("authenticate") {
         
         context("when credentials are correct") {
-            val userDetails = mockk<UserDetails>()
-            every { userDetails.username } returns "user_1"
-            every { userDetails.password } returns "encodedPassword"
-            every { userDetails.authorities } returns listOf(SimpleGrantedAuthority("ROLE_USER"))
-            
-            every { xmlUserDetailsService.loadUserByUsername("User_1") } returns userDetails
+            every { xmlUserDetailsService.loadUserByUsername("User_1") } returns mockk {
+                every { username } returns "user_1"
+                every { password } returns "encodedPassword"
+                every { authorities } returns listOf(mockk {
+                    every { authority } returns "ROLE_USER"
+                })
+            }
             every { xmlUserDetailsService.getUserIdByUsername("User_1") } returns 1L
             every { passwordEncoder.matches("StrongPass123", "encodedPassword") } returns true
             every { jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any()) } returns "test-token"
@@ -45,12 +44,9 @@ class AuthServiceTest : DescribeSpec({
         }
         
         context("when credentials are incorrect") {
-            val userDetails = mockk<UserDetails>()
-            every { userDetails.username } returns "user_1"
-            every { userDetails.password } returns "encodedPassword"
-            every { userDetails.authorities } returns listOf()
-            
-            every { xmlUserDetailsService.loadUserByUsername("user_1") } returns userDetails
+            every { xmlUserDetailsService.loadUserByUsername("user_1") } returns mockk {
+                every { password } returns "encodedPassword"
+            }
             every { passwordEncoder.matches("WrongPass123", "encodedPassword") } returns false
 
             it("should throw InvalidCredentialsException") {
