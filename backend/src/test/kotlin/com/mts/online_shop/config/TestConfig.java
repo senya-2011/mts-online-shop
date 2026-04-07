@@ -8,10 +8,16 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.boot.jdbc.EmbeddedDatabaseBuilder;
 import org.springframework.boot.jdbc.EmbeddedDatabaseType;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.sql.DataSource;
 
 @TestConfiguration
+@EnableWebSecurity
 public class TestConfig {
 
     @Bean
@@ -27,5 +33,18 @@ public class TestConfig {
     @Primary
     public PlatformTransactionManager testTransactionManager(DataSource dataSource) {
         return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+        return http.build();
     }
 }
