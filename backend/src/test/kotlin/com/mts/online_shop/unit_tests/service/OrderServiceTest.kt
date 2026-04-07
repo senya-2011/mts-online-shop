@@ -84,11 +84,7 @@ class OrderServiceTest : BehaviorSpec({
         items = emptyList()
     }
 
-    val paymentRequest = PaymentRequest(
-        cardNumber = "1234123412341234",
-        expiresAt = "12/30",
-        cvv = "111"
-    )
+    val paymentRequest = PaymentRequest("1234123412341234", "12/30", "111")
 
     given("order exists and belongs to current user") {
         every { orderRepository.getOrderById(order.id) } returns Optional.of(order)
