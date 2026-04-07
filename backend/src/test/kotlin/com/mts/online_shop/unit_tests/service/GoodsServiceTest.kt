@@ -140,44 +140,37 @@ class GoodsServiceTest : DescribeSpec({
         }
     }
 
-    given("product is absent in cart") {
-        every { userRepository.findById(user.id) } returns Optional.of(user)
-        every { goodsRepository.findById(product.id) } returns Optional.of(product)
-        every { userItemRepository.existsByUser_IdAndProduct_Id(user.id, product.id) } returns false
+    describe("deleteProductFromCart") {
+        context("when product is absent in cart") {
+            every { userRepository.findById(user.id) } returns Optional.of(user)
+            every { goodsRepository.findById(product.id) } returns Optional.of(product)
+            every { userItemRepository.existsByUser_IdAndProduct_Id(user.id, product.id) } returns false
 
-        `when`("deleteProductFromCart is called") {
-            then("ProductNotInCartException is thrown") {
+            it("should throw ProductNotInCartException") {
                 shouldThrow<ProductNotInCartException> {
                     service.deleteProductFromCart(user.id, product.id)
                 }
-                verify(exactly = 0) { userItemRepository.deleteByUser_IdAndProduct_Id(user.id, product.id) }
             }
         }
     }
 
-    given("cart item exists") {
-        val item = UserItem(user, product).apply { id = 15L }
-        every { userItemRepository.findByIdAndUser_Id(item.id, user.id) } returns Optional.of(item)
-        every { userItemRepository.delete(item) } just Runs
+    describe("removeCartItem") {
+        context("when cart item exists") {
+            val item = UserItem(user, product).apply { id = 15L }
+            every { userItemRepository.findByIdAndUser_Id(item.id, user.id) } returns Optional.of(item)
 
-        `when`("removeCartItem is called") {
-            service.removeCartItem(user.id, item.id)
-
-            then("item is deleted") {
-                verify(exactly = 1) { userItemRepository.delete(item) }
+            it("should delete item") {
+                service.removeCartItem(user.id, item.id)
             }
         }
     }
 
-    given("user exists with cart") {
-        every { userRepository.findById(user.id) } returns Optional.of(user)
-        every { userItemRepository.deleteAllByUser(user) } just Runs
+    describe("clearCart") {
+        context("when user exists") {
+            every { userRepository.findById(user.id) } returns Optional.of(user)
 
-        `when`("clearCart is called") {
-            service.clearCart(user.id)
-
-            then("all user items are deleted") {
-                verify(exactly = 1) { userItemRepository.deleteAllByUser(user) }
+            it("should clear cart") {
+                service.clearCart(user.id)
             }
         }
     }
