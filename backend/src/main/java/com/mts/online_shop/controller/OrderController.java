@@ -183,6 +183,41 @@ public class OrderController {
         }
     }
     
+    @PostMapping("/{orderId}/pay")
+    @io.swagger.v3.oas.annotations.Operation(summary = " Pay for existing order", description = "Pay for an existing order using payment data")
+    public ResponseEntity<OrderResponse> payOrder(@PathVariable Long orderId, @RequestBody PaymentRequest paymentRequest) {
+        Long userId = currentUserService.getCurrentUserIdOrThrow();
+        log.debug("POST pay order {} for user id={}", orderId, userId);
+        log.debug("Payment data: card={}, expiry={}, cvv={}", 
+            maskCardNumber(paymentRequest.getCardNumber()), 
+            paymentRequest.getExpiresAt(), 
+            "***");
+        
+        try {
+            log.info("Paying order {} via real bank", orderId);
+            
+            // Pay for existing order
+            orderService.payOrder(orderId, paymentRequest, userId);
+            
+            // Return updated order
+            Order updatedOrder = orderRepository.getOrderById(orderId)
+                    .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+            
+            OrderResponse orderResponse = orderMapper.toOrderResponse(updatedOrder, productMapper);
+            
+            log.info("Order paid successfully");
+            
+            return ResponseEntity.ok(orderResponse);
+            
+        } catch (OrderNotFoundException e) {
+            log.error("Order not found: {}", e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            log.error("Error paying order: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
     private String maskCardNumber(String cardNumber) {
         if (cardNumber == null || cardNumber.length() < 4) {
             return "****";
