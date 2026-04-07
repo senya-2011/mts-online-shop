@@ -40,6 +40,7 @@ class GoodsServiceTest : DescribeSpec({
 
             it("should return page of products") {
                 val result = service.findProducts(pageable, null)
+                result shouldNotBe null
                 result.content.size shouldBe 1
                 result.totalElements shouldBe 1L
             }
@@ -51,6 +52,7 @@ class GoodsServiceTest : DescribeSpec({
 
             it("should return matching products") {
                 val result = service.findProducts(pageable, "prod")
+                result shouldNotBe null
                 result.content.size shouldBe 1
             }
         }
