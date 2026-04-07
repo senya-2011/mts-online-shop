@@ -55,7 +55,8 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("authentication fails") {
-        every { authenticationManager.authenticate(any()) } throws InvalidCredentialsException("Invalid credentials")
+        every { xmlUserDetailsService.loadUserByUsername("user_1") } returns mockk<org.springframework.security.core.userdetails.UserDetails>()
+        every { passwordEncoder.matches("WrongPass123", any()) } returns false
 
         `when`("authenticate is called") {
             then("InvalidCredentialsException is thrown") {
