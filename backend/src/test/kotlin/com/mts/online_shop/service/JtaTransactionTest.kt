@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional as SpringTransac
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Disabled("Temporarily disabled - AssertionError and InvalidPaymentDataException issues")
 class NarayanaTransactionTest {
 
     private lateinit var orderService: OrderService
