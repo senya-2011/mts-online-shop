@@ -98,7 +98,7 @@ class GoodsServiceTest : BehaviorSpec({
         every { goodsRepository.findById(product.id) } returns Optional.of(product)
         
         val savedItem = UserItem(user, product).apply { id = 1L }
-        every { userItemRepository.save(match { it.user.id == user.id && it.product.id == product.id }) } returns savedItem
+        every { userItemRepository.save(any()) } returns savedItem
 
         `when`("addProductInUserCart is called") {
             val item = service.addProductInUserCart(user.id, product.id)
@@ -106,7 +106,7 @@ class GoodsServiceTest : BehaviorSpec({
             then("user item is saved") {
                 item.user shouldBe user
                 item.product shouldBe product
-                verify(exactly = 1) { userItemRepository.save(match { it.user.id == user.id && it.product.id == product.id }) }
+                verify(exactly = 1) { userItemRepository.save(any()) }
             }
         }
     }

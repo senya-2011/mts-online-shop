@@ -68,9 +68,12 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("registration is called") {
+        every { xmlUserDetailsService.userExists("new_user") } returns true
+        every { userRepository.save(any()) } returns mockk<User>()
+
         `when`("register is called") {
-            then("BadRequestException is thrown") {
-                shouldThrow<BadRequestException> {
+            then("UserAlreadyExistsException is thrown") {
+                shouldThrow<UserAlreadyExistsException> {
                     service.register("new_user", "new@mail.ru", "StrongPass123", "Name")
                 }
             }
@@ -78,6 +81,8 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("email has no at-sign") {
+        every { xmlUserDetailsService.userExists("new_user") } returns false
+
         `when`("register is called") {
             then("BadRequestException is thrown") {
                 shouldThrow<BadRequestException> {
@@ -88,6 +93,8 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("email has no dot in domain") {
+        every { xmlUserDetailsService.userExists("new_user") } returns false
+
         `when`("register is called") {
             then("BadRequestException is thrown") {
                 shouldThrow<BadRequestException> {
