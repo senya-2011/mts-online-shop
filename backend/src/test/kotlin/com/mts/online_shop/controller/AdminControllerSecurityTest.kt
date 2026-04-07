@@ -15,24 +15,24 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 
 class AdminControllerSecurityTest : BaseTest() {
 
-    @Autowired(required = false)
-    private var mockMvc: MockMvc? = null
+    @Autowired
+    private lateinit var mockMvc: MockMvc
 
-    @Autowired(required = false)
-    private var jwtService: JwtService? = null
+    @Autowired
+    private lateinit var jwtService: JwtService
 
-    @Autowired(required = false)
-    private var objectMapper: ObjectMapper? = null
+    @Autowired
+    private lateinit var objectMapper: ObjectMapper
 
     @Test
     fun `should allow admin to access all orders`() {
-        val adminToken = jwtService!!.generateToken(
+        val adminToken = jwtService.generateToken(
             null, 
             "admin", 
             setOf("ROLE_ADMIN", "ROLE_MANAGER")
         )
 
-        mockMvc!!.get("/api/admin/orders") {
+        mockMvc.get("/api/admin/orders") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -41,13 +41,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should deny customer access to admin orders`() {
-        val customerToken = jwtService!!.generateToken(
+        val customerToken = jwtService.generateToken(
             null, 
             "customer1", 
             setOf("ROLE_CUSTOMER")
         )
 
-        mockMvc!!.get("/api/admin/orders") {
+        mockMvc.get("/api/admin/orders") {
             header("Authorization", "Bearer $customerToken")
         }.andExpect {
             status { isForbidden() }
@@ -56,13 +56,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should allow manager to process orders`() {
-        val managerToken = jwtService!!.generateToken(
+        val managerToken = jwtService.generateToken(
             null, 
             "manager1", 
             setOf("ROLE_MANAGER")
         )
 
-        mockMvc!!.put("/api/admin/orders/123/process") {
+        mockMvc.put("/api/admin/orders/123/process") {
             header("Authorization", "Bearer $managerToken")
             contentType = MediaType.APPLICATION_JSON
         }.andExpect {
@@ -72,13 +72,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should deny customer to process orders`() {
-        val customerToken = jwtService!!.generateToken(
+        val customerToken = jwtService.generateToken(
             null, 
             "customer1", 
             setOf("ROLE_CUSTOMER")
         )
 
-        mockMvc!!.put("/api/admin/orders/123/process") {
+        mockMvc.put("/api/admin/orders/123/process") {
             header("Authorization", "Bearer $customerToken")
             contentType = MediaType.APPLICATION_JSON
         }.andExpect {
@@ -88,13 +88,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should allow admin to access system config`() {
-        val adminToken = jwtService!!.generateToken(
+        val adminToken = jwtService.generateToken(
             null, 
             "admin", 
             setOf("ROLE_ADMIN")
         )
 
-        mockMvc!!.get("/api/admin/config") {
+        mockMvc.get("/api/admin/config") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -103,13 +103,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should deny manager to access system config`() {
-        val managerToken = jwtService!!.generateToken(
+        val managerToken = jwtService.generateToken(
             null, 
             "manager1", 
             setOf("ROLE_MANAGER")
         )
 
-        mockMvc!!.get("/api/admin/config") {
+        mockMvc.get("/api/admin/config") {
             header("Authorization", "Bearer $managerToken")
         }.andExpect {
             status { isForbidden() }
@@ -118,18 +118,18 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should deny access without authentication`() {
-        mockMvc!!.get("/api/admin/orders") {
+        mockMvc.get("/api/admin/orders") {
         }.andExpect {
             status { isUnauthorized() }
         }
 
-        mockMvc!!.put("/api/admin/orders/123/process") {
+        mockMvc.put("/api/admin/orders/123/process") {
             contentType = MediaType.APPLICATION_JSON
         }.andExpect {
             status { isUnauthorized() }
         }
 
-        mockMvc!!.get("/api/admin/config") {
+        mockMvc.get("/api/admin/config") {
         }.andExpect {
             status { isUnauthorized() }
         }
@@ -137,13 +137,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should allow admin to clear user cart`() {
-        val adminToken = jwtService!!.generateToken(
+        val adminToken = jwtService.generateToken(
             null, 
             "admin", 
             setOf("ROLE_ADMIN")
         )
 
-        mockMvc!!.delete("/api/admin/cart/user/456") {
+        mockMvc.delete("/api/admin/cart/user/456") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -152,13 +152,13 @@ class AdminControllerSecurityTest : BaseTest() {
 
     @Test
     fun `should deny customer to clear other user cart`() {
-        val customerToken = jwtService!!.generateToken(
+        val customerToken = jwtService.generateToken(
             null, 
             "customer1", 
             setOf("ROLE_CUSTOMER")
         )
 
-        mockMvc!!.delete("/api/admin/cart/user/456") {
+        mockMvc.delete("/api/admin/cart/user/456") {
             header("Authorization", "Bearer $customerToken")
         }.andExpect {
             status { isForbidden() }
