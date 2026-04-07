@@ -60,6 +60,7 @@ dependencies {
 	testImplementation("io.kotest:kotest-assertions-core-jvm:5.8.0")
 
     testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
 }
 
 tasks.withType<Test> {
