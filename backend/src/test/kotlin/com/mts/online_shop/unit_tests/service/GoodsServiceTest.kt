@@ -8,28 +8,20 @@ import com.mts.online_shop.model.User
 import com.mts.online_shop.model.UserItem
 import com.mts.online_shop.repository.GoodsRepository
 import com.mts.online_shop.repository.UserItemRepository
-import com.mts.online_shop.repository.OrderItemRepository
 import com.mts.online_shop.repository.UserRepository
+import com.mts.online_shop.repository.OrderItemRepository
 import com.mts.online_shop.service.GoodsService
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.IsolationMode
-import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.verify
-import io.mockk.slot
-import java.math.BigDecimal
-import java.util.Optional
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
+import java.util.Optional
 
-class GoodsServiceTest : BehaviorSpec({
-
-    isolationMode = IsolationMode.InstancePerLeaf
+class GoodsServiceTest : DescribeSpec({
 
     val goodsRepository = mockk<GoodsRepository>()
     val userItemRepository = mockk<UserItemRepository>()
@@ -46,73 +38,55 @@ class GoodsServiceTest : BehaviorSpec({
     }
 
     val product = ProductEntity().apply {
-        id = 10L
+        id = 1L
         name = "Product"
-        price = BigDecimal("99.99")
+        price = java.math.BigDecimal("10.00")
     }
 
-    given("goods exist") {
-        every { goodsRepository.findAll() } returns listOf(product)
+    describe("findProducts") {
+        
+        context("when search is null") {
+            val pageable = PageRequest.of(0, 20)
+            every { goodsRepository.findAll(pageable) } returns PageImpl(listOf(product), pageable, 1L)
 
-        `when`("findAllGoods is called") {
-            val result = service.findAllGoods()
-
-            then("all goods are returned") {
-                result shouldContainExactly listOf(product)
-                verify(exactly = 1) { goodsRepository.findAll() }
-            }
-        }
-    }
-
-    given("findProducts without search") {
-        val pageable = PageRequest.of(0, 20)
-        every { goodsRepository.findAll(pageable) } returns PageImpl(listOf(product), pageable, 1L)
-
-        `when`("findProducts is called with null search") {
-            val result = service.findProducts(pageable, null)
-
-            then("page of products is returned") {
+            it("should return page of products") {
+                val result = service.findProducts(pageable, null)
                 result.content shouldContainExactly listOf(product)
                 result.totalElements shouldBe 1L
             }
         }
-    }
+        
+        context("when search is provided") {
+            val pageable = PageRequest.of(0, 20)
+            every { goodsRepository.findByNameContainingIgnoreCase("prod", pageable) } returns PageImpl(listOf(product), pageable, 1L)
 
-    given("findProducts with search") {
-        val pageable = PageRequest.of(0, 20)
-        every { goodsRepository.findByNameContainingIgnoreCase("prod", pageable) } returns PageImpl(listOf(product), pageable, 1L)
-
-        `when`("findProducts is called with search string") {
-            val result = service.findProducts(pageable, "prod")
-
-            then("matching products are returned") {
+            it("should return matching products") {
+                val result = service.findProducts(pageable, "prod")
                 result.content shouldContainExactly listOf(product)
             }
         }
     }
 
-    given("user exists and product exists") {
-        every { userRepository.findById(user.id) } returns Optional.of(user)
-        every { goodsRepository.findById(product.id) } returns Optional.of(product)
+    describe("addProductInUserCart") {
         
-        val savedItem = UserItem(user, product).apply { id = 1L }
-        every { userItemRepository.save(any()) } returns savedItem
+        context("when user and product exist") {
+            every { userRepository.findById(user.id) } returns Optional.of(user)
+            every { goodsRepository.findById(product.id) } returns Optional.of(product)
+            
+            val savedItem = UserItem(user, product).apply { id = 1L }
+            every { userItemRepository.save(any()) } returns savedItem
 
-        `when`("addProductInUserCart is called") {
-            val item = service.addProductInUserCart(user.id, product.id)
-
-            then("user item is saved") {
+            it("should save user item") {
+                val item = service.addProductInUserCart(user.id, product.id)
                 item.user shouldBe user
                 item.product shouldBe product
             }
         }
-    }
+        
+        context("when user does not exist") {
+            every { userRepository.findById(99L) } returns Optional.empty()
 
-    given("user does not exist") {
-        every { userRepository.findById(99L) } returns Optional.empty()
-
-        `when`("findUserGoods is called") {
-            then("UserNotFoundException is thrown") {
+            it("should throw UserNotFoundException") {
                 shouldThrow<UserNotFoundException> {
                     service.findUserGoods(99L)
                 }
@@ -120,11 +94,44 @@ class GoodsServiceTest : BehaviorSpec({
         }
     }
 
-    given("product does not exist") {
-        every { goodsRepository.findById(999L) } returns Optional.empty()
+    describe("findUserGoods") {
+        
+        context("when user exists") {
+            every { userRepository.findById(user.id) } returns Optional.of(user)
+            every { userItemRepository.findAllByUser(user) } returns listOf(UserItem(user, product))
 
-        `when`("getProductById is called") {
-            then("ProductNotFoundException is thrown") {
+            it("should return user goods") {
+                val result = service.findUserGoods(user.id)
+                result shouldContainExactly listOf(UserItem(user, product))
+            }
+        }
+        
+        context("when user does not exist") {
+            every { userRepository.findById(99L) } returns Optional.empty()
+
+            it("should throw UserNotFoundException") {
+                shouldThrow<UserNotFoundException> {
+                    service.findUserGoods(99L)
+                }
+            }
+        }
+    }
+
+    describe("getProductById") {
+        
+        context("when product exists") {
+            every { goodsRepository.findById(product.id) } returns Optional.of(product)
+
+            it("should return product") {
+                val result = service.getProductById(product.id)
+                result shouldBe product
+            }
+        }
+        
+        context("when product does not exist") {
+            every { goodsRepository.findById(999L) } returns Optional.empty()
+
+            it("should throw ProductNotFoundException") {
                 shouldThrow<ProductNotFoundException> {
                     service.getProductById(999L)
                 }

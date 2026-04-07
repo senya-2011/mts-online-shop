@@ -9,24 +9,15 @@ import com.mts.online_shop.service.AuthService
 import com.mts.online_shop.security.JwtService
 import com.mts.online_shop.security.XmlUserDetailsService
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.core.spec.IsolationMode
-import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
-import io.mockk.verify
-import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.Authentication
-import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import java.util.Optional
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.crypto.password.PasswordEncoder
 
-class AuthServiceTest : BehaviorSpec({
-
-    isolationMode = IsolationMode.InstancePerLeaf
+class AuthServiceTest : DescribeSpec({
 
     val passwordEncoder = mockk<PasswordEncoder>()
     val xmlUserDetailsService = mockk<XmlUserDetailsService>()
@@ -34,36 +25,35 @@ class AuthServiceTest : BehaviorSpec({
     val userRepository = mockk<UserRepository>()
     val service = AuthService(passwordEncoder, xmlUserDetailsService, jwtService, userRepository)
 
-    given("credentials are correct") {
-        val authorities: MutableList<GrantedAuthority> = mutableListOf(SimpleGrantedAuthority("ROLE_USER"))
-        val userDetails = mockk<org.springframework.security.core.userdetails.UserDetails>()
-        every { userDetails.username } returns "user_1"
-        every { userDetails.password } returns "encodedPassword"
-        every { userDetails.authorities } returns authorities
-        every { xmlUserDetailsService.loadUserByUsername("User_1") } returns userDetails
-        every { xmlUserDetailsService.getUserIdByUsername("User_1") } returns 1L
-        every { passwordEncoder.matches("StrongPass123", "encodedPassword") } returns true
-        every { jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any()) } returns "test-token"
+    describe("authenticate") {
+        
+        context("when credentials are correct") {
+            val userDetails = mockk<UserDetails>()
+            every { userDetails.username } returns "user_1"
+            every { userDetails.password } returns "encodedPassword"
+            every { userDetails.authorities } returns listOf(SimpleGrantedAuthority("ROLE_USER"))
+            
+            every { xmlUserDetailsService.loadUserByUsername("User_1") } returns userDetails
+            every { xmlUserDetailsService.getUserIdByUsername("User_1") } returns 1L
+            every { passwordEncoder.matches("StrongPass123", "encodedPassword") } returns true
+            every { jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any()) } returns "test-token"
 
-        `when`("authenticate is called") {
-            val result = service.authenticate("User_1", "StrongPass123")
-
-            then("token is returned") {
+            it("should return token") {
+                val result = service.authenticate("User_1", "StrongPass123")
                 result shouldBe "test-token"
             }
         }
-    }
+        
+        context("when credentials are incorrect") {
+            val userDetails = mockk<UserDetails>()
+            every { userDetails.username } returns "user_1"
+            every { userDetails.password } returns "encodedPassword"
+            every { userDetails.authorities } returns listOf()
+            
+            every { xmlUserDetailsService.loadUserByUsername("user_1") } returns userDetails
+            every { passwordEncoder.matches("WrongPass123", "encodedPassword") } returns false
 
-    given("authentication fails") {
-        val userDetails = mockk<org.springframework.security.core.userdetails.UserDetails>()
-        every { userDetails.username } returns "user_1"
-        every { userDetails.password } returns "encodedPassword"
-        every { userDetails.authorities } returns mutableListOf()
-        every { xmlUserDetailsService.loadUserByUsername("user_1") } returns userDetails
-        every { passwordEncoder.matches("WrongPass123", "encodedPassword") } returns false
-
-        `when`("authenticate is called") {
-            then("InvalidCredentialsException is thrown") {
+            it("should throw InvalidCredentialsException") {
                 shouldThrow<InvalidCredentialsException> {
                     service.authenticate("user_1", "WrongPass123")
                 }
@@ -71,35 +61,32 @@ class AuthServiceTest : BehaviorSpec({
         }
     }
 
-    given("registration is called with existing user") {
-        every { xmlUserDetailsService.userExists("new_user") } returns true
+    describe("register") {
+        
+        context("when user already exists") {
+            every { xmlUserDetailsService.userExists("new_user") } returns true
 
-        `when`("register is called") {
-            then("UserAlreadyExistsException is thrown") {
+            it("should throw UserAlreadyExistsException") {
                 shouldThrow<UserAlreadyExistsException> {
                     service.register("new_user", "new@mail.ru", "StrongPass123", "Name")
                 }
             }
         }
-    }
+        
+        context("when email has no at-sign") {
+            every { xmlUserDetailsService.userExists("new_user") } returns false
 
-    given("email has no at-sign") {
-        every { xmlUserDetailsService.userExists("new_user") } returns false
-
-        `when`("register is called") {
-            then("BadRequestException is thrown") {
+            it("should throw BadRequestException") {
                 shouldThrow<BadRequestException> {
                     service.register("new_user", "invalidemail", "StrongPass123", "Name")
                 }
             }
         }
-    }
+        
+        context("when email has no dot in domain") {
+            every { xmlUserDetailsService.userExists("new_user") } returns false
 
-    given("email has no dot in domain") {
-        every { xmlUserDetailsService.userExists("new_user") } returns false
-
-        `when`("register is called") {
-            then("BadRequestException is thrown") {
+            it("should throw BadRequestException") {
                 shouldThrow<BadRequestException> {
                     service.register("new_user", "user@nodot", "StrongPass123", "Name")
                 }
