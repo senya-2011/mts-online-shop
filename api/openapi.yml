@@ -806,6 +806,23 @@ components:
           format: double
           example: 399.99
 
+    PaymentRequest:
+      type: object
+      required:
+        - cardNumber
+        - expiresAt
+        - cvv
+      properties:
+        cardNumber:
+          type: string
+          example: "1234123412341234"
+        expiresAt:
+          type: string
+          example: "12/30"
+        cvv:
+          type: string
+          example: "111"
+
   securitySchemes:
     bearerAuth:
       type: http
