@@ -40,10 +40,10 @@ class AuthServiceTest : BehaviorSpec({
         every { userDetails.username } returns "user_1"
         every { userDetails.password } returns "encodedPassword"
         every { userDetails.authorities } returns authorities
-        every { xmlUserDetailsService.loadUserByUsername("user_1") } returns userDetails
-        every { xmlUserDetailsService.getUserIdByUsername("user_1") } returns 1L
-        every { passwordEncoder.matches("password", "encodedPassword") } returns true
-        every { jwtService.generateToken(1L, "user_1", setOf("ROLE_USER"), any()) } returns "test-token"
+        every { xmlUserDetailsService.loadUserByUsername("User_1") } returns userDetails
+        every { xmlUserDetailsService.getUserIdByUsername("User_1") } returns 1L
+        every { passwordEncoder.matches("StrongPass123", "encodedPassword") } returns true
+        every { jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any()) } returns "test-token"
 
         `when`("authenticate is called") {
             val result = service.authenticate("User_1", "StrongPass123")
@@ -55,8 +55,12 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("authentication fails") {
-        every { xmlUserDetailsService.loadUserByUsername("user_1") } returns mockk<org.springframework.security.core.userdetails.UserDetails>()
-        every { passwordEncoder.matches("WrongPass123", any()) } returns false
+        val userDetails = mockk<org.springframework.security.core.userdetails.UserDetails>()
+        every { userDetails.username } returns "user_1"
+        every { userDetails.password } returns "encodedPassword"
+        every { userDetails.authorities } returns mutableListOf()
+        every { xmlUserDetailsService.loadUserByUsername("user_1") } returns userDetails
+        every { passwordEncoder.matches("WrongPass123", "encodedPassword") } returns false
 
         `when`("authenticate is called") {
             then("InvalidCredentialsException is thrown") {
@@ -67,9 +71,8 @@ class AuthServiceTest : BehaviorSpec({
         }
     }
 
-    given("registration is called") {
+    given("registration is called with existing user") {
         every { xmlUserDetailsService.userExists("new_user") } returns true
-        every { userRepository.save(any()) } returns mockk<User>()
 
         `when`("register is called") {
             then("UserAlreadyExistsException is thrown") {

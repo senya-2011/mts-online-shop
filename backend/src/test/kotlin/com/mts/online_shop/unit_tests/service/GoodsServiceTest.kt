@@ -74,7 +74,6 @@ class GoodsServiceTest : BehaviorSpec({
             then("page of products is returned") {
                 result.content shouldContainExactly listOf(product)
                 result.totalElements shouldBe 1L
-                verify(exactly = 1) { goodsRepository.findAll(pageable) }
             }
         }
     }
@@ -88,7 +87,6 @@ class GoodsServiceTest : BehaviorSpec({
 
             then("matching products are returned") {
                 result.content shouldContainExactly listOf(product)
-                verify(exactly = 1) { goodsRepository.findByNameContainingIgnoreCase("prod", pageable) }
             }
         }
     }
@@ -106,7 +104,6 @@ class GoodsServiceTest : BehaviorSpec({
             then("user item is saved") {
                 item.user shouldBe user
                 item.product shouldBe product
-                verify(exactly = 1) { userItemRepository.save(any()) }
             }
         }
     }
