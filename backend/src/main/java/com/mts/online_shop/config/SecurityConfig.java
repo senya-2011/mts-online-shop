@@ -1,6 +1,8 @@
 package com.mts.online_shop.config;
 
 import com.mts.online_shop.security.CustomBasicAuthFilter;
+import com.mts.online_shop.security.JwtAuthenticationFilter;
+import com.mts.online_shop.security.PrivilegeService;
 import com.mts.online_shop.security.XmlUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,11 +13,17 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authentication.jaas.JaasAuthenticationProvider;
+import org.springframework.security.authentication.jaas.memory.InMemoryConfiguration;
+import javax.security.auth.login.AppConfigurationEntry;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
@@ -28,28 +36,66 @@ public class SecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
-    public XmlUserDetailsService userDetailsService() {
-        return new XmlUserDetailsService();
+    public XmlUserDetailsService userDetailsService(PrivilegeService privilegeService) {
+        return new XmlUserDetailsService(privilegeService);
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return NoOpPasswordEncoder.getInstance();
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(XmlUserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return new ProviderManager(provider);
+    public AuthenticationManager authenticationManager() {
+        // Настройка JAAS Authentication Provider с программной конфигурацией
+        JaasAuthenticationProvider jaasProvider = new JaasAuthenticationProvider();
+        jaasProvider.setLoginContextName("MTSOnlineShop");
+        
+        // Создаем JAAS конфигурацию через Resource (jaas.conf файл)
+        Resource jaasConfigResource = new ClassPathResource("jaas.conf");
+        jaasProvider.setLoginConfig(jaasConfigResource);
+        
+        jaasProvider.setAuthorityGranters(new org.springframework.security.authentication.jaas.AuthorityGranter[] {
+            principal -> {
+                // Извлекаем роли из JAAS Principal
+                if (principal instanceof com.mts.online_shop.security.jaas.XmlUserPrincipal) {
+                    com.mts.online_shop.security.jaas.XmlUserPrincipal xmlPrincipal = 
+                        (com.mts.online_shop.security.jaas.XmlUserPrincipal) principal;
+                    return xmlPrincipal.getUser().getRoles();
+                }
+                return java.util.Collections.emptySet();
+            }
+        });
+        try {
+            jaasProvider.afterPropertiesSet();
+        } catch (Exception e) {
+            log.error("Failed to initialize JAAS provider: {}", e.getMessage(), e);
+            throw new RuntimeException("JAAS initialization failed", e);
+        }
+        return new ProviderManager(jaasProvider);
+    }
+
+    private javax.security.auth.login.Configuration createJaasConfiguration() {
+        Map<String, String> options = new java.util.HashMap<>();
+        options.put("usersFile", "classpath:users.xml");
+        options.put("debug", "true");
+        
+        javax.security.auth.login.AppConfigurationEntry entry = new javax.security.auth.login.AppConfigurationEntry(
+            "com.mts.online_shop.security.jaas.XmlUserLoginModule",
+            javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+            options
+        );
+        
+        return new org.springframework.security.authentication.jaas.memory.InMemoryConfiguration(
+            java.util.Map.of("MTSOnlineShop", new javax.security.auth.login.AppConfigurationEntry[] { entry })
+        );
     }
 
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
             response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Требуется авторизация\"}");
         };
     }
@@ -58,46 +104,37 @@ public class SecurityConfig {
     public AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
             response.setStatus(HttpStatus.FORBIDDEN.value());
-            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
             response.getWriter().write("{\"error\":\"Forbidden\",\"message\":\"Недостаточно прав\"}");
         };
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationEntryPoint entryPoint, AccessDeniedHandler accessDeniedHandler, CustomBasicAuthFilter customBasicAuthFilter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationEntryPoint entryPoint, AccessDeniedHandler accessDeniedHandler, CustomBasicAuthFilter customBasicAuthFilter, JwtAuthenticationFilter jwtAuthenticationFilter, XmlUserDetailsService userDetailsService) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .exceptionHandling(ex -> {
                 ex.authenticationEntryPoint(entryPoint);
                 ex.accessDeniedHandler(accessDeniedHandler);
             })
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(customBasicAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .userDetailsService(userDetailsService())
+            .userDetailsService(userDetailsService)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/products", "/products/**").permitAll()
-                .requestMatchers("/auth/register").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                // СПЕЦИФИЧНЫЕ пути СНАЧАЛА (cart) - порядок ВАЖЕН!
-                .requestMatchers("/cart/add/**").hasAuthority("PRIVILEGE_WRITE_CART")
-                .requestMatchers("/cart/clear/**").hasAuthority("PRIVILEGE_CLEAR_CART")
-                .requestMatchers("/cart/**").hasAuthority("PRIVILEGE_READ_CART")
-                // СПЕЦИФИЧНЫЕ пути СНАЧАЛА (orders) - порядок ВАЖЕН!
-                .requestMatchers("/orders/create").hasAuthority("PRIVILEGE_WRITE_ORDERS")
-                .requestMatchers("/orders/process/**").hasAuthority("PRIVILEGE_PROCESS_ORDERS")
-                .requestMatchers("/orders/cancel/**").hasAuthority("PRIVILEGE_CANCEL_ORDERS")
-                .requestMatchers("/orders/**").hasAuthority("PRIVILEGE_READ_ORDERS")
-                // Admin paths - специфичные сначала
-                .requestMatchers("/users/create").hasAuthority("PRIVILEGE_WRITE_USERS")
-                .requestMatchers("/users/delete/**").hasAuthority("PRIVILEGE_DELETE_USERS")
-                .requestMatchers("/users/**").hasAuthority("PRIVILEGE_READ_USERS")
-                .requestMatchers("/admin/products/delete/**").hasAuthority("PRIVILEGE_DELETE_PRODUCTS")
-                .requestMatchers("/admin/products/**").hasAuthority("PRIVILEGE_WRITE_PRODUCTS")
-                .requestMatchers("/admin/config/update").hasAuthority("PRIVILEGE_WRITE_SYSTEM_CONFIG")
-                .requestMatchers("/admin/config/**").hasAuthority("PRIVILEGE_READ_SYSTEM_CONFIG")
-                // Other paths
-                .requestMatchers("/payments/**").hasAuthority("PRIVILEGE_PROCESS_PAYMENTS")
-                .requestMatchers("/reports/**").hasAuthority("PRIVILEGE_VIEW_REPORTS")
-                .requestMatchers("/transactions/**").hasAuthority("PRIVILEGE_PROCESS_ORDERS")
+                .requestMatchers("/api/products", "/api/products/**").permitAll()
+                .requestMatchers("/api/auth/login").permitAll()
+                .requestMatchers("/api/auth/register").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/swagger-ui/**", "/api/v3/api-docs/**", "/api/swagger-ui.html", "/api/swagger-ui/**").permitAll()
+                // Cart - USER and ADMIN
+                .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
+                // Orders - USER and ADMIN
+                .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
+                // Admin only
+                .requestMatchers("/api/users/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/payments/**").hasRole("ADMIN")
+                .requestMatchers("/api/reports/**").hasRole("ADMIN")
+                .requestMatchers("/api/transactions/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             );
         return http.build();

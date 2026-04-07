@@ -52,5 +52,19 @@ public class MailSimulator {
             log.info("Order cancellation sent successfully");
         }
     }
+
+    public void sendOrderCancelledEmail(String toEmail, Long orderId, BigDecimal totalPrice) {
+        if (toEmail.equals("artemdab228@mail.ru")) {
+            String body = "Hello!\n\nYour order #" + orderId + " has been cancelled.\nRefunded amount: " + totalPrice + "\n\nRegards,\nMTS demo Online Shop";
+
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(from);
+            message.setTo(toEmail);
+            message.setSubject("Order Cancelled - #" + orderId);
+            message.setText(body);
+
+            mailSender.send(message);
+        }
+    }
 }
 

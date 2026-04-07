@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/changeset/008-add-timestamps-to-orders.yml
   - include:
       file: db/changelog/changeset/009-add-role-to-users.yml
+  - include:
+      file: db/changelog/changeset/005-add-deleted-to-goods.yml

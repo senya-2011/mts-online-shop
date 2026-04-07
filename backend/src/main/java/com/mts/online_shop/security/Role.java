@@ -12,20 +12,6 @@ public enum Role {
         Privilege.PROCESS_PAYMENTS, Privilege.VIEW_REPORTS
     )),
     
-    MANAGER(Set.of(
-        Privilege.READ_PRODUCTS,
-        Privilege.READ_ORDERS, Privilege.WRITE_ORDERS, Privilege.PROCESS_ORDERS, Privilege.CANCEL_ORDERS,
-        Privilege.READ_CART, Privilege.WRITE_CART, Privilege.CLEAR_CART,
-        Privilege.VIEW_REPORTS
-    )),
-    
-    OPERATOR(Set.of(
-        Privilege.READ_PRODUCTS,
-        Privilege.READ_ORDERS, Privilege.PROCESS_ORDERS,
-        Privilege.READ_CART, Privilege.CLEAR_CART,
-        Privilege.VIEW_REPORTS
-    )),
-    
     CUSTOMER(Set.of(
         Privilege.READ_PRODUCTS,
         Privilege.READ_ORDERS, Privilege.WRITE_ORDERS, Privilege.CANCEL_ORDERS,

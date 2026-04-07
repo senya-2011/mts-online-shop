@@ -58,7 +58,7 @@ public class TransactionalOrderService {
         User user = userOpt.get();
 
         // 2. Получаем товары из корзины
-        List<UserItem> items = userItemRepository.findAllByUser_Id(userId);
+        List<UserItem> items = userItemRepository.findByUser_Id(userId);
         if (items.isEmpty()) {
             throw new EmptyCartException("Cart is empty");
         }
@@ -119,7 +119,7 @@ public class TransactionalOrderService {
         order.setUpdatedAt(new Date());
         orderRepository.save(order);
 
-        // 4. Возвращаем товары в корзину (в реальном приложении здесь была бы логика возврата денег)
+        // 4. Возвращаем товары в корзину 
         // Для упрощения просто отправляем уведомление
         mailSimulator.sendOrderCancellation(order.getUser().getEmail(), order.getOrderNumber());
     }

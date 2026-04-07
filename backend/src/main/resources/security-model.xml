@@ -7,38 +7,26 @@
             <privileges>
                 <privilege>USER_MANAGE</privilege>
                 <privilege>PRODUCT_MANAGE</privilege>
+                <privilege>PRODUCT_VIEW</privilege>
                 <privilege>ORDER_VIEW_ALL</privilege>
                 <privilege>ORDER_MANAGE_ALL</privilege>
+                <privilege>ORDER_OWN_MANAGE</privilege>
                 <privilege>CART_MANAGE_ALL</privilege>
+                <privilege>CART_OWN_MANAGE</privilege>
                 <privilege>PAYMENT_PROCESS</privilege>
+                <privilege>PAYMENT_OWN</privilege>
+                <privilege>PROFILE_OWN_MANAGE</privilege>
                 <privilege>SYSTEM_CONFIG</privilege>
             </privileges>
         </role>
         
-        <role id="MANAGER" description="Менеджер магазина">
-            <privileges>
-                <privilege>PRODUCT_MANAGE</privilege>
-                <privilege>ORDER_VIEW_ALL</privilege>
-                <privilege>ORDER_PROCESS</privilege>
-                <privilege>PAYMENT_PROCESS</privilege>
-                <privilege>REPORT_VIEW</privilege>
-            </privileges>
-        </role>
-        
-        <role id="CUSTOMER" description="Покупатель">
+        <role id="USER" description="Обычный пользователь">
             <privileges>
                 <privilege>PRODUCT_VIEW</privilege>
                 <privilege>CART_OWN_MANAGE</privilege>
                 <privilege>ORDER_OWN_MANAGE</privilege>
                 <privilege>PAYMENT_OWN</privilege>
                 <privilege>PROFILE_OWN_MANAGE</privilege>
-            </privileges>
-        </role>
-        
-        <role id="GUEST" description="Гость (неавторизованный пользователь)">
-            <privileges>
-                <privilege>PRODUCT_VIEW</privilege>
-                <privilege>USER_REGISTER</privilege>
             </privileges>
         </role>
     </roles>

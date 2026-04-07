@@ -18,4 +18,12 @@ public interface BankClient {
      * @throws com.mts.online_shop.exception.InvalidPaymentDataException при ошибке валидации или отказе банка
      */
     boolean doPayment(PaymentRequest paymentRequest, BigDecimal amount);
+    
+    /**
+     * Выполнить возврат средств.
+     *
+     * @param amount сумма к возврату
+     * @return true если возврат выполнен успешно
+     */
+    boolean refundPayment(BigDecimal amount);
 }

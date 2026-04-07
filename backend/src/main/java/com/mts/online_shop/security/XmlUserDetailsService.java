@@ -37,7 +37,13 @@ public class XmlUserDetailsService implements UserDetailsService {
     private static final Logger log = LoggerFactory.getLogger(XmlUserDetailsService.class);
     private static final String XML_FILE_NAME = "users.xml";
     private final Map<String, UserDetails> users = new HashMap<>();
+    private final Map<String, Long> usernameToId = new HashMap<>();
+    private final PrivilegeService privilegeService;
     private Path xmlFilePath;
+
+    public XmlUserDetailsService(PrivilegeService privilegeService) {
+        this.privilegeService = privilegeService;
+    }
 
     @PostConstruct
     public void init() {
@@ -82,6 +88,8 @@ public class XmlUserDetailsService implements UserDetailsService {
                 Element userElement = (Element) userNodes.item(i);
                 
                 String username = userElement.getAttribute("username");
+                String userIdStr = userElement.getAttribute("id");
+                Long userId = (userIdStr != null && !userIdStr.trim().isEmpty()) ? Long.parseLong(userIdStr.trim()) : null;
                 String password = userElement.getAttribute("password");
                 boolean enabled = Boolean.parseBoolean(userElement.getAttribute("enabled"));
                 
@@ -92,27 +100,26 @@ public class XmlUserDetailsService implements UserDetailsService {
                     roles.add(rolesList.item(j).getTextContent().trim().toUpperCase());
                 }
                 
-                // Convert roles to authorities (privileges)
+                // Convert roles to authorities
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                 for (String role : roles) {
-                    try {
-                        Role userRole = Role.valueOf(role);
-                        for (Privilege privilege : userRole.getPrivileges()) {
-                            authorities.add(new SimpleGrantedAuthority("PRIVILEGE_" + privilege.name()));
-                        }
-                    } catch (IllegalArgumentException e) {
-                        log.warn("Unknown role '{}' for user {}", role, username);
-                    }
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
                 }
                 
+                // Use userId as username for principal
+                String principal = userId != null ? userId.toString() : username;
+                
                 UserDetails userDetails = User.builder()
-                        .username(username)
+                        .username(principal)
                         .password(password)
                         .disabled(!enabled)
                         .authorities(authorities)
                         .build();
                 
                 users.put(username.toLowerCase(), userDetails);
+                if (userId != null) {
+                    usernameToId.put(username.toLowerCase(), userId);
+                }
             }
             
             log.info("Successfully loaded {} users from XML", users.size());
@@ -135,8 +142,12 @@ public class XmlUserDetailsService implements UserDetailsService {
             
             Element root = doc.getDocumentElement();
             
+            // Generate new ID
+            Long newUserId = generateNewUserId();
+            
             // Create new user element
             Element newUser = doc.createElement("user");
+            newUser.setAttribute("id", newUserId.toString());
             newUser.setAttribute("username", username);
             newUser.setAttribute("password", password);
             newUser.setAttribute("enabled", "true");
@@ -165,24 +176,39 @@ public class XmlUserDetailsService implements UserDetailsService {
             // Reload users
             loadUsersFromXml();
             
-            log.info("Saved new user: {} with roles {}", username, roles);
+            log.info("Saved new user: {} with ID {} and roles {}", username, newUserId, roles);
             
         } catch (Exception e) {
             log.error("Failed to save user to XML", e);
             throw new RuntimeException("Failed to save user to XML", e);
         }
     }
+    
+    private Long generateNewUserId() {
+        // Find max existing ID and add 1
+        Long maxId = usernameToId.values().stream()
+                .max(Long::compareTo)
+                .orElse(0L);
+        return maxId + 1;
+    }
 
     public boolean userExists(String username) {
         return users.containsKey(username.toLowerCase());
     }
 
+    public Long getUserIdByUsername(String username) {
+        return usernameToId.get(username.toLowerCase());
+    }
+
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        log.info("Attempting to load user: {}. Available users: {}", username, users.keySet());
         UserDetails user = users.get(username.toLowerCase());
         if (user == null) {
+            log.warn("User not found: {}. Available users: {}", username, users.keySet());
             throw new UsernameNotFoundException("User not found: " + username);
         }
+        log.info("User found: {}", username);
         return user;
     }
 }

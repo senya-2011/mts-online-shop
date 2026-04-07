@@ -31,9 +31,18 @@ public class PrivilegeService {
                 rolePrivileges.size(), privilegeDescriptions.size());
     }
     
+    public boolean hasPrivilege(Set<String> userRoles, String privilege) {
+        for (String role : userRoles) {
+            if (rolePrivileges.getOrDefault(role, Collections.emptySet()).contains(privilege)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     public boolean hasPrivilege(String username, String privilege) {
-        // В реальном приложении здесь была бы проверка ролей пользователя
-        // Для примера считаем, что все аутентифицированные пользователи имеют базовые привилегии
+        // Получить роли пользователя из XmlUserDetailsService или из контекста
+        // Для простоты, пока оставим true, но нужно реализовать
         return true;
     }
     

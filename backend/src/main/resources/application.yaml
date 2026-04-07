@@ -32,7 +32,7 @@ spring:
 server:
   port: ${MTS_PORT:8080}
   servlet:
-    context-path: ${MTS_CONTEXT_PATH:/api}
+    context-path: ${MTS_CONTEXT_PATH:}
 
 jwt:
   secret: ${MTS_JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
@@ -49,9 +49,9 @@ logging:
 
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    path: /api/v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: /api/swagger-ui.html
     enabled: true
 
 mail:

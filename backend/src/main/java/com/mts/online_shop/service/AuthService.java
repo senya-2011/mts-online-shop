@@ -3,15 +3,23 @@ package com.mts.online_shop.service;
 import com.mts.online_shop.exception.BadRequestException;
 import com.mts.online_shop.exception.InvalidCredentialsException;
 import com.mts.online_shop.exception.UserAlreadyExistsException;
+import com.mts.online_shop.model.User;
+import com.mts.online_shop.repository.UserRepository;
+import com.mts.online_shop.security.JwtService;
 import com.mts.online_shop.security.XmlUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -23,43 +31,77 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
     private final XmlUserDetailsService xmlUserDetailsService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
 
     public AuthService(PasswordEncoder passwordEncoder, 
-                      XmlUserDetailsService xmlUserDetailsService) {
+                      XmlUserDetailsService xmlUserDetailsService,
+                      JwtService jwtService,
+                      UserRepository userRepository) {
         this.passwordEncoder = passwordEncoder;
         this.xmlUserDetailsService = xmlUserDetailsService;
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     public String authenticate(String login, String password) {
-        // Для HTTP Basic аутентификации не нужен JWT
-        // Проверяем только существование пользователя
-        try {
-            xmlUserDetailsService.loadUserByUsername(login);
-            log.info("User authenticated successfully: {}", login);
-            return "authenticated";
-        } catch (Exception e) {
-            log.warn("Authentication failed for user {}: {}", login, e.getMessage());
-            throw new InvalidCredentialsException("Неверный логин или пароль");
+        UserDetails userDetails = xmlUserDetailsService.loadUserByUsername(login);
+        
+        // BCryptPasswordEncoder comparison
+        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
+            throw new InvalidCredentialsException("Invalid credentials");
         }
+        
+        Long userId = xmlUserDetailsService.getUserIdByUsername(login);
+        if (userId == null) {
+            throw new InvalidCredentialsException("User not found");
+        }
+        
+        Set<String> roles = userDetails.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().replace("ROLE_", ""))
+                .collect(Collectors.toSet());
+        
+        return jwtService.generateToken(userId, login, roles, Collections.emptyMap());
     }
 
+    @Transactional
     public Long register(String login, String email, String password, String name) {
         String normalizedLogin = normalizeLogin(login);
         String normalizedEmail = normalizeEmail(email);
         String rawPassword = normalizePassword(password);
 
+        log.info("Starting registration for user: {}", normalizedLogin);
+
         if (xmlUserDetailsService.userExists(normalizedLogin)) {
-            throw new UserAlreadyExistsException("Пользователь с таким логином уже существует");
+            throw new UserAlreadyExistsException("User with login already exists");
         }
 
-        String encodedPassword = passwordEncoder.encode(rawPassword);
+        // Hash password before saving
+        String hashedPassword = passwordEncoder.encode(rawPassword);
         
-        // Сохраняем в XML
-        xmlUserDetailsService.saveUser(normalizedLogin, encodedPassword, Collections.singletonList("CUSTOMER"));
+        // Save to XML with hashed password
+        xmlUserDetailsService.saveUser(normalizedLogin, hashedPassword, Collections.singletonList("USER"));
+        log.info("User saved to XML with hashed password: {}", normalizedLogin);
         
-        log.info("Registered user login={} email={}", normalizedLogin, normalizedEmail);
+        // Get assigned ID from XML
+        Long userId = xmlUserDetailsService.getUserIdByUsername(normalizedLogin);
+        log.info("Retrieved userId from XML: {} for user: {}", userId, normalizedLogin);
         
-        return 1L; // Фиктивный ID
+        // Create user in database for business logic
+        User dbUser = new User();
+        dbUser.setId(userId); // Use same ID
+        dbUser.setLogin(normalizedLogin);
+        dbUser.setEmail(normalizedEmail);
+        dbUser.setName(name);
+        dbUser.setPasswordHash(hashedPassword); // Save hashed password
+        dbUser.setRole("USER");
+        
+        User savedUser = userRepository.save(dbUser);
+        log.info("User saved to database: {} with ID: {}", savedUser.getLogin(), savedUser.getId());
+        
+        log.info("Registration completed for user: {} with ID: {}", normalizedLogin, userId);
+        
+        return userId;
     }
 
     private String normalizeLogin(String login) {
@@ -93,5 +135,27 @@ public class AuthService {
             throw new BadRequestException("Пароль должен быть длиной от 8 до 72 символов");
         }
         return normalized;
+    }
+
+    // ===== АДМИН-МЕТОДЫ для управления пользователями =====
+
+    public List<User> getAllUsers() {
+        log.debug("getAllUsers (admin)");
+        return userRepository.findAll();
+    }
+
+    public User getUserById(Long userId) {
+        log.debug("getUserById id={}", userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        log.info("deleteUser id={}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
+        userRepository.delete(user);
+        log.info("User deleted id={}", userId);
     }
 }

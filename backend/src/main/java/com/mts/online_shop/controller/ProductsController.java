@@ -1,26 +1,24 @@
 package com.mts.online_shop.controller;
 
-import com.mts.online_shop.api.ProductsApi;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.mts.online_shop.mapper.ProductMapper;
 import com.mts.online_shop.model.ProductListResponse;
 import com.mts.online_shop.model.Product;
 import com.mts.online_shop.service.GoodsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-<<<<<<< HEAD
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-=======
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
->>>>>>> 8a4a50cbb9f97fde39a6ea063563c546e8320327
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
-@SecurityRequirement(name = "basicAuth")
-public class ProductsController implements ProductsApi {
+@RequestMapping("/api/products")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Products", description = "Просмотр товаров")
+public class ProductsController {
 
     private static final Logger log = LoggerFactory.getLogger(ProductsController.class);
     private final GoodsService goodsService;
@@ -31,8 +29,11 @@ public class ProductsController implements ProductsApi {
         this.productMapper = productMapper;
     }
 
-    @Override
-    public ResponseEntity<ProductListResponse> getProducts(Integer page, Integer size, String search) {
+    @GetMapping
+    @io.swagger.v3.oas.annotations.Operation(summary = "Получить список товаров", description = "Возвращает список всех доступных товаров с пагинацией")
+    public ResponseEntity<ProductListResponse> getProducts(@RequestParam(required = false) Integer page, 
+                                                         @RequestParam(required = false) Integer size, 
+                                                         @RequestParam(required = false) String search) {
         log.debug("GET products page={} size={} search={}", page, size, search);
         Pageable pageable = PageRequest.of(page != null ? page : 0, size != null ? size : 20);
         var productsPage = goodsService.findProducts(pageable, search);
@@ -46,8 +47,9 @@ public class ProductsController implements ProductsApi {
         return ResponseEntity.ok(response);
     }
 
-    @Override
-    public ResponseEntity<Product> getProductById(Long productId) {
+    @GetMapping("/{productId}")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Получить товар по ID", description = "Возвращает детальную информацию о товаре по его уникальному идентификатору")
+    public ResponseEntity<Product> getProductById(@PathVariable Long productId) {
         log.debug("GET product id={}", productId);
         return ResponseEntity.ok(productMapper.toDto(goodsService.getProductById(productId)));
     }

@@ -13,12 +13,8 @@ import java.util.List;
 public interface UserItemRepository extends JpaRepository<UserItem, Long> {
 
     List<UserItem> findByUser_Id(Long userId);
-<<<<<<< HEAD
-    List<UserItem> findAllByUser_Id(Long userId);
-=======
 
     Page<UserItem> findByUser_Id(Long userId, Pageable pageable);
->>>>>>> 8a4a50cbb9f97fde39a6ea063563c546e8320327
     java.util.Optional<UserItem> findByIdAndUser_Id(Long itemId, Long userId);
     void deleteAllByUser(User user);
     void deleteAllByUser_Id(Long userId);

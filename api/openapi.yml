@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: MTS Online Shop
   version: 0.1.0
-  description: REST API интернет-магазина. Каталог товаров доступен без авторизации; корзина и заказы требуют Bearer JWT.
+  description: REST API интернет-магазина
 
 servers:
   - url: http://localhost:8080/api
@@ -17,6 +17,12 @@ tags:
     description: Корзина текущего пользователя
   - name: Orders
     description: Заказы и оплата
+  - name: Admin Users
+    description: Управление пользователями (только для ADMIN)
+  - name: Admin Products
+    description: Управление товарами (только для ADMIN)
+  - name: Admin Orders
+    description: Управление заказами (только для ADMIN)
 
 paths:
   /auth/login:
@@ -38,20 +44,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LoginResponse"
-              example:
-                accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        "401":
-          description: Неверный логин или пароль
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
   /auth/register:
     post:
@@ -72,26 +64,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: "Пользователь зарегистрирован"
-        "400":
-          description: Неверные данные запроса
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Логин или email уже заняты
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
   /products:
     get:
@@ -99,54 +71,22 @@ paths:
       tags: [Products]
       operationId: getProducts
       security: []
-      parameters:
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-            default: 0
-          description: Номер страницы (0-based)
-        - name: size
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-            maximum: 100
-            default: 20
-          description: Размер страницы
-        - name: search
-          in: query
-          required: false
-          schema:
-            type: string
-          description: Поиск по названию товара (подстрока, без учёта регистра)
       responses:
         "200":
-          description: Успешный ответ со списком товаров
+          description: Список товаров
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductListResponse"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
-  /products/{productId}:
+  /products/{id}:
     get:
-      summary: Получить товар по идентификатору
+      summary: Получить информацию о товаре
       tags: [Products]
       operationId: getProductById
       security: []
       parameters:
-        - name: productId
+        - name: id
           in: path
           required: true
           schema:
@@ -154,23 +94,11 @@ paths:
             format: int64
       responses:
         "200":
-          description: Данные товара
+          description: Информация о товаре
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Product"
-        "404":
-          description: Товар не найден
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
   /cart:
     get:
@@ -179,26 +107,6 @@ paths:
       operationId: getCart
       security:
         - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            minimum: 0
-            default: 0
-          description: Номер страницы (0-based)
-        - name: size
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int32
-            minimum: 1
-            maximum: 100
-            default: 20
-          description: Размер страницы
       responses:
         "200":
           description: Корзина пользователя
@@ -206,45 +114,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CartResponse"
-        "401":
-          description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    delete:
-      summary: Очистить корзину
-      tags: [Cart]
-      operationId: clearCart
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Корзина очищена
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: "Корзина успешно очищена"
-        "401":
-          description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
   /cart/items:
     post:
@@ -266,36 +135,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: "Товар добавлен в корзину"
-        "400":
-          description: Неверный запрос (например, неверный productId)
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "401":
-          description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "404":
-          description: Товар не найден
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
   /cart/items/{itemId}:
     delete:
-      summary: Удалить позицию из корзины
+      summary: Удалить товар из корзины
       tags: [Cart]
       operationId: removeCartItem
       security:
@@ -309,37 +152,85 @@ paths:
             format: int64
       responses:
         "200":
-          description: Позиция удалена
+          description: Товар удален из корзины
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: "Позиция удалена"
-        "401":
-          description: Не авторизован
+
+  /cart/clear:
+    delete:
+      summary: Очистить корзину
+      tags: [Cart]
+      operationId: clearCart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Корзина очищена
           content:
-            application/problem+json:
+            application/json:
               schema:
-                $ref: "#/components/schemas/Problem"
-        "404":
-          description: Позиция в корзине не найдена
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+                $ref: "#/components/schemas/MessageResponse"
 
   /orders:
     get:
-      summary: Список заказов текущего пользователя
+      summary: Получить заказы текущего пользователя
       tags: [Orders]
       operationId: getOrders
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+
+  /orders/create:
+    post:
+      summary: Создать заказ с оплатой (транзакция)
+      tags: [Orders]
+      operationId: createOrder
+      security:
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Заказ создан и оплачен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderResponse"
+
+  /orders/{orderId}/cancel:
+    post:
+      summary: Отменить заказ с возвратом денег
+      tags: [Orders]
+      operationId: cancelOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Заказ отменен, деньги возвращены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # Admin APIs
+  /admin/users:
+    get:
+      summary: Получить список всех пользователей
+      tags: [Admin Users]
+      operationId: adminGetUsers
       security:
         - bearerAuth: []
       parameters:
@@ -351,7 +242,6 @@ paths:
             format: int32
             minimum: 0
             default: 0
-          description: Номер страницы (0-based)
         - name: size
           in: query
           required: false
@@ -361,71 +251,144 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
-          description: Размер страницы
       responses:
         "200":
-          description: Список заказов
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+
+  /admin/users/{userId}:
+    get:
+      summary: Получить информацию о пользователе
+      tags: [Admin Users]
+      operationId: adminGetUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Информация о пользователе
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+        "404":
+          description: Пользователь не найден
+
+  /admin/users/{userId}/cart:
+    get:
+      summary: Получить корзину пользователя
+      tags: [Admin Users]
+      operationId: adminGetUserCart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Корзина пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartResponse"
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+        "404":
+          description: Пользователь не найден
+
+  /admin/users/{userId}/cart/clear:
+    delete:
+      summary: Очистить корзину пользователя
+      tags: [Admin Users]
+      operationId: adminClearUserCart
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Корзина пользователя очищена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+        "404":
+          description: Пользователь не найден
+
+  /admin/orders:
+    get:
+      summary: Получить все заказы всех пользователей
+      tags: [Admin Orders]
+      operationId: adminGetAllOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Список всех заказов
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/OrderListResponse"
         "401":
           description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-    post:
-      summary: Создать заказ из текущей корзины
-      tags: [Orders]
-      operationId: createOrder
-      security:
-        - bearerAuth: []
-      responses:
-        "201":
-          description: Заказ создан
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: "Заказ создан"
-        "400":
-          description: Неверный запрос (например, пустая корзина)
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "401":
-          description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Конфликт (например, корзина уже оформлена)
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Недостаточно прав (только ADMIN)
 
-  /orders/{orderId}:
-    get:
-      summary: Получить заказ по идентификатору
-      tags: [Orders]
-      operationId: getOrderById
+  /admin/orders/{orderId}/cancel:
+    post:
+      summary: Отменить любой заказ с возвратом
+      tags: [Admin Orders]
+      operationId: adminCancelOrder
       security:
         - bearerAuth: []
       parameters:
@@ -437,45 +400,89 @@ paths:
             format: int64
       responses:
         "200":
-          description: Данные заказа
+          description: Заказ отменен, деньги возвращены
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrderResponse"
+                $ref: "#/components/schemas/MessageResponse"
         "401":
           description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "403":
-          description: Нет доступа к этому заказу
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: Недостаточно прав (только ADMIN)
         "404":
           description: Заказ не найден
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
 
-  /orders/{orderId}/payment:
-    post:
-      summary: Оплатить заказ
-      tags: [Orders]
-      operationId: payOrder
+  /admin/products:
+    get:
+      summary: Получить все товары (админ)
+      tags: [Admin Products]
+      operationId: adminGetProducts
       security:
         - bearerAuth: []
       parameters:
-        - name: orderId
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Список товаров
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+    post:
+      summary: Создать новый товар
+      tags: [Admin Products]
+      operationId: adminCreateProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductRequest"
+      responses:
+        "201":
+          description: Товар создан
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Неверные данные товара
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+
+  /admin/products/{productId}:
+    put:
+      summary: Обновить товар
+      tags: [Admin Products]
+      operationId: adminUpdateProduct
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
           in: path
           required: true
           schema:
@@ -486,164 +493,113 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PaymentRequest"
+              $ref: "#/components/schemas/UpdateProductRequest"
       responses:
         "200":
-          description: Оплата прошла успешно
+          description: Товар обновлен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Неверные данные товара
+        "401":
+          description: Не авторизован
+        "403":
+          description: Недостаточно прав (только ADMIN)
+        "404":
+          description: Товар не найден
+    delete:
+      summary: Удалить товар
+      tags: [Admin Products]
+      operationId: adminDeleteProduct
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Товар удален
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-              example:
-                message: "Оплата прошла успешно"
-        "400":
-          description: Неверные данные карты или недостаточно средств
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "401":
           description: Не авторизован
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
         "403":
-          description: Нет доступа к заказу
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: Недостаточно прав (только ADMIN)
         "404":
-          description: Заказ не найден
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "409":
-          description: Заказ уже оплачен или отменён
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "422":
-          description: Ошибка валидации данных карты
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-        "500":
-          description: Внутренняя ошибка сервера
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
+          description: Товар не найден
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-      description: JWT токен, полученный при авторизации
-
   schemas:
-    Problem:
-      type: object
-      description: RFC 7807 / RFC 9457 — структурированное описание ошибки
-      required:
-        - type
-        - title
-        - status
-      properties:
-        type:
-          type: string
-          format: uri-reference
-          description: URI типа проблемы
-          example: "https://api.example.com/errors/not-found"
-        title:
-          type: string
-          description: Краткое описание проблемы
-        status:
-          type: integer
-          format: int32
-          description: HTTP-код ответа
-          example: 404
-        detail:
-          type: string
-          description: Детали для конкретного случая
-        instance:
-          type: string
-          format: uri-reference
-          description: URI конкретного запроса
-
-    MessageResponse:
-      type: object
-      required: [message]
-      properties:
-        message:
-          type: string
-          example: "Корзина успешно очищена"
-
     LoginRequest:
       type: object
-      required: [login, password]
+      required:
+        - login
+        - password
       properties:
         login:
           type: string
-          description: Логин
-          minLength: 3
-          maxLength: 255
-          example: "user_1"
+          example: "user1"
         password:
           type: string
-          format: password
-          description: Пароль
-          minLength: 8
-          maxLength: 72
-          example: "secret"
+          example: "password123"
 
     LoginResponse:
       type: object
-      required: [accessToken]
       properties:
         accessToken:
           type: string
-          description: JWT токен для заголовка Authorization Bearer
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
     RegisterRequest:
       type: object
-      required: [login, email, password]
+      required:
+        - login
+        - email
+        - password
+        - name
       properties:
         login:
           type: string
-          description: Логин пользователя
-          minLength: 3
-          maxLength: 64
-          pattern: "^[a-zA-Z0-9._-]+$"
-          example: "new_user"
         email:
           type: string
           format: email
-          description: Email пользователя
-          maxLength: 255
-          example: "newuser@example.com"
         password:
           type: string
-          format: password
-          description: Пароль
-          minLength: 8
-          maxLength: 72
         name:
           type: string
-          description: Имя пользователя
-          maxLength: 255
-          example: "Иван"
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Операция выполнена успешно"
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: "Пакет интернета 5Gb"
+        price:
+          type: number
+          format: double
+          example: 199.99
 
     ProductListResponse:
       type: object
-      required: [items, total, page, size]
       properties:
         items:
           type: array
@@ -652,56 +608,35 @@ components:
         total:
           type: integer
           format: int64
-          description: Общее количество элементов
         page:
           type: integer
           format: int32
-          description: Номер страницы (0-based)
         size:
           type: integer
           format: int32
-          description: Размер страницы
-
-    Product:
-      type: object
-      required: [id, name, price]
-      properties:
-        id:
-          type: integer
-          format: int64
-          example: 12
-        name:
-          type: string
-          example: "Пакет интернета 5Gb"
-        price:
-          type: number
-          x-java-type: java.math.BigDecimal
-          multipleOf: 0.01
-          example: 199.99
 
     AddCartItemRequest:
       type: object
-      required: [productId]
+      required:
+        - productId
       properties:
         productId:
           type: integer
           format: int64
-          example: 12
+          example: 1
 
     CartItem:
       type: object
-      required: [itemId, product]
       properties:
         itemId:
           type: integer
           format: int64
-          description: Идентификатор позиции в корзине
+          example: 123
         product:
           $ref: "#/components/schemas/Product"
 
     CartResponse:
       type: object
-      required: [items, total, page, size]
       properties:
         items:
           type: array
@@ -710,55 +645,49 @@ components:
         total:
           type: integer
           format: int64
-          description: Общее количество позиций в корзине
         page:
           type: integer
           format: int32
-          description: Номер страницы (0-based)
         size:
           type: integer
           format: int32
-          description: Размер страницы
 
-    CartItemResponse:
+    Order:
       type: object
-      required: [itemId, product]
       properties:
-        itemId:
+        id:
           type: integer
           format: int64
-        product:
-          $ref: "#/components/schemas/Product"
-
-    OrderResponse:
-      type: object
-      required: [orderId, userId, status, totalPrice, items]
-      properties:
-        orderId:
-          type: integer
-          format: int64
-          example: 3
+          example: 1
         userId:
           type: integer
           format: int64
-          example: 1337
-        status:
-          type: string
-          enum: [draft, pending, paid, cancelled]
-          example: paid
+          example: 2
         totalPrice:
           type: number
-          x-java-type: java.math.BigDecimal
-          multipleOf: 0.01
-          example: 750.00
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/Product"
+          format: double
+          example: 599.97
+        status:
+          type: string
+          enum: [CREATED, PAID, CANCELLED]
+          example: "PAID"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-03-15T10:30:00Z"
+
+    OrderResponse:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: "#/components/schemas/CartItem"
 
     OrderListResponse:
       type: object
-      required: [items, total, page, size]
       properties:
         items:
           type: array
@@ -767,68 +696,86 @@ components:
         total:
           type: integer
           format: int64
-          description: Общее количество заказов
         page:
           type: integer
           format: int32
-          description: Номер страницы (0-based)
         size:
           type: integer
           format: int32
-          description: Размер страницы
 
-    PaymentRequest:
+    User:
       type: object
-      required: [cardNumber, expiresAt, cvv]
       properties:
-        cardNumber:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        login:
           type: string
-          description: Номер карты, 16 цифр
-          example: "1234123412341234"
-          pattern: "^[0-9]{16}$"
-        expiresAt:
+          example: "user1"
+        email:
           type: string
-          description: ММ/ГГ
-          example: "09/30"
-        cvv:
+          format: email
+          example: "user@example.com"
+        name:
           type: string
-          description: Код на обороте карты
-          example: "123"
+          example: "Иван Иванов"
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          example: "USER"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-03-15T10:30:00Z"
 
-    BankPaymentRequest:
+    UserResponse:
+      $ref: "#/components/schemas/User"
+
+    UserListResponse:
       type: object
-      description: Тело запроса к банку POST /api/cards/payments
-      required: [cardNumber, cvv, expiresAt, amount]
       properties:
-        cardNumber:
-          type: string
-          description: Номер карты, 16 цифр
-          example: "1111222233334444"
-        cvv:
-          type: string
-          description: CVV, 3–4 цифры
-          example: "111"
-        expiresAt:
-          type: string
-          description: Срок действия ММ/ГГ
-          example: "12/30"
-        amount:
-          type: number
-          format: float
-          description: Сумма платежа
-          example: 150.50
-    BankPaymentResponse:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserResponse"
+        total:
+          type: integer
+          format: int64
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+
+    CreateProductRequest:
       type: object
-      description: Ответ банка на платёж
-      required: [approved, message]
+      required:
+        - name
+        - price
       properties:
-        approved:
-          type: boolean
-          description: Платёж одобрен
-        message:
+        name:
           type: string
-          description: Сообщение от банка
-        remainingBalance:
+          example: "Новый товар"
+        price:
           type: number
-          format: float
-          description: Оставшийся баланс по карте
+          format: double
+          example: 299.99
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Обновленный товар"
+        price:
+          type: number
+          format: double
+          example: 399.99
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

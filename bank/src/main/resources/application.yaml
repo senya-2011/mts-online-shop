@@ -7,9 +7,9 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${BANK_DB_URL:jdbc:postgresql://${BANK_DB_HOST:localhost}:${BANK_DB_PORT:13300}/${BANK_DB_NAME:db}}
-    username: ${BANK_DB_USERNAME:user}
-    password: ${BANK_DB_PASSWORD:pass}
+    url: ${BANK_DB_URL:jdbc:postgresql://${BANK_DB_HOST:localhost}:${BANK_DB_PORT:5432}/${BANK_DB_NAME:db_bank}}
+    username: ${BANK_DB_USERNAME:postgres}
+    password: ${BANK_DB_PASSWORD:postgres}
 
 server:
   port: ${BANK_PORT:8081}

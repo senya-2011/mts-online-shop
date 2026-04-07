@@ -33,3 +33,32 @@ bin/
 *.log
 .DS_Store
 
+# Sensitive data and configuration
+data/users.xml
+src/main/resources/users.xml
+*.pem
+*.key
+*.jks
+*.p12
+*.pfx
+application-secret.properties
+application-local.properties
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+PasswordHasher.java
+users_hashed.xml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Spring Boot
+spring.log
+
