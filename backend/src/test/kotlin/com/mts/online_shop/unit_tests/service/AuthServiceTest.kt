@@ -40,7 +40,7 @@ class AuthServiceTest : DescribeSpec({
             whenever(xmlUserDetailsService.loadUserByUsername("User_1")).thenReturn(userDetails)
             whenever(xmlUserDetailsService.getUserIdByUsername("User_1")).thenReturn(1L)
             whenever(passwordEncoder.matches("StrongPass123", "encodedPassword")).thenReturn(true)
-            whenever(jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any())).thenReturn("test-token")
+            whenever(jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), null)).thenReturn("test-token")
 
             it("should return token") {
                 val result = service.authenticate("User_1", "StrongPass123")
