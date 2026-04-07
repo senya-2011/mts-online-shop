@@ -7,6 +7,7 @@ import com.mts.online_shop.model.User
 import com.mts.online_shop.repository.UserRepository
 import com.mts.online_shop.service.AuthService
 import com.mts.online_shop.security.JwtService
+import com.mts.online_shop.security.XmlUserDetailsService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.BehaviorSpec
@@ -28,17 +29,21 @@ class AuthServiceTest : BehaviorSpec({
     isolationMode = IsolationMode.InstancePerLeaf
 
     val passwordEncoder = mockk<PasswordEncoder>()
-    val authenticationManager = mockk<AuthenticationManager>()
+    val xmlUserDetailsService = mockk<XmlUserDetailsService>()
     val jwtService = mockk<JwtService>()
-    val service = AuthService(passwordEncoder, authenticationManager, jwtService)
+    val userRepository = mockk<UserRepository>()
+    val service = AuthService(passwordEncoder, xmlUserDetailsService, jwtService, userRepository)
 
     given("credentials are correct") {
         val authorities: MutableList<GrantedAuthority> = mutableListOf(SimpleGrantedAuthority("ROLE_USER"))
-        val authentication = mockk<Authentication>()
-        every { authentication.name } returns "user_1"
-        every { authentication.authorities } returns authorities
-        every { authenticationManager.authenticate(any()) } returns authentication
-        every { jwtService.generateToken(null, "user_1", setOf("ROLE_USER"), any()) } returns "test-token"
+        val userDetails = mockk<org.springframework.security.core.userdetails.UserDetails>()
+        every { userDetails.username } returns "user_1"
+        every { userDetails.password } returns "encodedPassword"
+        every { userDetails.authorities } returns authorities
+        every { xmlUserDetailsService.loadUserByUsername("user_1") } returns userDetails
+        every { xmlUserDetailsService.getUserIdByUsername("user_1") } returns 1L
+        every { passwordEncoder.matches("password", "encodedPassword") } returns true
+        every { jwtService.generateToken(1L, "user_1", setOf("ROLE_USER"), any()) } returns "test-token"
 
         `when`("authenticate is called") {
             val result = service.authenticate("User_1", "StrongPass123")

@@ -77,10 +77,10 @@ class OrderServiceTest : BehaviorSpec({
     }
 
     val orderResponse = OrderResponse().apply {
-        orderId = 100L
+        id = 100L
         userId = 1L
-        status = OrderResponse.StatusEnum.PENDING
-        totalPrice = BigDecimal("150.00")
+        status = OrderResponse.StatusEnum.CREATED
+        totalPrice = 150.0
         items = emptyList()
     }
 

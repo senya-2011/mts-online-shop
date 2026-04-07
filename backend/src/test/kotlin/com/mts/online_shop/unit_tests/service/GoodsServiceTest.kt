@@ -8,6 +8,7 @@ import com.mts.online_shop.model.User
 import com.mts.online_shop.model.UserItem
 import com.mts.online_shop.repository.GoodsRepository
 import com.mts.online_shop.repository.UserItemRepository
+import com.mts.online_shop.repository.OrderItemRepository
 import com.mts.online_shop.repository.UserRepository
 import com.mts.online_shop.service.GoodsService
 import io.kotest.assertions.throwables.shouldThrow
@@ -33,7 +34,8 @@ class GoodsServiceTest : BehaviorSpec({
     val goodsRepository = mockk<GoodsRepository>()
     val userItemRepository = mockk<UserItemRepository>()
     val userRepository = mockk<UserRepository>()
-    val service = GoodsService(goodsRepository, userItemRepository, userRepository)
+    val orderItemRepository = mockk<OrderItemRepository>()
+    val service = GoodsService(goodsRepository, userItemRepository, userRepository, orderItemRepository)
 
     val user = User().apply {
         id = 1L
