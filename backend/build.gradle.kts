@@ -54,7 +54,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
-	testImplementation("org.springframework.boot:spring-boot-starter-liquibase-test")
+	testImplementation("org.liquibase:liquibase-core")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
 	testImplementation("io.kotest:kotest-runner-junit5:5.8.0")
