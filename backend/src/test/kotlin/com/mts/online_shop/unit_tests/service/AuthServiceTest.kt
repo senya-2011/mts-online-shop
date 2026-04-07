@@ -29,11 +29,12 @@ class AuthServiceTest : DescribeSpec({
         
         context("when credentials are correct") {
             val userDetails = mock<UserDetails>()
+            val authority = mock<org.springframework.security.core.GrantedAuthority>()
+            
             whenever(userDetails.username).thenReturn("user_1")
             whenever(userDetails.password).thenReturn("encodedPassword")
-            whenever(userDetails.authorities).thenReturn(listOf(mock {
-                whenever(authority).thenReturn("ROLE_USER")
-            }))
+            whenever(userDetails.authorities).thenReturn(listOf(authority))
+            whenever(authority.authority).thenReturn("ROLE_USER")
             
             whenever(xmlUserDetailsService.loadUserByUsername("User_1")).thenReturn(userDetails)
             whenever(xmlUserDetailsService.getUserIdByUsername("User_1")).thenReturn(1L)
