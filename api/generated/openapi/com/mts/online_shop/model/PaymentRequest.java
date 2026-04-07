@@ -18,7 +18,7 @@ import jakarta.annotation.Generated;
  * PaymentRequest
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-06T13:29:03.673572600+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-07T15:57:40.664016+03:00[Europe/Moscow]")
 public class PaymentRequest {
 
   private String cardNumber;
@@ -51,11 +51,11 @@ public class PaymentRequest {
   }
 
   /**
-   * Номер карты, 16 цифр
+   * Get cardNumber
    * @return cardNumber
   */
-  @NotNull @Pattern(regexp = "^[0-9]{16}$") 
-  @Schema(name = "cardNumber", example = "1234123412341234", description = "Номер карты, 16 цифр", requiredMode = Schema.RequiredMode.REQUIRED)
+  @NotNull 
+  @Schema(name = "cardNumber", example = "1234123412341234", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("cardNumber")
   public String getCardNumber() {
     return cardNumber;
@@ -71,11 +71,11 @@ public class PaymentRequest {
   }
 
   /**
-   * ММ/ГГ
+   * Get expiresAt
    * @return expiresAt
   */
   @NotNull 
-  @Schema(name = "expiresAt", example = "09/30", description = "ММ/ГГ", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "expiresAt", example = "12/30", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("expiresAt")
   public String getExpiresAt() {
     return expiresAt;
@@ -91,11 +91,11 @@ public class PaymentRequest {
   }
 
   /**
-   * Код на обороте карты
+   * Get cvv
    * @return cvv
   */
   @NotNull 
-  @Schema(name = "cvv", example = "123", description = "Код на обороте карты", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "cvv", example = "111", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("cvv")
   public String getCvv() {
     return cvv;

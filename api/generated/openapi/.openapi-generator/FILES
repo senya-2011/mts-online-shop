@@ -16,6 +16,7 @@ com/mts/online_shop/model/Order.java
 com/mts/online_shop/model/OrderListResponse.java
 com/mts/online_shop/model/OrderResponse.java
 com/mts/online_shop/model/OrderResponseAllOf.java
+com/mts/online_shop/model/PaymentRequest.java
 com/mts/online_shop/model/Product.java
 com/mts/online_shop/model/ProductListResponse.java
 com/mts/online_shop/model/RegisterRequest.java

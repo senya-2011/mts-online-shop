@@ -21,7 +21,7 @@ import jakarta.annotation.Generated;
  * Order
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-06T13:46:26.524955100+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-07T15:57:40.664016+03:00[Europe/Moscow]")
 public class Order {
 
   private Long id;
@@ -37,6 +37,8 @@ public class Order {
     CREATED("CREATED"),
     
     PAID("PAID"),
+    
+    DELIVERED("DELIVERED"),
     
     CANCELLED("CANCELLED");
 

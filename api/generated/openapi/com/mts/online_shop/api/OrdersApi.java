@@ -8,6 +8,7 @@ package com.mts.online_shop.api;
 import com.mts.online_shop.model.MessageResponse;
 import com.mts.online_shop.model.OrderListResponse;
 import com.mts.online_shop.model.OrderResponse;
+import com.mts.online_shop.model.PaymentRequest;
 import io.swagger.v3.oas.annotations.ExternalDocumentation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import jakarta.annotation.Generated;
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-06T13:46:26.524955100+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-07T15:57:40.664016+03:00[Europe/Moscow]")
 @Validated
 @Tag(name = "Orders", description = "Заказы и оплата")
 public interface OrdersApi {
@@ -121,6 +122,42 @@ public interface OrdersApi {
     )
     ResponseEntity<OrderListResponse> getOrders(
         
+    );
+
+
+    /**
+     * POST /orders/{orderId}/pay : Pay for existing order
+     *
+     * @param orderId  (required)
+     * @param paymentRequest  (required)
+     * @return Order paid successfully (status code 200)
+     *         or Order not found (status code 404)
+     *         or Payment failed (status code 400)
+     */
+    @Operation(
+        operationId = "payOrder",
+        summary = "Pay for existing order",
+        tags = { "Orders" },
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Order paid successfully", content = {
+                @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))
+            }),
+            @ApiResponse(responseCode = "404", description = "Order not found"),
+            @ApiResponse(responseCode = "400", description = "Payment failed")
+        },
+        security = {
+            @SecurityRequirement(name = "bearerAuth")
+        }
+    )
+    @RequestMapping(
+        method = RequestMethod.POST,
+        value = "/orders/{orderId}/pay",
+        produces = { "application/json" },
+        consumes = { "application/json" }
+    )
+    ResponseEntity<OrderResponse> payOrder(
+        @Parameter(name = "orderId", description = "", required = true, in = ParameterIn.PATH) @PathVariable("orderId") Long orderId,
+        @Parameter(name = "PaymentRequest", description = "", required = true) @Valid @RequestBody PaymentRequest paymentRequest
     );
 
 }
