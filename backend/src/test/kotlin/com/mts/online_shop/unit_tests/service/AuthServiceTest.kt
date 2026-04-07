@@ -11,31 +11,34 @@ import com.mts.online_shop.security.XmlUserDetailsService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockk
+import org.mockito.Mockito.*
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.core.userdetails.UserDetails
 
 class AuthServiceTest : DescribeSpec({
 
-    val passwordEncoder = mockk<PasswordEncoder>()
-    val xmlUserDetailsService = mockk<XmlUserDetailsService>()
-    val jwtService = mockk<JwtService>()
-    val userRepository = mockk<UserRepository>()
+    val passwordEncoder = mock<PasswordEncoder>()
+    val xmlUserDetailsService = mock<XmlUserDetailsService>()
+    val jwtService = mock<JwtService>()
+    val userRepository = mock<UserRepository>()
     val service = AuthService(passwordEncoder, xmlUserDetailsService, jwtService, userRepository)
 
     describe("authenticate") {
         
         context("when credentials are correct") {
-            every { xmlUserDetailsService.loadUserByUsername("User_1") } returns mockk {
-                every { username } returns "user_1"
-                every { password } returns "encodedPassword"
-                every { authorities } returns listOf(mockk {
-                    every { authority } returns "ROLE_USER"
-                })
-            }
-            every { xmlUserDetailsService.getUserIdByUsername("User_1") } returns 1L
-            every { passwordEncoder.matches("StrongPass123", "encodedPassword") } returns true
-            every { jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any()) } returns "test-token"
+            val userDetails = mock<UserDetails>()
+            whenever(userDetails.username).thenReturn("user_1")
+            whenever(userDetails.password).thenReturn("encodedPassword")
+            whenever(userDetails.authorities).thenReturn(listOf(mock {
+                whenever(authority).thenReturn("ROLE_USER")
+            }))
+            
+            whenever(xmlUserDetailsService.loadUserByUsername("User_1")).thenReturn(userDetails)
+            whenever(xmlUserDetailsService.getUserIdByUsername("User_1")).thenReturn(1L)
+            whenever(passwordEncoder.matches("StrongPass123", "encodedPassword")).thenReturn(true)
+            whenever(jwtService.generateToken(1L, "User_1", setOf("ROLE_USER"), any())).thenReturn("test-token")
 
             it("should return token") {
                 val result = service.authenticate("User_1", "StrongPass123")
@@ -44,10 +47,11 @@ class AuthServiceTest : DescribeSpec({
         }
         
         context("when credentials are incorrect") {
-            every { xmlUserDetailsService.loadUserByUsername("user_1") } returns mockk {
-                every { password } returns "encodedPassword"
-            }
-            every { passwordEncoder.matches("WrongPass123", "encodedPassword") } returns false
+            val userDetails = mock<UserDetails>()
+            whenever(userDetails.password).thenReturn("encodedPassword")
+            
+            whenever(xmlUserDetailsService.loadUserByUsername("user_1")).thenReturn(userDetails)
+            whenever(passwordEncoder.matches("WrongPass123", "encodedPassword")).thenReturn(false)
 
             it("should throw InvalidCredentialsException") {
                 shouldThrow<InvalidCredentialsException> {
@@ -60,7 +64,7 @@ class AuthServiceTest : DescribeSpec({
     describe("register") {
         
         context("when user already exists") {
-            every { xmlUserDetailsService.userExists("new_user") } returns true
+            whenever(xmlUserDetailsService.userExists("new_user")).thenReturn(true)
 
             it("should throw UserAlreadyExistsException") {
                 shouldThrow<UserAlreadyExistsException> {
@@ -70,7 +74,7 @@ class AuthServiceTest : DescribeSpec({
         }
         
         context("when email has no at-sign") {
-            every { xmlUserDetailsService.userExists("new_user") } returns false
+            whenever(xmlUserDetailsService.userExists("new_user")).thenReturn(false)
 
             it("should throw BadRequestException") {
                 shouldThrow<BadRequestException> {
@@ -80,7 +84,7 @@ class AuthServiceTest : DescribeSpec({
         }
         
         context("when email has no dot in domain") {
-            every { xmlUserDetailsService.userExists("new_user") } returns false
+            whenever(xmlUserDetailsService.userExists("new_user")).thenReturn(false)
 
             it("should throw BadRequestException") {
                 shouldThrow<BadRequestException> {

@@ -12,18 +12,18 @@ import com.mts.online_shop.service.GoodsService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockk
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import java.util.Optional
 
 class GoodsServiceTest : DescribeSpec({
 
-    val goodsRepository = mockk<GoodsRepository>()
-    val userItemRepository = mockk<UserItemRepository>()
-    val userRepository = mockk<UserRepository>()
-    val orderItemRepository = mockk<OrderItemRepository>()
+    val goodsRepository = mock<GoodsRepository>()
+    val userItemRepository = mock<UserItemRepository>()
+    val userRepository = mock<UserRepository>()
+    val orderItemRepository = mock<OrderItemRepository>()
     val service = GoodsService(goodsRepository, userItemRepository, userRepository, orderItemRepository)
 
     val product = ProductEntity().apply {
@@ -36,7 +36,7 @@ class GoodsServiceTest : DescribeSpec({
         
         context("when search is null") {
             val pageable = PageRequest.of(0, 20)
-            every { goodsRepository.findAll(pageable) } returns PageImpl(listOf(product), pageable, 1L)
+            whenever(goodsRepository.findAll(pageable)).thenReturn(PageImpl(listOf(product), pageable, 1L))
 
             it("should return page of products") {
                 val result = service.findProducts(pageable, null)
@@ -47,7 +47,7 @@ class GoodsServiceTest : DescribeSpec({
         
         context("when search is provided") {
             val pageable = PageRequest.of(0, 20)
-            every { goodsRepository.findByNameContainingIgnoreCase("prod", pageable) } returns PageImpl(listOf(product), pageable, 1L)
+            whenever(goodsRepository.findByNameContainingIgnoreCase("prod", pageable)).thenReturn(PageImpl(listOf(product), pageable, 1L))
 
             it("should return matching products") {
                 val result = service.findProducts(pageable, "prod")
@@ -59,7 +59,7 @@ class GoodsServiceTest : DescribeSpec({
     describe("getProductById") {
         
         context("when product exists") {
-            every { goodsRepository.findById(product.id) } returns Optional.of(product)
+            whenever(goodsRepository.findById(product.id)).thenReturn(Optional.of(product))
 
             it("should return product") {
                 val result = service.getProductById(product.id)
@@ -68,7 +68,7 @@ class GoodsServiceTest : DescribeSpec({
         }
         
         context("when product does not exist") {
-            every { goodsRepository.findById(999L) } returns Optional.empty()
+            whenever(goodsRepository.findById(999L)).thenReturn(Optional.empty())
 
             it("should throw ProductNotFoundException") {
                 shouldThrow<ProductNotFoundException> {
