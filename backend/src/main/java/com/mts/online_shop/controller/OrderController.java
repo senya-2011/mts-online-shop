@@ -52,7 +52,14 @@ public class OrderController {
     }
 
     @GetMapping
-    @io.swagger.v3.oas.annotations.Operation(summary = "Получить заказы пользователя", description = "Возвращает список всех заказов текущего пользователя")
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Get orders of user", 
+        description = "Returns list of all orders of current user with pagination support"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token required")
+    })
     public ResponseEntity<OrderListResponse> getOrders(@RequestParam(required = false) Integer page, 
                                                       @RequestParam(required = false) Integer size) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
@@ -66,7 +73,16 @@ public class OrderController {
     }
 
     @GetMapping("/{orderId}")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Получить заказ по ID", description = "Возвращает детальную информацию о конкретном заказе")
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Get order by ID", 
+        description = "Returns detailed information about specific order. User can only access their own orders."
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order retrieved successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token required"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - order does not belong to current user"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found")
+    })
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long orderId) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
         
@@ -97,7 +113,16 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/cancel")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Отменить заказ с возвратом", description = "Транзакционная отмена заказа с автоматическим возвратом денег на счет пользователя")
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Cancel order with refund", 
+        description = "Transactional order cancellation with automatic refund to user account via bank integration"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order cancelled and refunded successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - JWT token required"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Order not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error during cancellation")
+    })
     public ResponseEntity<MessageResponse> cancelOrder(@PathVariable Long orderId) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
         orderService.cancelOrder(orderId, userId);
@@ -107,10 +132,34 @@ public class OrderController {
     }
 
     @PostMapping("/create")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Создать заказ с оплатой", description = "Транзакционное создание заказа на основе корзины пользователя с оплатой по данным карты")
-    public ResponseEntity<OrderResponse> createOrderWithPayment(@RequestBody PaymentRequest paymentRequest) {
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Create order with payment", 
+        description = "Creates an order from user's cart and processes payment via bank integration. Payment data is required in request body."
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order created and paid successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Bad request - empty cart, invalid payment data, or missing payment information"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<OrderResponse> createOrderWithPayment(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+        description = "Payment information for order processing",
+        required = true,
+        content = @io.swagger.v3.oas.annotations.media.Content(
+            mediaType = "application/json",
+            schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = PaymentRequest.class),
+            examples = {
+                @io.swagger.v3.oas.annotations.media.ExampleObject(
+                    name = "Payment Example",
+                    value = "{\"cardNumber\":\"1234567890123456\",\"cvv\":\"123\",\"expiresAt\":\"12/25\"}",
+                    description = "Example payment data"
+                )
+            }
+        )
+    ) @RequestBody PaymentRequest paymentRequest) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
         log.debug("POST create order with payment for user id={}", userId);
+        
         log.debug("Payment data: card={}, expiry={}, cvv={}", 
             maskCardNumber(paymentRequest.getCardNumber()), 
             paymentRequest.getExpiresAt(), 
@@ -137,35 +186,36 @@ public class OrderController {
                     .sum();
             log.info("Order total amount: ${}", totalAmount);
             
-            // Подготовка данных карты из запроса (или используем тестовые)
-            PaymentRequest paymentRequestForService = new PaymentRequest();
+            // Validate payment data
             String cardNumber = paymentRequest.getCardNumber();
             String cvv = paymentRequest.getCvv();
             String expiresAt = paymentRequest.getExpiresAt();
             
             log.info("Received payment data from request:");
-            log.info("  Raw cardNumber: '{}' (length: {})", cardNumber, cardNumber != null ? cardNumber.length() : 0);
-            log.info("  Raw cvv: '{}'", cvv);
-            log.info("  Raw expiresAt: '{}'", expiresAt);
+            log.info("  Card: ****-****-****-{}", maskCardNumber(cardNumber));
+            log.info("  Expires: {}", expiresAt);
+            log.info("  CVV: ***");
             
-            // Если данные не предоставлены, используем тестовую карту из банка с балансом
-            if (cardNumber == null || cardNumber.isEmpty()) {
-                cardNumber = "1234123412341234";  // Карта с балансом $15000
-                cvv = "444";  // CVV из базы
-                expiresAt = "09/30";  // Срок из базы
-                log.info("Using test card with balance: 1234123412341234 ($15000)");
+            // Validate required fields
+            if (cardNumber == null || cardNumber.trim().isEmpty()) {
+                log.error("Card number is required for payment");
+                return ResponseEntity.badRequest().build();
             }
-            
-            paymentRequestForService.setCardNumber(cardNumber);
-            paymentRequestForService.setCvv(cvv);
-            paymentRequestForService.setExpiresAt(expiresAt);
+            if (cvv == null || cvv.trim().isEmpty()) {
+                log.error("CVV is required for payment");
+                return ResponseEntity.badRequest().build();
+            }
+            if (expiresAt == null || expiresAt.trim().isEmpty()) {
+                log.error("Expiry date is required for payment");
+                return ResponseEntity.badRequest().build();
+            }
             
             log.info("Processing payment via real bank:");
             log.info("  Card: ****-****-****-{}", cardNumber.substring(Math.max(0, cardNumber.length() - 4)));
             log.info("  Amount: ${}", totalAmount);
             
             // Используем OrderService для создания заказа с реальной оплатой через банк
-            OrderResponse orderResponse = orderService.createOrderWithPayment(userId, paymentRequestForService);
+            OrderResponse orderResponse = orderService.createOrderWithPayment(userId, paymentRequest);
             
             log.info("Order created and paid successfully via real bank");
             
@@ -177,47 +227,16 @@ public class OrderController {
         } catch (UserNotFoundException e) {
             log.error("User not found: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
+        } catch (org.springframework.http.converter.HttpMessageNotReadableException e) {
+            log.error("Missing payment data in request body");
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("Error creating order with payment: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
     
-    @PostMapping("/{orderId}/pay")
-    @io.swagger.v3.oas.annotations.Operation(summary = " Pay for existing order", description = "Pay for an existing order using payment data")
-    public ResponseEntity<OrderResponse> payOrder(@PathVariable Long orderId, @RequestBody PaymentRequest paymentRequest) {
-        Long userId = currentUserService.getCurrentUserIdOrThrow();
-        log.debug("POST pay order {} for user id={}", orderId, userId);
-        log.debug("Payment data: card={}, expiry={}, cvv={}", 
-            maskCardNumber(paymentRequest.getCardNumber()), 
-            paymentRequest.getExpiresAt(), 
-            "***");
         
-        try {
-            log.info("Paying order {} via real bank", orderId);
-            
-            // Pay for existing order
-            orderService.payOrder(orderId, paymentRequest, userId);
-            
-            // Return updated order
-            Order updatedOrder = orderRepository.getOrderById(orderId)
-                    .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
-            
-            OrderResponse orderResponse = orderMapper.toOrderResponse(updatedOrder, productMapper);
-            
-            log.info("Order paid successfully");
-            
-            return ResponseEntity.ok(orderResponse);
-            
-        } catch (OrderNotFoundException e) {
-            log.error("Order not found: {}", e.getMessage());
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Error paying order: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
-    
     private String maskCardNumber(String cardNumber) {
         if (cardNumber == null || cardNumber.length() < 4) {
             return "****";

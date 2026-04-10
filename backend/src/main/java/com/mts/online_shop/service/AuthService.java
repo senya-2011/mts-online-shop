@@ -33,15 +33,18 @@ public class AuthService {
     private final XmlUserDetailsService xmlUserDetailsService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final UserIdGeneratorService userIdGeneratorService;
 
     public AuthService(PasswordEncoder passwordEncoder, 
                       XmlUserDetailsService xmlUserDetailsService,
                       JwtService jwtService,
-                      UserRepository userRepository) {
+                      UserRepository userRepository,
+                      UserIdGeneratorService userIdGeneratorService) {
         this.passwordEncoder = passwordEncoder;
         this.xmlUserDetailsService = xmlUserDetailsService;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.userIdGeneratorService = userIdGeneratorService;
     }
 
     public String authenticate(String login, String password) {
@@ -79,7 +82,7 @@ public class AuthService {
         // Hash password before saving
         String hashedPassword = passwordEncoder.encode(rawPassword);
         
-        // Save to XML with hashed password
+        // Save to XML with hashed password (XmlUserDetailsService will generate ID)
         xmlUserDetailsService.saveUser(normalizedLogin, hashedPassword, Collections.singletonList("USER"));
         log.info("User saved to XML with hashed password: {}", normalizedLogin);
         

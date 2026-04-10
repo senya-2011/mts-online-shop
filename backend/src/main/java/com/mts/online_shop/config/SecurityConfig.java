@@ -4,6 +4,7 @@ import com.mts.online_shop.security.CustomBasicAuthFilter;
 import com.mts.online_shop.security.JwtAuthenticationFilter;
 import com.mts.online_shop.security.PrivilegeService;
 import com.mts.online_shop.security.XmlUserDetailsService;
+import com.mts.online_shop.service.UserIdGeneratorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;

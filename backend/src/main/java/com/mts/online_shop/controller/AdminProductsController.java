@@ -51,7 +51,7 @@ public class AdminProductsController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/product")
+    @PostMapping
     @io.swagger.v3.oas.annotations.Operation(summary = "Создать товар", description = "Создает новый товар в каталоге")
     public ResponseEntity<Product> createProduct(@RequestBody CreateProductRequest request) {
         log.debug("POST admin product name={}", request.getName());
@@ -62,7 +62,7 @@ public class AdminProductsController {
         return ResponseEntity.status(HttpStatus.CREATED).body(productMapper.toDto(entity));
     }
 
-    @PutMapping("/product{productId:\\d+}")
+    @PutMapping("/{productId}")
     @io.swagger.v3.oas.annotations.Operation(summary = "Обновить товар", description = "Обновляет информацию о существующем товаре")
     public ResponseEntity<Product> updateProduct(@PathVariable Long productId,
                                                @RequestBody UpdateProductRequest request) {
@@ -75,7 +75,7 @@ public class AdminProductsController {
         return ResponseEntity.ok(productMapper.toDto(entity));
     }
 
-    @DeleteMapping("/product{productId:\\d+}")
+    @DeleteMapping("/{productId}")
     @io.swagger.v3.oas.annotations.Operation(summary = "Удалить товар", description = "Удаляет товар из каталога")
     public ResponseEntity<MessageResponse> deleteProduct(@PathVariable Long productId) {
         log.debug("DELETE admin product id={}", productId);

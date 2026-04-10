@@ -34,7 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import jakarta.annotation.Generated;
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-07T15:57:40.664016+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-10T18:01:15.783789700+03:00[Europe/Moscow]")
 @Validated
 @Tag(name = "Cart", description = "Корзина текущего пользователя")
 public interface CartApi {

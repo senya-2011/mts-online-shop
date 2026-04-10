@@ -106,15 +106,14 @@ public class XmlUserDetailsService implements UserDetailsService {
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
                 }
                 
-                // Use userId as username for principal
-                String principal = userId != null ? userId.toString() : username;
-                
-                UserDetails userDetails = User.builder()
-                        .username(principal)
-                        .password(password)
-                        .disabled(!enabled)
-                        .authorities(authorities)
-                        .build();
+                // Create XmlUserPrincipal with userId
+                UserDetails userDetails = new XmlUserPrincipal(
+                        username, // use username for authentication
+                        password,
+                        enabled,
+                        authorities,
+                        userId
+                );
                 
                 users.put(username.toLowerCase(), userDetails);
                 if (userId != null) {
@@ -198,6 +197,12 @@ public class XmlUserDetailsService implements UserDetailsService {
 
     public Long getUserIdByUsername(String username) {
         return usernameToId.get(username.toLowerCase());
+    }
+
+    public Long getMaxUserId() {
+        return usernameToId.values().stream()
+                .max(Long::compareTo)
+                .orElse(0L);
     }
 
     @Override

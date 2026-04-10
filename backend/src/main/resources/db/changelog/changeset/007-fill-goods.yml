@@ -12,6 +12,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 499.99
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -21,6 +24,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 799.99
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -30,6 +36,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 1300.00
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -39,6 +48,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 199.99
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -48,6 +60,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 299.99
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -57,6 +72,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 500.00
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -66,6 +84,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 749.99
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -75,6 +96,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 29.99
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -84,6 +108,9 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 50.00
+              - column:
+                  name: deleted
+                  value: false
         - insert:
             tableName: goods
             columns:
@@ -93,3 +120,6 @@ databaseChangeLog:
               - column:
                   name: price
                   value: 399.99
+              - column:
+                  name: deleted
+                  value: false

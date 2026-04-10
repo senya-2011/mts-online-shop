@@ -18,7 +18,7 @@ import jakarta.annotation.Generated;
  * CreateProductRequest
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-07T15:57:40.664016+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-10T18:01:15.783789700+03:00[Europe/Moscow]")
 public class CreateProductRequest {
 
   private String name;

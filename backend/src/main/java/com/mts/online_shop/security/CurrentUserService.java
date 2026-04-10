@@ -16,9 +16,18 @@ public class CurrentUserService {
         }
 
         Object principal = auth.getPrincipal();
+        
+        // Handle XmlUserPrincipal
+        if (principal instanceof XmlUserPrincipal xmlUser) {
+            return Optional.of(xmlUser.getUserId());
+        }
+        
+        // Handle Long directly
         if (principal instanceof Long userId) {
             return Optional.of(userId);
         }
+        
+        // Handle String (fallback for compatibility)
         if (principal instanceof String value && !value.isBlank()) {
             try {
                 return Optional.of(Long.parseLong(value));

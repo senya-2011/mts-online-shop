@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Optional;
 import jakarta.annotation.Generated;
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-07T15:57:40.664016+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-10T18:01:15.783789700+03:00[Europe/Moscow]")
 @Validated
 @Tag(name = "Orders", description = "Заказы и оплата")
 public interface OrdersApi {
@@ -72,7 +72,10 @@ public interface OrdersApi {
     /**
      * POST /orders/create : Создать заказ с оплатой (транзакция)
      *
+     * @param paymentRequest  (required)
      * @return Заказ создан и оплачен (status code 201)
+     *         or Ошибка валидации данных карты или пустая корзина (status code 400)
+     *         or Внутренняя ошибка сервера (status code 500)
      */
     @Operation(
         operationId = "createOrder",
@@ -81,7 +84,9 @@ public interface OrdersApi {
         responses = {
             @ApiResponse(responseCode = "201", description = "Заказ создан и оплачен", content = {
                 @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))
-            })
+            }),
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации данных карты или пустая корзина"),
+            @ApiResponse(responseCode = "500", description = "Внутренняя ошибка сервера")
         },
         security = {
             @SecurityRequirement(name = "bearerAuth")
@@ -90,10 +95,11 @@ public interface OrdersApi {
     @RequestMapping(
         method = RequestMethod.POST,
         value = "/orders/create",
-        produces = { "application/json" }
+        produces = { "application/json" },
+        consumes = { "application/json" }
     )
     ResponseEntity<OrderResponse> createOrder(
-        
+        @Parameter(name = "PaymentRequest", description = "", required = true) @Valid @RequestBody PaymentRequest paymentRequest
     );
 
 
@@ -122,42 +128,6 @@ public interface OrdersApi {
     )
     ResponseEntity<OrderListResponse> getOrders(
         
-    );
-
-
-    /**
-     * POST /orders/{orderId}/pay : Pay for existing order
-     *
-     * @param orderId  (required)
-     * @param paymentRequest  (required)
-     * @return Order paid successfully (status code 200)
-     *         or Order not found (status code 404)
-     *         or Payment failed (status code 400)
-     */
-    @Operation(
-        operationId = "payOrder",
-        summary = "Pay for existing order",
-        tags = { "Orders" },
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Order paid successfully", content = {
-                @Content(mediaType = "application/json", schema = @Schema(implementation = OrderResponse.class))
-            }),
-            @ApiResponse(responseCode = "404", description = "Order not found"),
-            @ApiResponse(responseCode = "400", description = "Payment failed")
-        },
-        security = {
-            @SecurityRequirement(name = "bearerAuth")
-        }
-    )
-    @RequestMapping(
-        method = RequestMethod.POST,
-        value = "/orders/{orderId}/pay",
-        produces = { "application/json" },
-        consumes = { "application/json" }
-    )
-    ResponseEntity<OrderResponse> payOrder(
-        @Parameter(name = "orderId", description = "", required = true, in = ParameterIn.PATH) @PathVariable("orderId") Long orderId,
-        @Parameter(name = "PaymentRequest", description = "", required = true) @Valid @RequestBody PaymentRequest paymentRequest
     );
 
 }

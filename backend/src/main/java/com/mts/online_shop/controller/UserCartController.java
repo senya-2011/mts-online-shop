@@ -66,7 +66,7 @@ public class UserCartController {
         return ResponseEntity.ok(cart);
     }
 
-    @DeleteMapping
+    @DeleteMapping("/clear")
     @io.swagger.v3.oas.annotations.Operation(summary = "Очистить корзину", description = "Удаляет все товары из корзины текущего пользователя")
     public ResponseEntity<MessageResponse> clearCart() {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
