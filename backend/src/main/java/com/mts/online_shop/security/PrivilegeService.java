@@ -12,6 +12,7 @@ import jakarta.annotation.PostConstruct;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -77,27 +78,25 @@ public class PrivilegeService {
     
     private void loadSecurityModel() {
         try {
-            File securityFile = getSecurityModelFile();
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream("security-model.xml");
+            if (inputStream == null) {
+                throw new RuntimeException("Security model file not found: security-model.xml");
+            }
+            
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
-            Document document = builder.parse(securityFile);
+            Document document = builder.parse(inputStream);
             
             loadPrivileges(document);
             loadRoles(document);
             loadOperations(document);
             
+            inputStream.close();
+            
         } catch (Exception e) {
             log.error("Failed to load security model: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to load security model", e);
         }
-    }
-    
-    private File getSecurityModelFile() {
-        var resource = getClass().getClassLoader().getResource("security-model.xml");
-        if (resource == null) {
-            throw new RuntimeException("Security model file not found: security-model.xml");
-        }
-        return new File(resource.getFile());
     }
     
     private void loadPrivileges(Document document) {

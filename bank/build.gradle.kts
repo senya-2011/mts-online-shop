@@ -1,7 +1,7 @@
 plugins {
 	java
 	kotlin("jvm") version "2.0.21"
-	id("org.springframework.boot") version "3.2.5"
+	id("org.springframework.boot") version "3.3.5"
 	id("io.spring.dependency-management") version "1.1.7"
 	id("org.openapi.generator") version "6.6.0"
 	id("io.kotest") version "6.1.3"
@@ -13,7 +13,7 @@ description = "bank-simulator for mts-online-shop lab"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(17)
 	}
 }
 
