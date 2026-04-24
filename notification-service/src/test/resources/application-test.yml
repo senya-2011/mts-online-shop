@@ -1,9 +1,23 @@
 spring:
-  kafka:
-    bootstrap-servers: localhost:9094
-    properties:
-      schema.registry.url: http://localhost:8081
+  jms:
+    listener:
+      auto-startup: false
+  datasource:
+    url: jdbc:h2:mem:notificationtest;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
 app:
-  kafka:
-    enabled: false
+  telegram:
+    bot-username: test_bot
+    bot-token: "000000:TEST_TOKEN_FOR_CONTEXT_LOAD_ONLY"

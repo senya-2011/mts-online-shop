@@ -106,26 +106,26 @@ class TelegramBot(
         log.info("Consumed pending verification code for @{}: {}", username, if (pending != null) "FOUND" else "NOT FOUND")
         val welcomeText = buildString {
             appendLine("Привет, @$username 👋")
-            appendLine("Теперь я смогу присылать тебе уведомления о новых желаниях.")
+            appendLine("Теперь я смогу присылать уведомления из Online Shop.")
             if (pending != null) {
                 val normalizedTelegramUsername = normalize(username)
                 val normalizedEventUsername = normalize(pending.telegramUsername)
-                
+
                 if (normalizedTelegramUsername == normalizedEventUsername) {
                     appendLine()
-                    append("Если вы не отправляли запрос, просто игнорируйте\nТвой код подтверждения Telegram в DabWish: ")
+                    append("Если вы не отправляли запрос, просто игнорируйте\nТвой код подтверждения Telegram в Online Shop: ")
                     append(pending.verificationCode)
                     log.info(
                         "Sent verification code to @{} (userId={}) - username matches",
                         username,
-                        pending.userId
+                        pending.userId,
                     )
                 } else {
                     log.warn(
                         "Username mismatch: Telegram username @{} does not match event username @{} (userId={}). Code not sent.",
                         username,
                         pending.telegramUsername,
-                        pending.userId
+                        pending.userId,
                     )
                 }
             }

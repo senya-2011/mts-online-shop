@@ -1,36 +1,38 @@
 plugins {
-	kotlin("jvm")
-	kotlin("plugin.spring")
-	id("org.springframework.boot")
-	id("io.spring.dependency-management")
+    kotlin("jvm") version "2.0.21"
+    kotlin("plugin.spring") version "2.0.21"
+    id("org.springframework.boot") version "3.3.5"
+    id("io.spring.dependency-management") version "1.1.7"
 }
 
-repositories {
-    mavenCentral()
-    maven("https://packages.confluent.io/maven/")
+java {
+    toolchain {
+        languageVersion.set(org.gradle.jvm.toolchain.JavaLanguageVersion.of(21))
+    }
 }
 
 dependencies {
-	implementation("org.springframework.boot:spring-boot-starter-web")
-	implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation(project(":messaging-contracts"))
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.springframework:spring-jms:6.1.14")
+    implementation("jakarta.jms:jakarta.jms-api:3.1.0")
+    implementation("com.rabbitmq.jms:rabbitmq-jms:3.3.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("javax.xml.bind:jaxb-api:2.3.1")
     implementation("org.glassfish.jaxb:jaxb-runtime:2.3.8")
-	implementation("org.jetbrains.kotlin:kotlin-reflect")
-	implementation("org.telegram:telegrambots-spring-boot-starter:6.9.7.1")
-	implementation(project(":event-contracts"))
-	implementation("org.springframework.kafka:spring-kafka")
-	implementation("io.confluent:kafka-avro-serializer:7.6.0")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.telegram:telegrambots-spring-boot-starter:6.9.7.1")
 
     runtimeOnly("org.postgresql:postgresql")
 
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.junit.jupiter:junit-jupiter")
-	testImplementation("org.springframework.kafka:spring-kafka-test")
-	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("com.h2database:h2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<Test> {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
