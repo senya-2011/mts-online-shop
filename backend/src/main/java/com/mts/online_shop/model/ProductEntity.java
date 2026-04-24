@@ -26,8 +26,12 @@ public class ProductEntity {
     @Column(name = "price", nullable = false, precision = 19, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "deleted", nullable = false)
+    private Boolean deleted = false;
+
     public ProductEntity(String name, BigDecimal price) {
         this.name = name;
         this.price = price;
+        this.deleted = false;
     }
 }

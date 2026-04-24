@@ -1,0 +1,17 @@
+spring:
+  liquibase:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+jwt:
+  secret: this-is-a-test-secret-key-for-jwt-that-is-at-least-32-bytes-long
+  expiration-ms: 31536000000
+
+bank:
+  base-url: http://localhost:8081
+
+logging:
+  level:
+    com.mts.online_shop: ERROR

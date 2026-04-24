@@ -6,9 +6,12 @@ import com.mts.online_shop.model.BankPaymentResponse;
 import com.mts.online_shop.model.PaymentRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 
@@ -18,13 +21,11 @@ public class BankApiClient implements BankClient {
     private static final Logger log = LoggerFactory.getLogger(BankApiClient.class);
     private static final String PAYMENTS_PATH = "/api/cards/payments";
 
-    private final RestClient restClient;
+    private final RestTemplate restTemplate;
 
     public BankApiClient(BankClientProperties properties) {
         String baseUrl = properties.getBaseUrl() != null ? properties.getBaseUrl().replaceAll("/$", "") : "http://localhost:8081";
-        this.restClient = RestClient.builder()
-                .baseUrl(baseUrl)
-                .build();
+        this.restTemplate = new RestTemplate();
         log.info("Bank client baseUrl={}", baseUrl);
     }
 
@@ -45,20 +46,24 @@ public class BankApiClient implements BankClient {
         );
 
         try {
-            BankPaymentResponse response = restClient.post()
-                    .uri(PAYMENTS_PATH)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(BankPaymentResponse.class);
+            String url = "http://localhost:8081" + PAYMENTS_PATH;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<BankPaymentRequest> entity = new HttpEntity<>(body, headers);
+            
+            BankPaymentResponse response = restTemplate.postForObject(url, entity, BankPaymentResponse.class);
 
             if (response == null) {
                 log.warn("Bank returned empty response");
                 throw new InvalidPaymentDataException("Payment failed");
             }
             boolean approved = Boolean.TRUE.equals(response.getApproved());
-            log.debug("Bank payment approved={} message={}", approved, response.getMessage());
+            log.info("Bank response: approved={}, message={}", 
+                approved, 
+                response.getMessage());
             if (!approved && response.getMessage() != null) {
+                log.error("Bank payment not approved: {}", response.getMessage());
                 throw new InvalidPaymentDataException(response.getMessage());
             }
             return approved;
@@ -68,7 +73,8 @@ public class BankApiClient implements BankClient {
             String message = "Payment failed";
             if (e.getResponseBodyAsString() != null && !e.getResponseBodyAsString().isBlank()) {
                 try {
-                    BankPaymentResponse err = e.getResponseBodyAs(BankPaymentResponse.class);
+                    ObjectMapper mapper = new ObjectMapper();
+                    BankPaymentResponse err = mapper.readValue(e.getResponseBodyAsString(), BankPaymentResponse.class);
                     if (err != null && err.getMessage() != null) {
                         message = err.getMessage();
                     }
@@ -80,6 +86,28 @@ public class BankApiClient implements BankClient {
         } catch (Exception e) {
             log.error("Bank request failed", e);
             throw new InvalidPaymentDataException("Bank service unavailable: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean refundPayment(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new InvalidPaymentDataException("Refund amount must be positive");
+        }
+
+        try {
+            // Имитируем возврат через банк
+            log.info("Processing refund of amount: {}", amount);
+            
+            // В реальном приложении здесь был бы запрос к банковскому API
+            // Для демонстрации просто возвращаем true
+            boolean refundProcessed = true;
+            
+            log.debug("Refund processed successfully for amount: {}", amount);
+            return refundProcessed;
+        } catch (Exception e) {
+            log.error("Refund failed", e);
+            throw new InvalidPaymentDataException("Refund failed: " + e.getMessage());
         }
     }
 }

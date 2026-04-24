@@ -1,5 +1,7 @@
 package com.mts.online_shop.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -23,17 +25,28 @@ public class UserItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ProductEntity product;
+
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity = 1;
 
     public UserItem(User user, ProductEntity product) {
         this.user = user;
         this.product = product;
+    }
+
+    public UserItem(User user, ProductEntity product, Integer quantity) {
+        this.user = user;
+        this.product = product;
+        this.quantity = quantity;
     }
 }
 

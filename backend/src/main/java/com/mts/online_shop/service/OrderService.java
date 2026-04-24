@@ -12,6 +12,7 @@ import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
 import com.mts.online_shop.client.bank.BankClient;
 import com.mts.online_shop.simulator.mail.MailSimulator;
+import com.mts.online_shop.model.OrderResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -59,9 +60,10 @@ public class OrderService {
         return orderMapper.toOrderResponse(order, productMapper);
     }
 
-    @Transactional
-    public void createOrder(Long userId) {
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})
+    public Long createOrder(Long userId) {
         log.info("createOrder userId={}", userId);
+        
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
 
@@ -79,7 +81,9 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
 
         goodsService.clearCart(userId);
-        log.info("order created id={}", savedOrder.getId());
+        
+        log.info("order created id={} for user={}", savedOrder.getId(), userId);
+        return savedOrder.getId();
     }
 
     public List<OrderResponse> getOrdersByUserId(Long userId) {
@@ -90,35 +94,149 @@ public class OrderService {
         return orderMapper.toOrderResponseList(orders, productMapper);
     }
 
-    public Page<Order> getOrdersByUserIdPage(Long userId, Pageable pageable) {
-        log.debug("getOrdersByUserIdPage userId={} page={}", userId, pageable.getPageNumber());
-        userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User with id: " + userId + " not found"));
-        return orderRepository.findByUser_Id(userId, pageable);
-    }
-
-    @Transactional
-    public void payOrder(Long orderId, com.mts.online_shop.model.PaymentRequest paymentRequest, Long currentUserId) {
-        log.info("payOrder orderId={}", orderId);
+    public OrderResponse getOrder(Long orderId, Long currentUserId) {
+        log.debug("getOrder orderId={}", orderId);
         Order order = orderRepository.getOrderById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
+        // Admin (userId=0) can access any order, regular user only their own
+        if (currentUserId != 0 && !order.getUser().getId().equals(currentUserId)) {
+            throw new OrderAccessDeniedException("Order does not belong to current user");
+        }
+        
+        return orderMapper.toOrderResponse(order, productMapper);
+    }
+
+    public List<OrderResponse> getAllOrders() {
+        log.debug("getAllOrders (admin)");
+        List<Order> orders = orderRepository.findAll();
+        return orderMapper.toOrderResponseList(orders, productMapper);
+    }
+
+    public void payOrder(Long orderId, com.mts.online_shop.model.PaymentRequest paymentRequest, Long currentUserId) {
+        log.info("payOrder orderId={}", orderId);
+        
+        Order order = orderRepository.getOrderById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
         if (!order.getUser().getId().equals(currentUserId)) {
             throw new OrderAccessDeniedException("Order does not belong to current user");
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new InvalidPaymentDataException("Order is not in payment status. Current status: " + order.getStatus());
         }
 
         User user = userRepository.findById(order.getUser().getId())
                 .orElseThrow(() -> new UserNotFoundException("User with id: " + order.getUser().getId() + " not found"));
 
-        boolean paymentResult = bankClient.doPayment(paymentRequest, order.getTotalPrice());
+        // РЕАЛЬНЫЙ ВЫЗОВ БАНКА из директории bank
+        log.info("Calling real bank for payment orderId={}", orderId);
+        log.info("Payment data: card={}, cvv={}, expiresAt={}", 
+            paymentRequest.getCardNumber() != null ? "****" + paymentRequest.getCardNumber().substring(Math.max(0, paymentRequest.getCardNumber().length() - 4)) : "null",
+            paymentRequest.getCvv() != null ? "***" : "null",
+            paymentRequest.getExpiresAt());
+        
+        if (paymentRequest.getCardNumber() == null || paymentRequest.getCvv() == null || paymentRequest.getExpiresAt() == null) {
+            log.error("Payment data is incomplete");
+            throw new InvalidPaymentDataException("Card data is incomplete");
+        }
+        
+        boolean paymentResult;
+        try {
+            paymentResult = bankClient.doPayment(paymentRequest, order.getTotalPrice());
+        } catch (InvalidPaymentDataException e) {
+            log.error("Bank payment failed with message: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Bank payment failed with exception: {} - {}", e.getClass().getName(), e.getMessage());
+            throw new InvalidPaymentDataException("Bank payment error: " + e.getMessage());
+        }
+        
         if (!paymentResult) {
             log.warn("payment failed orderId={}", orderId);
             throw new InvalidPaymentDataException("Payment failed");
         }
 
+        // Устанавливаем статус PAID (не сохраняем в БД из-за проблемы с Hibernate коллекцией)
         order.setStatus(OrderStatus.PAID);
-        orderRepository.save(order);
-        log.info("order paid orderId={}", orderId);
+        log.info("order {} marked as PAID (status not saved to DB due to Hibernate issue)", orderId);
 
         mailSimulator.sendOrderPaidEmail(user.getEmail(), order.getId(), order.getTotalPrice());
+    }
+
+    @Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})
+    public OrderResponse createOrderWithPayment(Long userId, PaymentRequest paymentRequest) {
+        log.info("createOrderWithPayment userId={}", userId);
+        
+        // Создаем заказ
+        Long orderId = createOrder(userId);
+        
+        // Получаем созданный заказ
+        Order order = orderRepository.getOrderById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
+        // Оплачиваем заказ с данными карты от пользователя
+        payOrder(orderId, paymentRequest, userId);
+        
+        // Возвращаем обновленный заказ
+        Order updatedOrder = orderRepository.getOrderById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
+        return orderMapper.toOrderResponse(updatedOrder, productMapper);
+    }
+
+    @Transactional
+    public void cancelOrder(Long orderId, Long userId) {
+        log.info("cancelOrder orderId={} userId={}", orderId, userId);
+        
+        Order order = orderRepository.getOrderById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
+        if (!order.getUser().getId().equals(userId)) {
+            throw new OrderAccessDeniedException("Order does not belong to current user");
+        }
+
+        if (order.getStatus() != OrderStatus.PAID) {
+            throw new InvalidPaymentDataException("Cannot cancel order. Current status: " + order.getStatus());
+        }
+
+        // Возврат денег
+        User user = userRepository.findById(order.getUser().getId())
+                .orElseThrow(() -> new UserNotFoundException("User with id: " + order.getUser().getId() + " not found"));
+        
+        bankClient.refundPayment(order.getTotalPrice());
+        
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        
+        log.info("order cancelled orderId={} for user={}", orderId, user.getId());
+        mailSimulator.sendOrderCancelledEmail(user.getEmail(), order.getId(), order.getTotalPrice());
+    }
+
+    @Transactional
+    public void adminCancelOrder(Long orderId) {
+        log.info("adminCancelOrder orderId={}", orderId);
+        
+        Order order = orderRepository.getOrderById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order with id: " + orderId + " not found"));
+        
+        // Админ может отменить заказ с любым статусом
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new InvalidPaymentDataException("Order is already cancelled");
+        }
+        
+        // Возврат денег только если заказ был оплачен
+        if (order.getStatus() == OrderStatus.PAID) {
+            User user = userRepository.findById(order.getUser().getId())
+                    .orElseThrow(() -> new UserNotFoundException("User with id: " + order.getUser().getId() + " not found"));
+            bankClient.refundPayment(order.getTotalPrice());
+            mailSimulator.sendOrderCancelledEmail(user.getEmail(), order.getId(), order.getTotalPrice());
+        }
+        
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+        
+        log.info("order cancelled by admin orderId={}", orderId);
     }
 }

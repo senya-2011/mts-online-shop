@@ -5,14 +5,21 @@ import com.mts.online_shop.exception.InvalidCredentialsException;
 import com.mts.online_shop.exception.UserAlreadyExistsException;
 import com.mts.online_shop.model.User;
 import com.mts.online_shop.repository.UserRepository;
+import com.mts.online_shop.security.JwtService;
+import com.mts.online_shop.security.XmlUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -22,53 +29,82 @@ public class AuthService {
     private static final Pattern LOGIN_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]{3,64}$");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@]+@[^@]+\\.[^@]+$");
 
-    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final XmlUserDetailsService xmlUserDetailsService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository;
+    private final UserIdGeneratorService userIdGeneratorService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
+    public AuthService(PasswordEncoder passwordEncoder, 
+                      XmlUserDetailsService xmlUserDetailsService,
+                      JwtService jwtService,
+                      UserRepository userRepository,
+                      UserIdGeneratorService userIdGeneratorService) {
         this.passwordEncoder = passwordEncoder;
+        this.xmlUserDetailsService = xmlUserDetailsService;
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
+        this.userIdGeneratorService = userIdGeneratorService;
     }
 
-    public Long authenticate(String login, String password) {
-        String normalizedLogin = normalizeLogin(login);
-        String rawPassword = normalizePassword(password);
-        User user = userRepository.findByLoginIgnoreCaseOrEmailIgnoreCase(normalizedLogin, normalizedLogin)
-                .orElseThrow(() -> new InvalidCredentialsException("Неверный логин или пароль"));
-
-        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
-            throw new InvalidCredentialsException("Неверный логин или пароль");
+    public String authenticate(String login, String password) {
+        UserDetails userDetails = xmlUserDetailsService.loadUserByUsername(login);
+        
+        // BCryptPasswordEncoder comparison
+        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
+            throw new InvalidCredentialsException("Invalid credentials");
         }
-
-        return user.getId();
+        
+        Long userId = xmlUserDetailsService.getUserIdByUsername(login);
+        if (userId == null) {
+            throw new InvalidCredentialsException("User not found");
+        }
+        
+        Set<String> roles = userDetails.getAuthorities().stream()
+                .map(authority -> authority.getAuthority().replace("ROLE_", ""))
+                .collect(Collectors.toSet());
+        
+        return jwtService.generateToken(userId, login, roles, Collections.emptyMap());
     }
 
     @Transactional
-    public void register(String login, String email, String password, String name) {
+    public Long register(String login, String email, String password, String name) {
         String normalizedLogin = normalizeLogin(login);
         String normalizedEmail = normalizeEmail(email);
         String rawPassword = normalizePassword(password);
 
-        if (userRepository.existsByLoginIgnoreCase(normalizedLogin)) {
-            throw new UserAlreadyExistsException("Пользователь с таким логином уже существует");
-        }
-        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new UserAlreadyExistsException("Пользователь с таким email уже существует");
-        }
+        log.info("Starting registration for user: {}", normalizedLogin);
 
-        String normalizedName = name == null || name.isBlank() ? normalizedLogin : name.trim();
-        if (normalizedName.length() > 255) {
-            throw new BadRequestException("Имя пользователя слишком длинное");
+        if (xmlUserDetailsService.userExists(normalizedLogin)) {
+            throw new UserAlreadyExistsException("User with login already exists");
         }
 
-        User user = new User();
-        user.setLogin(normalizedLogin);
-        user.setEmail(normalizedEmail);
-        user.setName(normalizedName);
-        user.setPasswordHash(passwordEncoder.encode(rawPassword));
-
-        userRepository.save(user);
-        log.info("Registered user id={} login={} email={}", user.getId(), normalizedLogin, normalizedEmail);
+        // Hash password before saving
+        String hashedPassword = passwordEncoder.encode(rawPassword);
+        
+        // Save to XML with hashed password (XmlUserDetailsService will generate ID)
+        xmlUserDetailsService.saveUser(normalizedLogin, hashedPassword, Collections.singletonList("USER"));
+        log.info("User saved to XML with hashed password: {}", normalizedLogin);
+        
+        // Get assigned ID from XML
+        Long userId = xmlUserDetailsService.getUserIdByUsername(normalizedLogin);
+        log.info("Retrieved userId from XML: {} for user: {}", userId, normalizedLogin);
+        
+        // Create user in database for business logic
+        User dbUser = new User();
+        dbUser.setId(userId); // Use same ID
+        dbUser.setLogin(normalizedLogin);
+        dbUser.setEmail(normalizedEmail);
+        dbUser.setName(name);
+        dbUser.setPasswordHash(hashedPassword); // Save hashed password
+        dbUser.setRole("USER");
+        
+        User savedUser = userRepository.save(dbUser);
+        log.info("User saved to database: {} with ID: {}", savedUser.getLogin(), savedUser.getId());
+        
+        log.info("Registration completed for user: {} with ID: {}", normalizedLogin, userId);
+        
+        return userId;
     }
 
     private String normalizeLogin(String login) {
@@ -102,5 +138,27 @@ public class AuthService {
             throw new BadRequestException("Пароль должен быть длиной от 8 до 72 символов");
         }
         return normalized;
+    }
+
+    // ===== АДМИН-МЕТОДЫ для управления пользователями =====
+
+    public List<User> getAllUsers() {
+        log.debug("getAllUsers (admin)");
+        return userRepository.findAll();
+    }
+
+    public User getUserById(Long userId) {
+        log.debug("getUserById id={}", userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
+    }
+
+    @Transactional
+    public void deleteUser(Long userId) {
+        log.info("deleteUser id={}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
+        userRepository.delete(user);
+        log.info("User deleted id={}", userId);
     }
 }

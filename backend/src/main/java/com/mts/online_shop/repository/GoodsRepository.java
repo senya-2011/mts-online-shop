@@ -10,4 +10,8 @@ import org.springframework.stereotype.Repository;
 public interface GoodsRepository extends JpaRepository<ProductEntity, Long> {
 
     Page<ProductEntity> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    Page<ProductEntity> findByDeletedFalse(Pageable pageable);
+
+    Page<ProductEntity> findByNameContainingIgnoreCaseAndDeletedFalse(String name, Pageable pageable);
 }

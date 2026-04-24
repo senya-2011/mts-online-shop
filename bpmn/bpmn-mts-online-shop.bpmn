@@ -101,13 +101,6 @@
     </serviceTask>
     <sequenceFlow id="Flow_1nb5umh" sourceRef="Activity_0kpf7hn" targetRef="Gateway_1skpzpb" />
     <sequenceFlow id="Flow_1b8jppo" sourceRef="Activity_0ybk1fb" targetRef="Activity_1qa1b4x" />
-    <boundaryEvent id="Event_0cj9c4w" attachedToRef="Activity_04h2quq">
-      <errorEventDefinition id="ErrorEventDefinition_1dipb6p" />
-    </boundaryEvent>
-    <sequenceFlow id="Flow_05bpi2e" sourceRef="Activity_04h2quq" targetRef="Activity_0y1p9dz" />
-    <sequenceFlow id="Flow_19bins3" sourceRef="Gateway_1i09div" targetRef="Event_1ncmbxt" />
-    <sequenceFlow id="Flow_196m4h8" sourceRef="Gateway_1i09div" targetRef="Activity_0x8curt" />
-    <sequenceFlow id="Flow_0k5hmrr" sourceRef="Activity_0x8curt" targetRef="Event_13qnj24" />
     <serviceTask id="Activity_0y1p9dz" name="Изменение статуса заказа на &#34;Оплачен&#34;">
       <incoming>Flow_05bpi2e</incoming>
       <outgoing>Flow_1kkww16</outgoing>
@@ -140,6 +133,10 @@
       <incoming>Flow_0k5hmrr</incoming>
     </endEvent>
     <sequenceFlow id="Flow_1kkww16" sourceRef="Activity_0y1p9dz" targetRef="Activity_01a1t3w" />
+    <endEvent id="Event_0cj9c4w" name="Ошибка платежа">
+      <incoming>Flow_13qwert</incoming>
+    </endEvent>
+    <sequenceFlow id="Flow_13qwert" sourceRef="Event_0cj9c4w" targetRef="Event_0cj9c4w" />
   </process>
   <process id="Process_04uoqzv" />
   <bpmndi:BPMNDiagram id="BpmnDiagram_1">
@@ -218,9 +215,6 @@
         <bpmndi:BPMNLabel>
           <omgdc:Bounds x="1457" y="218" width="86" height="40" />
         </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Event_0cj9c4w_di" bpmnElement="Event_0cj9c4w">
-        <omgdc:Bounds x="862" y="362" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1o6e2e2_di" bpmnElement="Flow_1o6e2e2">
         <omgdi:waypoint x="278" y="190" />

@@ -5,6 +5,7 @@ import com.mts.online_shop.model.OrderItem;
 import com.mts.online_shop.model.OrderStatus;
 import com.mts.online_shop.model.Product;
 import com.mts.online_shop.model.ProductEntity;
+import com.mts.online_shop.model.OrderResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -13,41 +14,46 @@ import java.util.List;
 @Component
 public class OrderMapper {
 
-    public com.mts.online_shop.model.OrderResponse toOrderResponse(Order order, ProductMapper productMapper) {
+    public OrderResponse toOrderResponse(Order order, ProductMapper productMapper) {
         if (order == null) {
             return null;
         }
 
-        com.mts.online_shop.model.OrderResponse response = new com.mts.online_shop.model.OrderResponse();
-        response.setOrderId(order.getId());
+        OrderResponse response = new OrderResponse();
+        response.setId(order.getId());
         response.setUserId(order.getUser() != null ? order.getUser().getId() : null);
         response.setStatus(mapStatus(order.getStatus()));
-        response.setTotalPrice(order.getTotalPrice());
+        response.setTotalPrice(order.getTotalPrice().doubleValue()); 
         response.setItems(mapItems(order.getItems(), productMapper));
         return response;
     }
 
-    private com.mts.online_shop.model.OrderResponse.StatusEnum mapStatus(OrderStatus status) {
+    private OrderResponse.StatusEnum mapStatus(OrderStatus status) {
         if (status == null) {
             return null;
         }
         return switch (status) {
-            case CREATED -> com.mts.online_shop.model.OrderResponse.StatusEnum.PENDING;
-            case PAID, DELIVERED -> com.mts.online_shop.model.OrderResponse.StatusEnum.PAID;
-            case CANCELLED -> com.mts.online_shop.model.OrderResponse.StatusEnum.CANCELLED;
+            case CREATED -> OrderResponse.StatusEnum.CREATED;
+            case PAID, DELIVERED -> OrderResponse.StatusEnum.PAID;
+            case CANCELLED -> OrderResponse.StatusEnum.CANCELLED;
         };
     }
 
-    private List<Product> mapItems(List<OrderItem> items, ProductMapper productMapper) {
+    private List<com.mts.online_shop.model.CartItem> mapItems(List<OrderItem> items, ProductMapper productMapper) {
         if (items == null || items.isEmpty()) {
             return Collections.emptyList();
         }
         return items.stream()
-                .map(oi -> productMapper.toDto(oi.getProduct()))
+                .map(oi -> {
+                    com.mts.online_shop.model.CartItem cartItem = new com.mts.online_shop.model.CartItem();
+                    cartItem.setId(oi.getId());
+                    cartItem.setProduct(productMapper.toDto(oi.getProduct()));
+                    return cartItem;
+                })
                 .toList();
     }
 
-    public List<com.mts.online_shop.model.OrderResponse> toOrderResponseList(
+    public List<OrderResponse> toOrderResponseList(
             List<Order> orders,
             ProductMapper productMapper) {
         if (orders == null || orders.isEmpty()) {

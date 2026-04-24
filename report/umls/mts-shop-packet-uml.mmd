@@ -7,8 +7,11 @@ flowchart LR
     direction LR
         OrderController["OrderController"]
         ProductsController["ProductsController"]
-        CartController["CartController"]
+        UserCartController["UserCartController"]
         AuthController["AuthController"]
+        AdminProductsController["AdminProductsController"]
+        AdminUsersController["AdminUsersController"]
+        AdminCartController["AdminCartController"]
         GlobalExceptionHandler["GlobalExceptionHandler"]
   end
  subgraph Service_Pkg["📂 com.mts.online_shop.service"]
@@ -16,6 +19,7 @@ flowchart LR
         OrderService["OrderService"]
         GoodsService["GoodsService"]
         AuthService["AuthService"]
+        UserIdGeneratorService["UserIdGeneratorService"]
   end
  subgraph Mapper_Pkg["📂 com.mts.online_shop.mapper"]
     direction LR
@@ -33,6 +37,7 @@ flowchart LR
         GoodsRepository["GoodsRepository"]
         UserRepository["UserRepository"]
         UserItemRepository["UserItemRepository"]
+        OrderItemRepository["OrderItemRepository"]
   end
  subgraph Model_Pkg["📂 com.mts.online_shop.model"]
     direction LR
@@ -47,6 +52,7 @@ flowchart LR
     direction LR
         JwtService["JwtService"]
         CurrentUserService["CurrentUserService"]
+        XmlUserDetailsService["XmlUserDetailsService"]
   end
  subgraph Simulator_Pkg["📂 com.mts.online_shop.simulator.mail"]
     direction LR
@@ -58,6 +64,7 @@ flowchart LR
     Service_Pkg --> Mapper_Pkg
     Service_Pkg --> Client_Pkg
     Service_Pkg --> Simulator_Pkg
+    Service_Pkg --> Security_Pkg
     Repository_Pkg -.-> Model_Pkg
     Service_Pkg -.-> Model_Pkg
     Mapper_Pkg -.-> Model_Pkg
@@ -65,12 +72,16 @@ flowchart LR
 
      OrderController:::cls
      ProductsController:::cls
-     CartController:::cls
+     UserCartController:::cls
      AuthController:::cls
+     AdminProductsController:::cls
+     AdminUsersController:::cls
+     AdminCartController:::cls
      GlobalExceptionHandler:::cls
      OrderService:::cls
      GoodsService:::cls
      AuthService:::cls
+     UserIdGeneratorService:::cls
      OrderMapper:::cls
      ProductMapper:::cls
      BankClient:::cls
@@ -80,6 +91,7 @@ flowchart LR
      GoodsRepository:::cls
      UserRepository:::cls
      UserItemRepository:::cls
+     OrderItemRepository:::cls
      Order:::cls
      OrderItem:::cls
      User:::cls
@@ -88,6 +100,7 @@ flowchart LR
      OrderStatus:::cls
      JwtService:::cls
      CurrentUserService:::cls
+     XmlUserDetailsService:::cls
      Controller_Pkg:::pkg
      Service_Pkg:::pkg
      Mapper_Pkg:::pkg

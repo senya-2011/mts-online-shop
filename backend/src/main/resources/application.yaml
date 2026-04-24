@@ -11,9 +11,10 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${MTS_DB_URL:jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:13300}/${MTS_DB_NAME:db}}
-    username: ${MTS_DB_USERNAME:user}
-    password: ${MTS_DB_PASSWORD:pass}
+    url: jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db_backend}
+    username: ${MTS_DB_USERNAME:postgres}
+    password: ${MTS_DB_PASSWORD:postgres}
+
   mail:
     host: ${MTS_MAIL_HOST:smtp.mail.ru}
     port: ${MTS_MAIL_PORT:465}
@@ -31,7 +32,7 @@ spring:
 server:
   port: ${MTS_PORT:8080}
   servlet:
-    context-path: ${MTS_CONTEXT_PATH:/api}
+    context-path: ${MTS_CONTEXT_PATH:}
 
 jwt:
   secret: ${MTS_JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
@@ -45,6 +46,13 @@ logging:
     root: ${MTS_LOG_LEVEL:INFO}
     liquibase: INFO
     org.springframework.boot.autoconfigure.liquibase: INFO
+
+springdoc:
+  api-docs:
+    path: /api/v3/api-docs
+  swagger-ui:
+    path: /api/swagger-ui.html
+    enabled: true
 
 mail:
   from: ${MTS_MAIL_USERNAME:noreply@localhost}

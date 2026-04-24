@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<users>
+                
+    
+    
+    <user enabled="true" id="1" password="$2a$10$Rwd1h/72XsJ0p7D4O2C0nuABpb6VuRsdJ63pI7x5jDC4ItWI09oK2" username="admin">
+        <roles>
+            <role>ADMIN</role> 
+        </roles>
+    </user>
+    
+    <user enabled="true" id="2" password="$2a$10$rbvmpkQs4B//2A9mHJEdb.62PRVRkquI9ZBJlN290gyRcSAn.6ZRq" username="alisa">
+        <roles>
+            <role>USER</role>
+        </roles>
+    </user>
+</users>

@@ -4,13 +4,27 @@ on:
 #  push:
 #    branches: [dev, main]
   pull_request:
-    branches: [ dev, main ]
+    branches: [ dev, main, lr2 ]
 
 
 jobs:
   test:
     if: github.event_name == 'pull_request' || github.event_name == 'push'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
 
@@ -22,4 +36,10 @@ jobs:
 
       - name: Generate API and run tests
         working-directory: backend
+        env:
+          MTS_DB_HOST: localhost
+          MTS_DB_PORT: 5432
+          MTS_DB_NAME: test_db
+          MTS_DB_USERNAME: test_user
+          MTS_DB_PASSWORD: test_password
         run: chmod +x gradlew && ./gradlew test

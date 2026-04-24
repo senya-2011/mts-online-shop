@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0"
+             xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0"
+             id="Definitions_MTS_Online_Shop"
+             targetNamespace="http://mts-online-shop/bpmn"
+             exporter="Cascade AI Assistant"
+             exporterVersion="6.0">
+
+  <!-- ================= COLLABORATION ================= -->
+  <collaboration id="Collaboration_MTS_Shop">
+    <participant id="Participant_Customer" name="ПОЛЬЗОВАТЕЛЬ" processRef="Process_Customer"/>
+    <participant id="Participant_Auth" name="АУТЕНТИФИКАЦИЯ" processRef="Process_Auth"/>
+    <participant id="Participant_Shop" name="МАГАЗИН МТС" processRef="Process_Shop"/>
+    <participant id="Participant_Transaction" name="ТРАНЗАКЦИИ" processRef="Process_Transaction"/>
+    <participant id="Participant_Bank" name="БАНК" processRef="Process_Bank"/>
+    <participant id="Participant_Notification" name="УВЕДОМЛЕНИЯ" processRef="Process_Notification"/>
+    <participant id="Participant_Manager" name="МЕНЕДЖЕР" processRef="Process_Manager"/>
+    <participant id="Participant_Admin" name="АДМИНИСТРАТОР" processRef="Process_Admin"/>
+
+    <!-- Message Flows -->
+    <messageFlow id="MF_CustomerAuthRequest" sourceRef="Event_CustomerStart" targetRef="Event_AuthStart" name="authenticate(login, password)"/>
+    <messageFlow id="MF_AuthResponse" sourceRef="Event_AuthEnd" targetRef="Event_CustomerAuth" name="authentication result"/>
+    <messageFlow id="MF_BrowseProducts" sourceRef="Task_BrowseProducts" targetRef="Task_GetProducts" name="GET /api/products"/>
+    <messageFlow id="MF_AddToCart" sourceRef="Task_AddToCart" targetRef="Task_AddCartItem" name="POST /api/cart/items"/>
+    <messageFlow id="MF_ViewCart" sourceRef="Task_ViewCart" targetRef="Task_GetCartItems" name="GET /api/cart/items"/>
+    <messageFlow id="MF_CreateOrder" sourceRef="Task_CreateOrder" targetRef="Event_TransactionOrderStart" name="createOrderWithPayment()"/>
+    <messageFlow id="MF_ClearCart" sourceRef="Task_ClearCart" targetRef="Event_TransactionClearStart" name="clearCart()"/>
+    <messageFlow id="MF_RemoveItems" sourceRef="Task_RemoveItems" targetRef="Event_TransactionRemoveStart" name="removeItems()"/>
+    <messageFlow id="MF_MergeCarts" sourceRef="Task_MergeCarts" targetRef="Event_TransactionMergeStart" name="mergeCarts()"/>
+    <messageFlow id="MF_ProcessPayment" sourceRef="Task_ProcessPayment" targetRef="Event_BankStart" name="processPayment()"/>
+    <messageFlow id="MF_BankResponse" sourceRef="Event_BankEnd" targetRef="Task_ProcessPayment" name="paymentResult"/>
+    <messageFlow id="MF_SendNotification" sourceRef="Task_SendEmail" targetRef="Event_NotificationStart" name="sendNotification()"/>
+    <messageFlow id="MF_NotificationResponse" sourceRef="Event_NotificationEnd" targetRef="Task_SendEmail" name="notificationSent"/>
+    <messageFlow id="MF_OrderToManager" sourceRef="Event_OrderComplete" targetRef="Task_ManagerViewOrders" name="newOrder"/>
+    <messageFlow id="MF_ManagerProcessOrder" sourceRef="Task_ManagerProcessOrder" targetRef="Task_UpdateOrderStatus" name="updateStatus"/>
+    <messageFlow id="MF_ManagerCancelOrder" sourceRef="Task_ManagerCancelOrder" targetRef="Event_TransactionCancelStart" name="cancelOrder"/>
+    <messageFlow id="MF_ManagerReports" sourceRef="Task_ManagerReports" targetRef="Task_AdminViewReports" name="reportsRequest"/>
+    <messageFlow id="MF_AdminManageProducts" sourceRef="Task_AdminManageProducts" targetRef="Task_GetProducts" name="manageProducts"/>
+  </collaboration>
+
+  <!-- ================= PROCESS CUSTOMER ================= -->
+  <process id="Process_Customer" isExecutable="true">
+    <laneSet id="LaneSet_Customer">
+      <lane id="Lane_Customer_Main" name="Основные действия пользователя">
+        <flowNodeRef>Event_CustomerStart</flowNodeRef>
+        <flowNodeRef>Event_CustomerAuth</flowNodeRef>
+        <flowNodeRef>Task_BrowseProducts</flowNodeRef>
+        <flowNodeRef>Task_AddToCart</flowNodeRef>
+        <flowNodeRef>Task_ViewCart</flowNodeRef>
+        <flowNodeRef>Task_MergeCart</flowNodeRef>
+        <flowNodeRef>Task_CreateOrder</flowNodeRef>
+        <flowNodeRef>Event_OrderComplete</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <startEvent id="Event_CustomerStart" name="Начало сессии">
+      <outgoing>Flow_CustomerStartToAuth</outgoing>
+    </startEvent>
+    
+    <intermediateCatchEvent id="Event_CustomerAuth" name="Аутентификация успешна">
+      <incoming>Flow_CustomerStartToAuth</incoming>
+      <outgoing>Flow_AuthToBrowse</outgoing>
+    </intermediateCatchEvent>
+    
+    <userTask id="Task_BrowseProducts" name="Просмотр товаров">
+      <incoming>Flow_AuthToBrowse</incoming>
+      <outgoing>Flow_BrowseToAdd</outgoing>
+    </userTask>
+    
+    <userTask id="Task_AddToCart" name="Добавить товар в корзину">
+      <incoming>Flow_BrowseToAdd</incoming>
+      <outgoing>Flow_AddToView</outgoing>
+    </userTask>
+    
+    <userTask id="Task_ViewCart" name="Просмотр корзины">
+      <incoming>Flow_AddToView</incoming>
+      <outgoing>Flow_ViewToMerge</outgoing>
+    </userTask>
+    
+    <userTask id="Task_MergeCart" name="Объединить корзины">
+      <incoming>Flow_ViewToMerge</incoming>
+      <outgoing>Flow_MergeToCreate</outgoing>
+    </userTask>
+    
+    <userTask id="Task_CreateOrder" name="Создать заказ с оплатой">
+      <incoming>Flow_MergeToCreate</incoming>
+      <outgoing>Flow_CreateToComplete</outgoing>
+    </userTask>
+    
+    <endEvent id="Event_OrderComplete" name="Заказ создан">
+      <incoming>Flow_CreateToComplete</incoming>
+    </endEvent>
+
+    <sequenceFlow id="Flow_CustomerStartToAuth" sourceRef="Event_CustomerStart" targetRef="Event_CustomerAuth"/>
+    <sequenceFlow id="Flow_AuthToBrowse" sourceRef="Event_CustomerAuth" targetRef="Task_BrowseProducts"/>
+    <sequenceFlow id="Flow_BrowseToAdd" sourceRef="Task_BrowseProducts" targetRef="Task_AddToCart"/>
+    <sequenceFlow id="Flow_AddToView" sourceRef="Task_AddToCart" targetRef="Task_ViewCart"/>
+    <sequenceFlow id="Flow_ViewToMerge" sourceRef="Task_ViewCart" targetRef="Task_MergeCart"/>
+    <sequenceFlow id="Flow_MergeToCreate" sourceRef="Task_MergeCart" targetRef="Task_CreateOrder"/>
+    <sequenceFlow id="Flow_CreateToComplete" sourceRef="Task_CreateOrder" targetRef="Event_OrderComplete"/>
+  </process>
+
+  <!-- ================= PROCESS AUTH ================= -->
+  <process id="Process_Auth" isExecutable="true">
+    <laneSet id="LaneSet_Auth">
+      <lane id="Lane_Auth_Main" name="Аутентификация">
+        <flowNodeRef>Event_AuthStart</flowNodeRef>
+        <flowNodeRef>Task_ValidateUser</flowNodeRef>
+        <flowNodeRef>Task_GenerateToken</flowNodeRef>
+        <flowNodeRef>Event_AuthEnd</flowNodeRef>
+        <flowNodeRef>DataStore_Users</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <dataStoreReference id="DataStore_Users" name="БД пользователей"/>
+    <dataInputAssociation id="DataInput_Auth">
+      <sourceRef>DataStore_Users</sourceRef>
+    </dataInputAssociation>
+
+    <startEvent id="Event_AuthStart" name="Запрос аутентификации">
+      <messageEventDefinition/>
+      <outgoing>Flow_AuthStartToValidate</outgoing>
+    </startEvent>
+    
+    <serviceTask id="Task_ValidateUser" name="Валидация пользователя">
+      <incoming>Flow_AuthStartToValidate</incoming>
+      <outgoing>Flow_AuthValidateToToken</outgoing>
+    </serviceTask>
+    
+    <serviceTask id="Task_GenerateToken" name="Генерация токена">
+      <incoming>Flow_AuthValidateToToken</incoming>
+      <outgoing>Flow_AuthTokenToEnd</outgoing>
+    </serviceTask>
+    
+    <endEvent id="Event_AuthEnd" name="Аутентификация завершена">
+      <messageEventDefinition/>
+      <incoming>Flow_AuthTokenToEnd</incoming>
+    </endEvent>
+
+    <sequenceFlow id="Flow_AuthStartToValidate" sourceRef="Event_AuthStart" targetRef="Task_ValidateUser"/>
+    <sequenceFlow id="Flow_AuthValidateToToken" sourceRef="Task_ValidateUser" targetRef="Task_GenerateToken"/>
+    <sequenceFlow id="Flow_AuthTokenToEnd" sourceRef="Task_GenerateToken" targetRef="Event_AuthEnd"/>
+  </process>
+
+  <!-- ================= PROCESS SHOP ================= -->
+  <process id="Process_Shop" isExecutable="true">
+    <laneSet id="LaneSet_Shop">
+      <lane id="Lane_Shop_Products" name="Управление товарами">
+        <flowNodeRef>Task_GetProducts</flowNodeRef>
+      </lane>
+      <lane id="Lane_Shop_Cart" name="Управление корзиной">
+        <flowNodeRef>Task_AddCartItem</flowNodeRef>
+        <flowNodeRef>Task_GetCartItems</flowNodeRef>
+        <flowNodeRef>Task_ClearCart</flowNodeRef>
+        <flowNodeRef>Task_RemoveItems</flowNodeRef>
+        <flowNodeRef>Task_MergeCarts</flowNodeRef>
+      </lane>
+      <lane id="Lane_Shop_Orders" name="Управление заказами">
+        <flowNodeRef>Task_UpdateOrderStatus</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <serviceTask id="Task_GetProducts" name="Получение списка товаров"/>
+    <serviceTask id="Task_AddCartItem" name="Добавление товара в корзину"/>
+    <serviceTask id="Task_GetCartItems" name="Получение товаров корзины"/>
+    <serviceTask id="Task_MergeCarts" name="Объединение корзин"/>
+    <serviceTask id="Task_ClearCart" name="Очистка корзины"/>
+    <serviceTask id="Task_RemoveItems" name="Удаление товаров из корзины"/>
+    <serviceTask id="Task_UpdateOrderStatus" name="Обновление статуса заказа"/>
+  </process>
+
+  <!-- ================= PROCESS TRANSACTION ================= -->
+  <process id="Process_Transaction" isExecutable="true">
+    <laneSet id="LaneSet_Transaction">
+      <lane id="Lane_Transaction_Cart" name="Транзакции корзины">
+        <flowNodeRef>Event_TransactionClearStart</flowNodeRef>
+        <flowNodeRef>Event_TransactionRemoveStart</flowNodeRef>
+        <flowNodeRef>Event_TransactionMergeStart</flowNodeRef>
+        <flowNodeRef>Task_CartTransaction</flowNodeRef>
+      </lane>
+      <lane id="Lane_Transaction_Order" name="Транзакции заказов">
+        <flowNodeRef>Event_TransactionOrderStart</flowNodeRef>
+        <flowNodeRef>Event_TransactionCancelStart</flowNodeRef>
+        <flowNodeRef>Task_BeginOrderTransaction</flowNodeRef>
+        <flowNodeRef>Task_ValidateCart</flowNodeRef>
+        <flowNodeRef>Task_SaveOrder</flowNodeRef>
+        <flowNodeRef>Task_ProcessPayment</flowNodeRef>
+        <flowNodeRef>Task_UpdateOrderStatusTrans</flowNodeRef>
+        <flowNodeRef>Task_ClearCartAfterOrder</flowNodeRef>
+        <flowNodeRef>Task_SendEmail</flowNodeRef>
+        <flowNodeRef>Task_CommitOrderTransaction</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <!-- Cart Transaction Events -->
+    <startEvent id="Event_TransactionClearStart" name="Очистка корзины">
+      <messageEventDefinition/>
+      <outgoing>Flow_ClearToCartTx</outgoing>
+    </startEvent>
+    <startEvent id="Event_TransactionRemoveStart" name="Удаление товаров">
+      <messageEventDefinition/>
+      <outgoing>Flow_RemoveToCartTx</outgoing>
+    </startEvent>
+    <startEvent id="Event_TransactionMergeStart" name="Объединение корзин">
+      <messageEventDefinition/>
+      <outgoing>Flow_MergeToCartTx</outgoing>
+    </startEvent>
+    <serviceTask id="Task_CartTransaction" name="Выполнить транзакцию корзины">
+      <incoming>Flow_ClearToCartTx</incoming>
+      <incoming>Flow_RemoveToCartTx</incoming>
+      <incoming>Flow_MergeToCartTx</incoming>
+    </serviceTask>
+
+    <!-- Order Transaction Events -->
+    <startEvent id="Event_TransactionOrderStart" name="Создание заказа">
+      <messageEventDefinition/>
+      <outgoing>Flow_OrderToBegin</outgoing>
+    </startEvent>
+    <startEvent id="Event_TransactionCancelStart" name="Отмена заказа">
+      <messageEventDefinition/>
+      <outgoing>Flow_CancelToBegin</outgoing>
+    </startEvent>
+    
+    <serviceTask id="Task_BeginOrderTransaction" name="Начать транзакцию">
+      <incoming>Flow_OrderToBegin</incoming>
+      <incoming>Flow_CancelToBegin</incoming>
+      <outgoing>Flow_BeginToValidate</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_ValidateCart" name="Проверить корзину">
+      <incoming>Flow_BeginToValidate</incoming>
+      <outgoing>Flow_ValidateToSave</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_SaveOrder" name="Сохранить заказ">
+      <incoming>Flow_ValidateToSave</incoming>
+      <outgoing>Flow_SaveToPayment</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_ProcessPayment" name="Обработать платеж">
+      <incoming>Flow_SaveToPayment</incoming>
+      <incoming>Flow_BankResponseMsg</incoming>
+      <outgoing>Flow_PaymentToStatus</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_UpdateOrderStatusTrans" name="Обновить статус">
+      <incoming>Flow_PaymentToStatus</incoming>
+      <outgoing>Flow_StatusToClear</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_ClearCartAfterOrder" name="Очистить корзину">
+      <incoming>Flow_StatusToClear</incoming>
+      <outgoing>Flow_ClearToEmail</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_SendEmail" name="Отправить email">
+      <incoming>Flow_ClearToEmail</incoming>
+      <incoming>Flow_NotifResponseMsg</incoming>
+      <outgoing>Flow_EmailToCommit</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_CommitOrderTransaction" name="Завершить транзакцию">
+      <incoming>Flow_EmailToCommit</incoming>
+    </serviceTask>
+
+    <!-- Sequence Flows -->
+    <sequenceFlow id="Flow_ClearToCartTx" sourceRef="Event_TransactionClearStart" targetRef="Task_CartTransaction"/>
+    <sequenceFlow id="Flow_RemoveToCartTx" sourceRef="Event_TransactionRemoveStart" targetRef="Task_CartTransaction"/>
+    <sequenceFlow id="Flow_MergeToCartTx" sourceRef="Event_TransactionMergeStart" targetRef="Task_CartTransaction"/>
+    <sequenceFlow id="Flow_OrderToBegin" sourceRef="Event_TransactionOrderStart" targetRef="Task_BeginOrderTransaction"/>
+    <sequenceFlow id="Flow_CancelToBegin" sourceRef="Event_TransactionCancelStart" targetRef="Task_BeginOrderTransaction"/>
+    <sequenceFlow id="Flow_BeginToValidate" sourceRef="Task_BeginOrderTransaction" targetRef="Task_ValidateCart"/>
+    <sequenceFlow id="Flow_ValidateToSave" sourceRef="Task_ValidateCart" targetRef="Task_SaveOrder"/>
+    <sequenceFlow id="Flow_SaveToPayment" sourceRef="Task_SaveOrder" targetRef="Task_ProcessPayment"/>
+    <sequenceFlow id="Flow_PaymentToStatus" sourceRef="Task_ProcessPayment" targetRef="Task_UpdateOrderStatusTrans"/>
+    <sequenceFlow id="Flow_StatusToClear" sourceRef="Task_UpdateOrderStatusTrans" targetRef="Task_ClearCartAfterOrder"/>
+    <sequenceFlow id="Flow_ClearToEmail" sourceRef="Task_ClearCartAfterOrder" targetRef="Task_SendEmail"/>
+    <sequenceFlow id="Flow_EmailToCommit" sourceRef="Task_SendEmail" targetRef="Task_CommitOrderTransaction"/>
+    
+    <dataAssociation id="Flow_BankResponseMsg" sourceRef="Flow_BankResponse"/>
+    <dataAssociation id="Flow_NotifResponseMsg" sourceRef="Flow_NotificationResponse"/>
+  </process>
+
+  <!-- ================= PROCESS BANK ================= -->
+  <process id="Process_Bank" isExecutable="true">
+    <laneSet id="LaneSet_Bank">
+      <lane id="Lane_Bank_Main" name="Банковские операции">
+        <flowNodeRef>Event_BankStart</flowNodeRef>
+        <flowNodeRef>Task_ValidatePayment</flowNodeRef>
+        <flowNodeRef>Task_ProcessBankPayment</flowNodeRef>
+        <flowNodeRef>Event_BankEnd</flowNodeRef>
+        <flowNodeRef>DataStore_Bank</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <dataStoreReference id="DataStore_Bank" name="БД банка"/>
+
+    <startEvent id="Event_BankStart" name="Запрос платежа">
+      <messageEventDefinition/>
+      <outgoing>Flow_BankStartToValidate</outgoing>
+    </startEvent>
+    <serviceTask id="Task_ValidatePayment" name="Валидация платежа">
+      <incoming>Flow_BankStartToValidate</incoming>
+      <outgoing>Flow_BankValidateToProcess</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_ProcessBankPayment" name="Обработка платежа">
+      <incoming>Flow_BankValidateToProcess</incoming>
+      <outgoing>Flow_BankProcessToEnd</outgoing>
+    </serviceTask>
+    <endEvent id="Event_BankEnd" name="Платеж обработан">
+      <messageEventDefinition/>
+      <incoming>Flow_BankProcessToEnd</incoming>
+    </endEvent>
+
+    <sequenceFlow id="Flow_BankStartToValidate" sourceRef="Event_BankStart" targetRef="Task_ValidatePayment"/>
+    <sequenceFlow id="Flow_BankValidateToProcess" sourceRef="Task_ValidatePayment" targetRef="Task_ProcessBankPayment"/>
+    <sequenceFlow id="Flow_BankProcessToEnd" sourceRef="Task_ProcessBankPayment" targetRef="Event_BankEnd"/>
+  </process>
+
+  <!-- ================= PROCESS NOTIFICATION ================= -->
+  <process id="Process_Notification" isExecutable="true">
+    <laneSet id="LaneSet_Notification">
+      <lane id="Lane_Notification_Main" name="Уведомления">
+        <flowNodeRef>Event_NotificationStart</flowNodeRef>
+        <flowNodeRef>Task_PrepareNotification</flowNodeRef>
+        <flowNodeRef>Task_SendEmailNotification</flowNodeRef>
+        <flowNodeRef>Event_NotificationEnd</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <startEvent id="Event_NotificationStart" name="Запрос уведомления">
+      <messageEventDefinition/>
+      <outgoing>Flow_NotifStartToPrepare</outgoing>
+    </startEvent>
+    <serviceTask id="Task_PrepareNotification" name="Подготовка уведомления">
+      <incoming>Flow_NotifStartToPrepare</incoming>
+      <outgoing>Flow_NotifPrepareToSend</outgoing>
+    </serviceTask>
+    <serviceTask id="Task_SendEmailNotification" name="Отправка email">
+      <incoming>Flow_NotifPrepareToSend</incoming>
+      <outgoing>Flow_NotifSendToEnd</outgoing>
+    </serviceTask>
+    <endEvent id="Event_NotificationEnd" name="Уведомление отправлено">
+      <messageEventDefinition/>
+      <incoming>Flow_NotifSendToEnd</incoming>
+    </endEvent>
+
+    <sequenceFlow id="Flow_NotifStartToPrepare" sourceRef="Event_NotificationStart" targetRef="Task_PrepareNotification"/>
+    <sequenceFlow id="Flow_NotifPrepareToSend" sourceRef="Task_PrepareNotification" targetRef="Task_SendEmailNotification"/>
+    <sequenceFlow id="Flow_NotifSendToEnd" sourceRef="Task_SendEmailNotification" targetRef="Event_NotificationEnd"/>
+  </process>
+
+  <!-- ================= PROCESS MANAGER ================= -->
+  <process id="Process_Manager" isExecutable="true">
+    <laneSet id="LaneSet_Manager">
+      <lane id="Lane_Manager_Main" name="Управление заказами">
+        <flowNodeRef>Task_ManagerViewOrders</flowNodeRef>
+        <flowNodeRef>Task_ManagerProcessOrder</flowNodeRef>
+        <flowNodeRef>Task_ManagerCancelOrder</flowNodeRef>
+        <flowNodeRef>Task_ManagerReports</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <userTask id="Task_ManagerViewOrders" name="Просмотр заказов"/>
+    <userTask id="Task_ManagerProcessOrder" name="Обработка заказа"/>
+    <userTask id="Task_ManagerCancelOrder" name="Отмена заказа"/>
+    <userTask id="Task_ManagerReports" name="Просмотр отчетов"/>
+  </process>
+
+  <!-- ================= PROCESS ADMIN ================= -->
+  <process id="Process_Admin" isExecutable="true">
+    <laneSet id="LaneSet_Admin">
+      <lane id="Lane_Admin_Main" name="Администрирование">
+        <flowNodeRef>Task_AdminViewReports</flowNodeRef>
+        <flowNodeRef>Task_AdminManageUsers</flowNodeRef>
+        <flowNodeRef>Task_AdminManageProducts</flowNodeRef>
+        <flowNodeRef>Task_AdminManageOrders</flowNodeRef>
+        <flowNodeRef>Task_AdminManageCart</flowNodeRef>
+        <flowNodeRef>Task_AdminSystemConfig</flowNodeRef>
+      </lane>
+    </laneSet>
+
+    <userTask id="Task_AdminViewReports" name="Просмотр отчетов"/>
+    <userTask id="Task_AdminManageUsers" name="Управление пользователями"/>
+    <userTask id="Task_AdminManageProducts" name="Управление товарами"/>
+    <userTask id="Task_AdminManageOrders" name="Управление заказами"/>
+    <userTask id="Task_AdminManageCart" name="Управление корзинами"/>
+    <userTask id="Task_AdminSystemConfig" name="Конфигурация системы"/>
+  </process>
+
+  <!-- ================= BPMN DIAGRAM (упрощен для читаемости) ================= -->
+  <bpmndi:BPMNDiagram id="BPMNDiagram_MTS_Shop">
+    <bpmndi:BPMNPlane id="BPMNPlane_MTS_Shop" bpmnElement="Collaboration_MTS_Shop">
+      <!-- Здесь можно разместить элементы, но для чистоты кода я их опускаю -->
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

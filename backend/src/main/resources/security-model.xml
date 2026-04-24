@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<security-model xmlns="http://mts-online-shop/security">
+    
+    <!-- Роли системы -->
+    <roles>
+        <role id="ADMIN" description="Администратор системы">
+            <privileges>
+                <privilege>USER_MANAGE</privilege>
+                <privilege>PRODUCT_MANAGE</privilege>
+                <privilege>PRODUCT_VIEW</privilege>
+                <privilege>ORDER_VIEW_ALL</privilege>
+                <privilege>ORDER_MANAGE_ALL</privilege>
+                <privilege>ORDER_OWN_MANAGE</privilege>
+                <privilege>CART_MANAGE_ALL</privilege>
+                <privilege>CART_OWN_MANAGE</privilege>
+                <privilege>PAYMENT_PROCESS</privilege>
+                <privilege>PAYMENT_OWN</privilege>
+                <privilege>PROFILE_OWN_MANAGE</privilege>
+                <privilege>SYSTEM_CONFIG</privilege>
+            </privileges>
+        </role>
+        
+        <role id="USER" description="Обычный пользователь">
+            <privileges>
+                <privilege>PRODUCT_VIEW</privilege>
+                <privilege>CART_OWN_MANAGE</privilege>
+                <privilege>ORDER_OWN_MANAGE</privilege>
+                <privilege>PAYMENT_OWN</privilege>
+                <privilege>PROFILE_OWN_MANAGE</privilege>
+            </privileges>
+        </role>
+    </roles>
+    
+    <!-- Привилегии системы -->
+    <privileges>
+        <!-- Управление пользователями -->
+        <privilege id="USER_MANAGE" description="Полное управление пользователями"/>
+        <privilege id="USER_REGISTER" description="Регистрация нового пользователя"/>
+        <privilege id="PROFILE_OWN_MANAGE" description="Управление собственным профилем"/>
+        
+        <!-- Управление товарами -->
+        <privilege id="PRODUCT_VIEW" description="Просмотр товаров"/>
+        <privilege id="PRODUCT_MANAGE" description="Управление товарами"/>
+        
+        <!-- Управление корзиной -->
+        <privilege id="CART_OWN_MANAGE" description="Управление собственной корзиной"/>
+        <privilege id="CART_MANAGE_ALL" description="Управление всеми корзинами"/>
+        
+        <!-- Управление заказами -->
+        <privilege id="ORDER_OWN_MANAGE" description="Управление собственными заказами"/>
+        <privilege id="ORDER_VIEW_ALL" description="Просмотр всех заказов"/>
+        <privilege id="ORDER_PROCESS" description="Обработка заказов"/>
+        <privilege id="ORDER_MANAGE_ALL" description="Полное управление заказами"/>
+        
+        <!-- Управление платежами -->
+        <privilege id="PAYMENT_OWN" description="Собственные платежи"/>
+        <privilege id="PAYMENT_PROCESS" description="Обработка платежей"/>
+        
+        <!-- Системные привилегии -->
+        <privilege id="SYSTEM_CONFIG" description="Конфигурация системы"/>
+        <privilege id="REPORT_VIEW" description="Просмотр отчетов"/>
+    </privileges>
+    
+    <!-- Операции бизнес-логики и требуемые привилегии -->
+    <operations>
+        <!-- Аутентификация и регистрация -->
+        <operation path="/api/auth/login" method="POST" required-privileges="USER_REGISTER"/>
+        <operation path="/api/auth/register" method="POST" required-privileges="USER_REGISTER"/>
+        
+        <!-- Управление профилем -->
+        <operation path="/api/users/me" method="GET" required-privileges="PROFILE_OWN_MANAGE"/>
+        <operation path="/api/users/me" method="PUT" required-privileges="PROFILE_OWN_MANAGE"/>
+        
+        <!-- Товары -->
+        <operation path="/api/products" method="GET" required-privileges="PRODUCT_VIEW"/>
+        <operation path="/api/products" method="POST" required-privileges="PRODUCT_MANAGE"/>
+        <operation path="/api/products/{id}" method="GET" required-privileges="PRODUCT_VIEW"/>
+        <operation path="/api/products/{id}" method="PUT" required-privileges="PRODUCT_MANAGE"/>
+        <operation path="/api/products/{id}" method="DELETE" required-privileges="PRODUCT_MANAGE"/>
+        
+        <!-- Корзина -->
+        <operation path="/api/cart" method="GET" required-privileges="CART_OWN_MANAGE"/>
+        <operation path="/api/cart" method="DELETE" required-privileges="CART_OWN_MANAGE"/>
+        <operation path="/api/cart/items" method="POST" required-privileges="CART_OWN_MANAGE"/>
+        <operation path="/api/cart/items/{id}" method="DELETE" required-privileges="CART_OWN_MANAGE"/>
+        
+        <!-- Расширенные операции корзины -->
+        <operation path="/api/cart-transaction/clear" method="DELETE" required-privileges="CART_OWN_MANAGE"/>
+        <operation path="/api/cart-transaction/items" method="DELETE" required-privileges="CART_OWN_MANAGE"/>
+        <operation path="/api/cart-transaction/merge/{sourceUserId}" method="POST" required-privileges="CART_MANAGE_ALL"/>
+        
+        <!-- Заказы -->
+        <operation path="/api/orders" method="GET" required-privileges="ORDER_OWN_MANAGE"/>
+        <operation path="/api/orders" method="POST" required-privileges="CART_OWN_MANAGE"/>
+        <operation path="/api/orders/{id}" method="GET" required-privileges="ORDER_OWN_MANAGE"/>
+        <operation path="/api/orders/{id}" method="POST" required-privileges="PAYMENT_OWN"/>
+        
+        <!-- Управление заказами (для персонала) -->
+        <operation path="/api/admin/orders" method="GET" required-privileges="ORDER_VIEW_ALL"/>
+        <operation path="/api/admin/orders/{id}" method="PUT" required-privileges="ORDER_PROCESS"/>
+        <operation path="/api/admin/orders/{id}/cancel" method="POST" required-privileges="ORDER_MANAGE_ALL"/>
+        
+        <!-- Платежи -->
+        <operation path="/api/payments/process" method="POST" required-privileges="PAYMENT_PROCESS"/>
+        <operation path="/api/payments/refund/{id}" method="POST" required-privileges="PAYMENT_PROCESS"/>
+        
+        <!-- Отчеты -->
+        <operation path="/api/reports/sales" method="GET" required-privileges="REPORT_VIEW"/>
+        <operation path="/api/reports/orders" method="GET" required-privileges="REPORT_VIEW"/>
+        
+        <!-- Системные операции -->
+        <operation path="/api/admin/config" method="GET" required-privileges="SYSTEM_CONFIG"/>
+        <operation path="/api/admin/config" method="PUT" required-privileges="SYSTEM_CONFIG"/>
+        <operation path="/api/admin/users" method="GET" required-privileges="USER_MANAGE"/>
+        <operation path="/api/admin/users/{id}" method="PUT" required-privileges="USER_MANAGE"/>
+        <operation path="/api/admin/users/{id}" method="DELETE" required-privileges="USER_MANAGE"/>
+    </operations>
+    
+</security-model>

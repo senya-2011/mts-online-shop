@@ -17,6 +17,8 @@ public interface UserItemRepository extends JpaRepository<UserItem, Long> {
     Page<UserItem> findByUser_Id(Long userId, Pageable pageable);
     java.util.Optional<UserItem> findByIdAndUser_Id(Long itemId, Long userId);
     void deleteAllByUser(User user);
+    void deleteAllByUser_Id(Long userId);
     void deleteByUser_IdAndProduct_Id(Long userId, Long productId);
     boolean existsByUser_IdAndProduct_Id(Long userId, Long productId);
+    java.util.Optional<UserItem> findByUser_IdAndProduct_Id(Long userId, Long productId);
 }
