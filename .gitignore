@@ -26,6 +26,9 @@ out/
 /dist/
 /nbdist/
 
+# OpenAPI / codegen (Gradle openApiGenerate → api/generated/…)
+# Уже закоммиченные пути из индекса не «отпадут» сами — см. git rm -r --cached api/generated/
+api/generated/
 **/generated/
 bank/generated/
 

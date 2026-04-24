@@ -1,6 +1,8 @@
-# MTS Online Shop — где выполнены требования ЛР №2
+# MTS Online Shop — где выполнены требования ЛР №2 и ЛР №3
 
-Краткая карта: **транзакции (Spring JTA + Narayana)**, **декларативные транзакции**, **Spring Security + JAAS**, **учётные записи в XML**, **JWT**, **роли и привилегии**, **OpenAPI**, **деплой на helios**.
+Краткая карта **ЛР №2**: **транзакции (Spring JTA + Narayana)**, **декларативные транзакции**, **Spring Security + JAAS**, **учётные записи в XML**, **JWT**, **роли и привилегии**, **OpenAPI**, **деплой на helios**.
+
+Краткая карта **ЛР №3**: **очередь RabbitMQ**, **отправка MQTT**, **приём JMS**, **два узла notification-service**, **`@Scheduled`**, **интеграция с банком по JCA (CCI)** — детально в [разделе «Лабораторная работа №3»](#lab3).
 
 ---
 
@@ -125,6 +127,96 @@ MTSOnlineShop {
 - **Backend:** из каталога `backend`: `./gradlew bootRun` (нужны JDK 21, PostgreSQL по `application.yaml`).
 - **Bank:** из каталога `bank`: `./gradlew bootRun`.
 - Порты и URL банка задаются переменными окружения / `application.yaml` (см. также шаг деплоя в `helios-deploy.yml`).
+
+---
+
+## Лабораторная работа №3: асинхронность, два узла, планировщик, JCA
+
+<a id="lab3"></a>
+
+Ниже — соответствие **вашему тексту задания** (очередь, MQTT, JMS, два узла, распределённые транзакции, `@Scheduled`, JCA/EIS). У разных вариантов формулировки могут отличаться; при сдаче сверьтесь с выданным вам вариантом.
+
+### Согласованные прецеденты для асинхронной обработки
+
+| Прецедент | Смысл | Где запускается асинхронная цепочка |
+|-----------|--------|-------------------------------------|
+| Уведомления в Telegram | После привязки Telegram к аккаунту и после успешной оплаты заказа backend **не ждёт** доставки в мессенджер: публикует событие в брокер; доставка и вызов Bot API — на отдельном сервисе | Публикация: [`backend/src/main/java/com/mts/online_shop/service/TelegramLinkService.java`](backend/src/main/java/com/mts/online_shop/service/TelegramLinkService.java), [`backend/src/main/java/com/mts/online_shop/service/OrderService.java`](backend/src/main/java/com/mts/online_shop/service/OrderService.java) → [`backend/src/main/java/com/mts/online_shop/messaging/MqttNotificationPublisher.java`](backend/src/main/java/com/mts/online_shop/messaging/MqttNotificationPublisher.java) |
+
+Контракт сообщения (JSON): [`messaging-contracts/src/main/java/com/mts/messaging/contracts/TelegramNotificationEnvelope.java`](messaging-contracts/src/main/java/com/mts/messaging/contracts/TelegramNotificationEnvelope.java).
+
+---
+
+### Асинхронная обработка и модель «очередь сообщений»
+
+| Требование | Реализация | Путь к коду / конфигу |
+|------------|------------|------------------------|
+| Очередь на базе **RabbitMQ** | Очередь `telegram.notifications`, привязка к `amq.topic` | [`docker/docker-compose.yml`](docker/docker-compose.yml) — сервис `rabbitmq-setup` (HTTP API создания очереди и binding с routing key `mts.shop.telegram.#`) |
+| Отправка по **MQTT** | Eclipse Paho, публикация JSON в топик | [`backend/src/main/java/com/mts/online_shop/messaging/MqttNotificationPublisher.java`](backend/src/main/java/com/mts/online_shop/messaging/MqttNotificationPublisher.java) |
+| Настройки MQTT (URI, топик, префикс clientId) | `@ConfigurationProperties` | [`backend/src/main/java/com/mts/online_shop/config/MqttProperties.java`](backend/src/main/java/com/mts/online_shop/config/MqttProperties.java), [`backend/src/main/resources/application.yaml`](backend/src/main/resources/application.yaml) (`app.mqtt`) |
+| Регистрация свойств в Spring | `@EnableConfigurationProperties` | [`backend/src/main/java/com/mts/online_shop/OnlineShopApplication.java`](backend/src/main/java/com/mts/online_shop/OnlineShopApplication.java) |
+| Получение по **JMS API** | `@JmsListener`, фабрика на RabbitMQ JMS Client | [`notification-service/src/main/kotlin/com/wish_notification/notification_service/messaging/TelegramNotificationsJmsListener.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/messaging/TelegramNotificationsJmsListener.kt) |
+| Конфигурация JMS (RMQConnectionFactory, listener container) | Spring JMS | [`notification-service/src/main/kotlin/com/wish_notification/notification_service/config/JmsConfig.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/config/JmsConfig.kt) (`@EnableJms`, `DefaultJmsListenerContainerFactory`) |
+| Имя очереди (переменная окружения) | `app.jms.telegram-queue` | [`notification-service/src/main/resources/application.yml`](notification-service/src/main/resources/application.yml) и переменные в [`docker/docker-compose.yml`](docker/docker-compose.yml) |
+
+---
+
+### Распределённая обработка на двух узлах
+
+| Требование | Реализация | Путь к коду / конфигу |
+|------------|------------|------------------------|
+| Два **независимых** узла обработки сообщений | Два Spring Boot-приложения `notification-service` в Docker; оба подписаны на одну и ту же JMS-очередь (конкурирующие потребители) | [`docker/docker-compose.yml`](docker/docker-compose.yml) — `notification-service-1` (всегда) и `notification-service-2` (**только** с профилем `notify-scale`, см. комментарий в compose: два long polling с одним токеном бота конфликтуют) |
+| Обработка на узле | Разбор JSON, верификация, plain text, регистрация чата | [`TelegramNotificationsJmsListener.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/messaging/TelegramNotificationsJmsListener.kt), [`notification-service/.../telegram/TelegramNotificationService.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/telegram/TelegramNotificationService.kt), [`notification-service/.../telegram/TelegramBot.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/telegram/TelegramBot.kt), [`TelegramChatRegistry.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/telegram/TelegramChatRegistry.kt) |
+| Регистрация long polling после старта | Повторные попытки при недоступности `api.telegram.org` | [`notification-service/.../config/TelegramBotRegistrationRunner.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/config/TelegramBotRegistrationRunner.kt), [`BotConfig.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/config/BotConfig.kt) |
+
+---
+
+### Распределённые транзакции (требование задания)
+
+| Что сделано | Где |
+|-------------|-----|
+| JTA / глобальный менеджер транзакций на **backend** (Narayana) | [`backend/src/main/java/com/mts/online_shop/config/NarayanaJtaConfig.java`](backend/src/main/java/com/mts/online_shop/config/NarayanaJtaConfig.java) |
+| Пример сценария «БД заказа + вызов банка» в одной границе `@Transactional` | [`backend/src/main/java/com/mts/online_shop/service/DistributedTransactionService.java`](backend/src/main/java/com/mts/online_shop/service/DistributedTransactionService.java) |
+
+**Важно для отчёта:** JCA-адаптер банка в [`bank-jca-adapter/.../BankManagedConnection.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/BankManagedConnection.java) возвращает `null` из `getXAResource()` и не поддерживает `LocalTransaction` — то есть **зачисление ресурса банка в двухфазную XA-транзакцию вместе с БД в этом репозитории не реализовано**; `DistributedTransactionService` демонстрирует **декларативную транзакцию на узле backend** вокруг JPA и вызова `BankClient`. Основной пользовательский поток оплаты — в [`OrderService.payOrder`](backend/src/main/java/com/mts/online_shop/service/OrderService.java). Уточните у преподавателя, достаточно ли такой трактовки «распределённости» для вашего варианта.
+
+Транзакции на **notification-service** (локальные, JPA): например [`TelegramChatRegistry.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/telegram/TelegramChatRegistry.kt).
+
+---
+
+### Планировщик задач Spring (`@Scheduled`)
+
+| Прецедент | Назначение | Класс и путь |
+|-----------|------------|----------------|
+| Мониторинг доступности банка (EIS по REST на стороне симулятора) | Периодический HTTP-ping | [`backend/src/main/java/com/mts/online_shop/service/BankReachabilityScheduler.java`](backend/src/main/java/com/mts/online_shop/service/BankReachabilityScheduler.java) — `@Scheduled(fixedRateString = "${app.bank.health-check-ms:300000}")` |
+| Очистка просроченных кодов привязки Telegram в памяти | Раз в час удаление записей старше TTL | [`notification-service/.../telegram/TelegramVerificationStore.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/telegram/TelegramVerificationStore.kt) — `@Scheduled(fixedRate = 3600000)` |
+| Включение планировщика | `@EnableScheduling` | [`backend/src/main/java/com/mts/online_shop/OnlineShopApplication.java`](backend/src/main/java/com/mts/online_shop/OnlineShopApplication.java), [`notification-service/.../NotificationServiceApplication.kt`](notification-service/src/main/kotlin/com/wish_notification/notification_service/NotificationServiceApplication.kt) |
+
+Интервал для банка задаётся в [`backend/src/main/resources/application.yaml`](backend/src/main/resources/application.yaml) (`app.bank.health-check-ms`).
+
+---
+
+### Интеграция с внешней корпоративной системой (EIS) через **JCA**
+
+| Роль | Описание | Путь |
+|------|----------|------|
+| **EIS** | Корпоративный **банковский** сервис (симулятор): REST API приёма платежей | Модуль [`bank/`](bank/) |
+| **JCA (Jakarta Connectors)** | Отдельный артефакт адаптера: `ManagedConnectionFactory`, `ManagedConnection`, CCI `Connection` / `Interaction`, `MappedRecord` | Каталог [`bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/) — в частности [`BankManagedConnectionFactory.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/BankManagedConnectionFactory.java), [`BankManagedConnection.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/BankManagedConnection.java), [`BankCciConnection.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/BankCciConnection.java), [`BankCciInteraction.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/BankCciInteraction.java), [`LocalConnectionManager.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/LocalConnectionManager.java) |
+| Подключение JCA к Spring (бин `ConnectionFactory`) | Конфигурация | [`backend/src/main/java/com/mts/online_shop/config/BankJcaConfig.java`](backend/src/main/java/com/mts/online_shop/config/BankJcaConfig.java) |
+| Использование из бизнес-логики | Реализация интерфейса `BankClient` через CCI | [`backend/src/main/java/com/mts/online_shop/client/bank/BankClientJcaAdapter.java`](backend/src/main/java/com/mts/online_shop/client/bank/BankClientJcaAdapter.java) |
+| Контракт операции (CCI) | `InteractionSpec` / поля записей | [`bank-jca-adapter/.../BankInteractionSpec.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/BankInteractionSpec.java), [`SimpleMappedRecord.java`](bank-jca-adapter/src/main/java/com/mts/online_shop/bank/jca/SimpleMappedRecord.java) |
+
+Вызовы банка из домена: [`OrderService`](backend/src/main/java/com/mts/online_shop/service/OrderService.java), [`TransactionalOrderService`](backend/src/main/java/com/mts/online_shop/service/TransactionalOrderService.java) и др. через инжект `BankClient`.
+
+---
+
+### Модель процесса, REST API, тесты, деплой (по правилам работы)
+
+| Требование | Статус / где |
+|------------|----------------|
+| Модель бизнес-процесса | При необходимости обновите диаграммы в [`report/`](report/) под ваш курс; асинхронный контур «оплата / привязка → MQTT → очередь → notification → Telegram» описан выше и в разделе «Архитектура» ниже по файлу. |
+| REST API | [`api/openapi.yml`](api/openapi.yml); контроллеры в [`backend/src/main/java/com/mts/online_shop/controller/`](backend/src/main/java/com/mts/online_shop/controller/) (в т.ч. админка Telegram: [`AdminTelegramController.java`](backend/src/main/java/com/mts/online_shop/controller/AdminTelegramController.java)). |
+| Скрипты тестирования публичных интерфейсов | Отдельного набора `.http`/shell-скриптов в репозитории **нет**; проверка через OpenAPI/Swagger UI, Postman/curl или тесты модулей (например Kotlin-тесты в `backend/src/test`, `notification-service/src/test`). При требовании методички — добавьте согласованные с преподавателем скрипты. |
+| Деплой на helios или своя инфраструктура | GitHub Actions: [`.github/workflows/helios-deploy.yml`](.github/workflows/helios-deploy.yml); локально/Docker: [`docker/docker-compose.yml`](docker/docker-compose.yml). |
 
 ---
 
