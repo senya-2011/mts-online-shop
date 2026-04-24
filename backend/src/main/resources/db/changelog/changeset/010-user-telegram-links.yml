@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: user-telegram-links
+      author: lab
+      changes:
+        - createTable:
+            tableName: user_telegram_links
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telegram_username
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: user_telegram_links
+            columnNames: telegram_username
+            constraintName: uq_user_telegram_username
+        - addForeignKeyConstraint:
+            baseTableName: user_telegram_links
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_user_telegram_user
