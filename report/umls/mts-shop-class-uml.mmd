@@ -7,8 +7,11 @@ flowchart LR
     direction TB
         OrderController["OrderController"]
         ProductsController["ProductsController"]
-        CartController["CartController"]
+        UserCartController["UserCartController"]
         AuthController["AuthController"]
+        AdminProductsController["AdminProductsController"]
+        AdminUsersController["AdminUsersController"]
+        AdminCartController["AdminCartController"]
   end
  subgraph Services["Service Layer"]
     direction TB
@@ -21,6 +24,8 @@ flowchart LR
         MailSimulator["MailSimulator"]
         JwtService["JwtService"]
         CurrentUserService["CurrentUserService"]
+        XmlUserDetailsService["XmlUserDetailsService"]
+        UserIdGeneratorService["UserIdGeneratorService"]
   end
  subgraph Repositories["Repository Layer"]
     direction TB
@@ -28,6 +33,7 @@ flowchart LR
         GoodsRepository["GoodsRepository"]
         UserItemRepository["UserItemRepository"]
         UserRepository["UserRepository"]
+        OrderItemRepository["OrderItemRepository"]
   end
  subgraph Entities["Domain / Entity Layer"]
     direction TB
@@ -40,13 +46,21 @@ flowchart LR
   end
     OrderController --> OrderService
     OrderController --> CurrentUserService
+    OrderController --> OrderMapper
+    OrderController --> ProductMapper
+    OrderController --> OrderRepository
+    OrderController --> GoodsService
     ProductsController --> GoodsService
     ProductsController --> ProductMapper
-    CartController --> GoodsService
-    CartController --> ProductMapper
-    CartController --> CurrentUserService
+    UserCartController --> GoodsService
+    UserCartController --> CurrentUserService
     AuthController --> AuthService
-    AuthController --> JwtService
+    AdminProductsController --> GoodsService
+    AdminProductsController --> ProductMapper
+    AdminUsersController --> AuthService
+    AdminUsersController --> GoodsService
+    AdminUsersController --> OrderService
+    AdminCartController --> OrderService
     OrderService --> OrderRepository
     OrderService --> GoodsService
     OrderService --> OrderMapper
@@ -57,11 +71,18 @@ flowchart LR
     GoodsService --> GoodsRepository
     GoodsService --> UserItemRepository
     GoodsService --> UserRepository
+    GoodsService --> OrderItemRepository
     AuthService --> UserRepository
+    AuthService --> JwtService
+    AuthService --> XmlUserDetailsService
+    AuthService --> UserIdGeneratorService
+    UserIdGeneratorService --> UserRepository
+    UserIdGeneratorService --> XmlUserDetailsService
     OrderRepository --> Order
     UserItemRepository --> UserItem
     GoodsRepository --> ProductEntity
     UserRepository --> User
+    OrderItemRepository --> OrderItem
     OrderMapper --> Order
     OrderMapper --> OrderItem
     OrderMapper --> ProductMapper
