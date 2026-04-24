@@ -18,7 +18,7 @@ import jakarta.annotation.Generated;
  * AddCartItemRequest
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-10T20:48:52.004416800+03:00[Europe/Moscow]")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-04-24T19:38:34.039721800+03:00[Europe/Minsk]")
 public class AddCartItemRequest {
 
   private Long productId;

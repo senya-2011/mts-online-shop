@@ -130,6 +130,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
                 // Orders - USER and ADMIN
                 .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/users/me/**").hasAnyRole("USER", "ADMIN")
                 // Admin only
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: seed-default-admin-user-xml-sync
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM users WHERE login = 'admin'
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column: { name: id, valueNumeric: 1 }
+              - column: { name: name, value: Administrator }
+              - column: { name: login, value: admin }
+              - column: { name: email, value: admin@localhost }
+              - column:
+                  name: password_hash
+                  value: "$2b$10$obg6MpawLg3be8haz3aPZ.U8IEK2Pj5F8hlhyuQ/BMfdzSoLlVm5a"
+              - column: { name: role, value: ADMIN }
+
+  - changeSet:
+      id: seed-default-user-xml-sync
+      author: system
+      preConditions:
+        - onFail: MARK_RAN
+        - sqlCheck:
+            expectedResult: 0
+            sql: SELECT COUNT(*) FROM users WHERE login = 'user'
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column: { name: id, valueNumeric: 2 }
+              - column: { name: name, value: User }
+              - column: { name: login, value: user }
+              - column: { name: email, value: user@localhost }
+              - column:
+                  name: password_hash
+                  value: "$2b$10$yp.KEmY35HLhrSoK0uX2bOHKj6lcLOOtaYwF17MG0T33uNdT0.qZG"
+              - column: { name: role, value: USER }

@@ -12,7 +12,7 @@ description = "Demo project for Spring Boot"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -28,6 +28,9 @@ repositories {
 
 dependencies {
 	implementation(project(":api"))
+	implementation(project(":messaging-contracts"))
+	implementation(project(":bank-jca-adapter"))
+	implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.liquibase:liquibase-core")
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -61,6 +64,14 @@ dependencies {
 
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+}
+
+tasks.jar {
+	enabled = false
+}
+
+tasks.bootJar {
+	archiveFileName.set("app.jar")
 }
 
 tasks.withType<Test> {

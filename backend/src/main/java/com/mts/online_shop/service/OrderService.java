@@ -10,7 +10,11 @@ import com.mts.online_shop.mapper.ProductMapper;
 import com.mts.online_shop.model.*;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
+import com.mts.messaging.contracts.TelegramNotificationEnvelope;
 import com.mts.online_shop.client.bank.BankClient;
+import com.mts.online_shop.messaging.MqttNotificationPublisher;
+import com.mts.online_shop.model.UserTelegramLink;
+import com.mts.online_shop.repository.UserTelegramLinkRepository;
 import com.mts.online_shop.simulator.mail.MailSimulator;
 import com.mts.online_shop.model.OrderResponse;
 import org.slf4j.Logger;
@@ -33,6 +37,8 @@ public class OrderService {
     private final UserRepository userRepository;
     private final BankClient bankClient;
     private final MailSimulator mailSimulator;
+    private final UserTelegramLinkRepository userTelegramLinkRepository;
+    private final MqttNotificationPublisher mqttNotificationPublisher;
 
     public OrderService(OrderRepository orderRepository,
                         OrderMapper orderMapper,
@@ -40,7 +46,9 @@ public class OrderService {
                         GoodsService goodsService,
                         UserRepository userRepository,
                         BankClient bankClient,
-                        MailSimulator mailSimulator) {
+                        MailSimulator mailSimulator,
+                        UserTelegramLinkRepository userTelegramLinkRepository,
+                        MqttNotificationPublisher mqttNotificationPublisher) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.productMapper = productMapper;
@@ -48,6 +56,8 @@ public class OrderService {
         this.userRepository = userRepository;
         this.bankClient = bankClient;
         this.mailSimulator = mailSimulator;
+        this.userTelegramLinkRepository = userTelegramLinkRepository;
+        this.mqttNotificationPublisher = mqttNotificationPublisher;
     }
 
     public com.mts.online_shop.model.OrderResponse getOrderByOrderId(Long orderId, Long currentUserId) {
@@ -163,6 +173,21 @@ public class OrderService {
         log.info("order {} marked as PAID (status not saved to DB due to Hibernate issue)", orderId);
 
         mailSimulator.sendOrderPaidEmail(user.getEmail(), order.getId(), order.getTotalPrice());
+        publishOrderPaidTelegramNotifications(user, order.getId(), order.getTotalPrice());
+    }
+
+    private void publishOrderPaidTelegramNotifications(User user, Long orderId, java.math.BigDecimal totalPrice) {
+        String total = totalPrice.stripTrailingZeros().toPlainString();
+        String text = String.format("Заказ #%d оплачен. Сумма: %s ₽.", orderId, total);
+        for (UserTelegramLink link : userTelegramLinkRepository.findByUserId(user.getId())) {
+            mqttNotificationPublisher.publish(new TelegramNotificationEnvelope(
+                    TelegramNotificationEnvelope.TYPE_PLAIN_TEXT,
+                    user.getId(),
+                    link.getTelegramUsername(),
+                    text,
+                    null
+            ));
+        }
     }
 
     @Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})

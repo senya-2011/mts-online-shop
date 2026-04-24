@@ -3,6 +3,7 @@ package com.mts.online_shop.service;
 import com.mts.messaging.contracts.TelegramNotificationEnvelope;
 import com.mts.online_shop.exception.BadRequestException;
 import com.mts.online_shop.messaging.MqttNotificationPublisher;
+import com.mts.online_shop.model.TelegramLinkAdminItem;
 import com.mts.online_shop.model.User;
 import com.mts.online_shop.model.UserTelegramLink;
 import com.mts.online_shop.repository.UserRepository;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.List;
 
 @Service
 public class TelegramLinkService {
@@ -56,6 +58,17 @@ public class TelegramLinkService {
         telegramLinkRepository.save(link);
 
         publishLinked(user.getId(), username);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TelegramLinkAdminItem> listLinkedAccountsForAdmin() {
+        return telegramLinkRepository.findAllWithUserOrderByLogin().stream()
+                .map(l -> new TelegramLinkAdminItem(
+                        "@" + l.getTelegramUsername(),
+                        l.getUser().getLogin(),
+                        l.getUser().getName()
+                ))
+                .toList();
     }
 
     private void publishLinked(Long userId, String telegramUsername) {

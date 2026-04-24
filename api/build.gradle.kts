@@ -8,7 +8,7 @@ version = "0.0.1-SNAPSHOT"
 
 java {
     toolchain {
-        languageVersion = org.gradle.jvm.toolchain.JavaLanguageVersion.of(17)
+        languageVersion = org.gradle.jvm.toolchain.JavaLanguageVersion.of(21)
     }
 }
 

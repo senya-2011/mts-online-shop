@@ -125,3 +125,28 @@ MTSOnlineShop {
 - **Backend:** из каталога `backend`: `./gradlew bootRun` (нужны JDK 21, PostgreSQL по `application.yaml`).
 - **Bank:** из каталога `bank`: `./gradlew bootRun`.
 - Порты и URL банка задаются переменными окружения / `application.yaml` (см. также шаг деплоя в `helios-deploy.yml`).
+
+---
+
+## Архитектура (Docker / сообщения / Telegram)
+
+```mermaid
+flowchart LR
+  subgraph clients["Клиенты"]
+    WEB["Web / REST"]
+    TG["Telegram Bot API"]
+  end
+
+  WEB --> BACK["backend\n(Spring)"]
+  BACK --> PG[("PostgreSQL\nbackend + bank DB")]
+  BACK --> BANK["bank\n(REST)"]
+  BACK -->|"MQTT publish\nmts/shop/telegram/…"| RMQ["RabbitMQ\nMQTT plugin + AMQP"]
+
+  RMQ -->|"JMS queue\ntelegram.notifications"| NS["notification-service\n(JMS listener + бот)"]
+  NS --> TG
+  NS --> PG
+```
+
+**Зачем два «коннекта» к уведомлениям.** Backend шлёт события в **один** брокер RabbitMQ по **MQTT** (топик с точками в routing key); в Rabbit настроена очередь `telegram.notifications` и привязка к `amq.topic`, а **notification-service** читает ту же очередь по **AMQP/JMS**. То есть это не два разных брокера, а один канал брокера с двумя протоколами на входе (MQTT из backend) и на выходе (JMS в сервисе уведомлений).
+
+**Два контейнера `notification-service` в compose.** По умолчанию поднимается один экземпляр. Второй включён только с профилем `notify-scale` (`docker compose --profile notify-scale up`), потому что у **long polling** один и тот же `TELEGRAM_BOT_TOKEN` нельзя безопасно использовать в двух процессах одновременно — обновления `/start` и сообщений начнут «теряться» или конфликтовать.

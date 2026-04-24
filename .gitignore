@@ -27,6 +27,7 @@ out/
 /nbdist/
 
 **/generated/
+bank/generated/
 
 # Misc
 bin/

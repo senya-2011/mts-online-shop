@@ -78,12 +78,20 @@ class TelegramBot(
             chatId, text, username, firstName, lastName
         )
 
-        if (username.isNullOrBlank()) {
-            log.warn("Received message in chatId {} without username, ignoring. User: {} {}", chatId, firstName, lastName)
-            return
-        }
-
         if (text.startsWith("/start")) {
+            if (username.isNullOrBlank()) {
+                log.warn("Received /start in chatId {} without public @username. User: {} {}", chatId, firstName, lastName)
+                val hint = (
+                    "Чтобы привязать аккаунт к Online Shop, задайте себе публичное имя пользователя в Telegram " +
+                        "(Настройки → Имя пользователя), затем снова нажмите /start."
+                    )
+                try {
+                    execute(SendMessage(chatId.toString(), hint))
+                } catch (e: Exception) {
+                    log.warn("Failed to send no-username hint to chatId {}: {}", chatId, e.message)
+                }
+                return
+            }
             log.info("Processing /start command for @{} (chatId={})", username, chatId)
             handleStart(chatId, username)
         } else {

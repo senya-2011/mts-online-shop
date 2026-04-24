@@ -1,21 +1,194 @@
 networks:
   mts-net:
+    driver: bridge
 
 services:
   postgres:
     image: postgres:16
-    container_name: db-psql
+    container_name: mts-postgres
     environment:
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${MTS_DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${MTS_DB_NAME:-db_backend}
     ports:
-      - "${POSTGRES_PORT}:13300"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/00-init-multiple-dbs.sql
+    networks:
+      - mts-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MTS_DB_USERNAME:-postgres} -d ${MTS_DB_NAME:-db_backend}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    build:
+      context: ./rabbitmq
+    container_name: mts-rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MQTT_PORT:-1883}:1883"
+      - "${RABBITMQ_UI_PORT:-15672}:15672"
+    networks:
+      - mts-net
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq-setup:
+    image: curlimages/curl:8.5.0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - mts-net
+    # Literal block (|): '#' in routing_key must not be parsed as YAML comment (breaks folded '>' blocks).
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+          if curl -sf -u guest:guest "http://rabbitmq:15672/api/overview" >/dev/null 2>&1; then
+            break
+          fi
+          sleep 2
+        done
+        curl -sf -u guest:guest -H "content-type: application/json" \
+          -X PUT "http://rabbitmq:15672/api/queues/%2F/telegram.notifications" \
+          -d '{"durable":true,"auto_delete":false}'
+        curl -sf -u guest:guest -H "content-type: application/json" \
+          -X POST "http://rabbitmq:15672/api/bindings/%2F/e/amq.topic/q/telegram.notifications" \
+          -d '{"routing_key":"mts.shop.telegram.#","arguments":{}}'
+
+  bank:
+    build:
+      context: ..
+      dockerfile: docker/bank/Dockerfile
+    container_name: mts-bank
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${BANK_DB_NAME:-db_bank}
+      SPRING_DATASOURCE_USERNAME: ${BANK_DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${BANK_DB_PASSWORD:-postgres}
+      SPRING_LIQUIBASE_ENABLED: "true"
+      BANK_PORT: 8081
+    ports:
+      - "${BANK_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - mts-net
 
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend/Dockerfile
+    container_name: mts-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${MTS_DB_NAME:-db_backend}
+      SPRING_DATASOURCE_USERNAME: ${MTS_DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      MTS_DB_HOST: postgres
+      MTS_DB_PORT: 5432
+      MTS_DB_NAME: ${MTS_DB_NAME:-db_backend}
+      MTS_DB_USERNAME: ${MTS_DB_USERNAME:-postgres}
+      MTS_DB_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      MTS_CONTEXT_PATH: ${MTS_CONTEXT_PATH:-/api}
+      MTS_PORT: 8080
+      BANK_URL: http://bank:8081
+      MQTT_BROKER_URI: tcp://rabbitmq:1883
+      MQTT_TELEGRAM_TOPIC: mts/shop/telegram/notify
+    ports:
+      - "${MTS_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+      bank:
+        condition: service_started
+    networks:
+      - mts-net
+
+  notification-service-1:
+    build:
+      context: ..
+      dockerfile: docker/notification/Dockerfile
+    container_name: mts-notify-1
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${MTS_DB_NAME:-db_backend}
+      SPRING_DATASOURCE_USERNAME: ${MTS_DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      MTS_DB_HOST: postgres
+      MTS_DB_PORT: 5432
+      MTS_DB_NAME: ${MTS_DB_NAME:-db_backend}
+      MTS_DB_USERNAME: ${MTS_DB_USERNAME:-postgres}
+      MTS_DB_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      MY_NOTIFICATION_PORT: 10081
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    ports:
+      # Host ports 18081/18082: on Windows 10081–10100 are often in Hyper-V excluded ranges.
+      - "${NOTIFY1_PORT:-18081}:10081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+    networks:
+      - mts-net
+
+  # Второй экземпляр: только с профилем `notify-scale`. Два polling-бота с одним токеном конфликтуют с Telegram.
+  notification-service-2:
+    profiles:
+      - notify-scale
+    build:
+      context: ..
+      dockerfile: docker/notification/Dockerfile
+    container_name: mts-notify-2
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${MTS_DB_NAME:-db_backend}
+      SPRING_DATASOURCE_USERNAME: ${MTS_DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      MTS_DB_HOST: postgres
+      MTS_DB_PORT: 5432
+      MTS_DB_NAME: ${MTS_DB_NAME:-db_backend}
+      MTS_DB_USERNAME: ${MTS_DB_USERNAME:-postgres}
+      MTS_DB_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      MY_NOTIFICATION_PORT: 10081
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    ports:
+      - "${NOTIFY2_PORT:-18082}:10081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      rabbitmq-setup:
+        condition: service_completed_successfully
+    networks:
+      - mts-net
 
 volumes:
   pgdata:

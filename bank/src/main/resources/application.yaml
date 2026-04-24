@@ -2,8 +2,7 @@ spring:
   application:
     name: ${BANK_APP_NAME:bank-simulator}
   liquibase:
-    # enabled: ${BANK_LIQUIBASE_ENABLED:true}
-    enabled: false
+    enabled: ${SPRING_LIQUIBASE_ENABLED:false}
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
