@@ -128,6 +128,27 @@ MTSOnlineShop {
 - **Bank:** из каталога `bank`: `./gradlew bootRun`.
 - Порты и URL банка задаются переменными окружения / `application.yaml` (см. также шаг деплоя в `helios-deploy.yml`).
 
+### Docker Compose (в т.ч. VPS, Docker из Snap)
+
+По умолчанию `docker compose -f docker/docker-compose.yml …` считает каталог проекта папкой **`docker/`**, поэтому корневой **`.env`** для подстановки `${…}` в YAML может не подхватиться. А флаг **`--env-file .env`** при Docker **из Snap** часто ищет файл в `/var/lib/snapd/void/.env` вместо текущего каталога.
+
+Из **корня репозитория** используйте скрипт (после `chmod +x docker-up.sh`):
+
+```bash
+./docker-up.sh up --build -d
+```
+
+Эквивалент вручную (пути **только абсолютные**, иначе Docker из **Snap** подставляет `/var/lib/snapd/void/…` вместо каталога проекта):
+
+```bash
+REPO=/arsenii/lr3/mts-online-shop   # свой путь к корню репозитория
+docker compose --project-directory "$REPO" -f "$REPO/docker/docker-compose.yml" up --build -d
+```
+
+Явный env при Snap: `--env-file "$REPO/.env"`.
+
+Надёжное решение: поставить Docker **не из snap** ([документация Docker Engine](https://docs.docker.com/engine/install/ubuntu/)) — тогда снова работают относительные пути.
+
 ---
 
 ## Лабораторная работа №3: асинхронность, два узла, планировщик, JCA
