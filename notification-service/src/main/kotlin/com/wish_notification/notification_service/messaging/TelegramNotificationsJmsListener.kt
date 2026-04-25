@@ -7,9 +7,11 @@ import com.wish_notification.notification_service.telegram.TelegramChatRegistry
 import com.wish_notification.notification_service.telegram.TelegramNotificationService
 import com.wish_notification.notification_service.telegram.TelegramVerificationStore
 import org.slf4j.LoggerFactory
-import org.springframework.jms.annotation.JmsListener
+import org.springframework.amqp.core.Message
+import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
+import java.nio.charset.StandardCharsets
 
 @Component
 class TelegramNotificationsJmsListener(
@@ -21,15 +23,17 @@ class TelegramNotificationsJmsListener(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @JmsListener(destination = "\${app.jms.telegram-queue:telegram.notifications}", containerFactory = "jmsListenerContainerFactory")
-    fun onMessage(payload: String) {
+    @RabbitListener(queues = ["\${app.jms.telegram-queue:telegram.notifications}"])
+    fun onMessage(message: Message) {
+        val payload = String(message.body, StandardCharsets.UTF_8)
+
         val env = try {
             objectMapper.readValue(payload, TelegramNotificationEnvelope::class.java)
         } catch (e: Exception) {
-            log.warn("Skip invalid JMS payload: {}", e.message)
+            log.warn("Skip invalid RabbitMQ payload: {}", e.message)
             return
         }
-        log.info("JMS telegram notification type={} userId={} @{}", env.type(), env.userId(), env.telegramUsername())
+        log.info("RabbitMQ telegram notification type={} userId={} @{}", env.type(), env.userId(), env.telegramUsername())
         when (env.type()) {
             TelegramNotificationEnvelope.TYPE_VERIFICATION -> handleVerification(env)
             TelegramNotificationEnvelope.TYPE_PLAIN_TEXT -> telegramNotificationService.sendPlainText(env)
