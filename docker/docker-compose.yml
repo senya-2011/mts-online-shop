@@ -14,7 +14,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/00-init-multiple-dbs.sql
+      - ./docker/postgres/init-multiple-dbs.sql:/docker-entrypoint-initdb.d/00-init-multiple-dbs.sql
     networks:
       - mts-net
     healthcheck:
@@ -25,13 +25,14 @@ services:
 
   rabbitmq:
     build:
-      context: ./rabbitmq
+      context: ./docker/rabbitmq
     container_name: mts-rabbitmq
     hostname: rabbitmq
     ports:
       - "${RABBITMQ_AMQP_PORT:-5672}:5672"
       - "${RABBITMQ_MQTT_PORT:-1883}:1883"
       - "${RABBITMQ_UI_PORT:-15672}:15672"
+      - "${RABBITMQ_PROM_PORT:-15692}:15692"
     networks:
       - mts-net
     healthcheck:
@@ -66,9 +67,45 @@ services:
           -X POST "http://rabbitmq:15672/api/bindings/%2F/e/amq.topic/q/telegram.notifications" \
           -d '{"routing_key":"mts.shop.telegram.#","arguments":{}}'
 
+  prometheus:
+    image: prom/prometheus:v2.53.2
+    container_name: mts-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - mts-net
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: mts-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - mts-net
+
   bank:
     build:
-      context: ..
+      context: .
       dockerfile: docker/bank/Dockerfile
     container_name: mts-bank
     environment:
@@ -87,7 +124,7 @@ services:
 
   backend:
     build:
-      context: ..
+      context: .
       dockerfile: docker/backend/Dockerfile
     container_name: mts-backend
     environment:
@@ -101,9 +138,14 @@ services:
       MTS_DB_PASSWORD: ${MTS_DB_PASSWORD:-postgres}
       MTS_CONTEXT_PATH: ${MTS_CONTEXT_PATH:-/api}
       MTS_PORT: 8080
+      MTS_JWT_SECRET: ${MTS_JWT_SECRET}
+      MTS_JWT_EXPIRATION_MS: ${MTS_JWT_EXPIRATION_MS:-1800000}
+      MTS_LIQUIBASE_ENABLED: ${MTS_LIQUIBASE_ENABLED:-true}
       BANK_URL: http://bank:8081
       MQTT_BROKER_URI: tcp://rabbitmq:1883
       MQTT_TELEGRAM_TOPIC: mts/shop/telegram/notify
+      BITRIX_EIS_ENABLED: ${BITRIX_EIS_ENABLED:-false}
+      BITRIX_WEBHOOK_BASE: ${BITRIX_WEBHOOK_BASE:-}
     ports:
       - "${MTS_PORT:-8080}:8080"
     depends_on:
@@ -120,7 +162,7 @@ services:
 
   notification-service-1:
     build:
-      context: ..
+      context: .
       dockerfile: docker/notification/Dockerfile
     container_name: mts-notify-1
     environment:
@@ -158,7 +200,7 @@ services:
     profiles:
       - notify-scale
     build:
-      context: ..
+      context: .
       dockerfile: docker/notification/Dockerfile
     container_name: mts-notify-2
     environment:
@@ -192,3 +234,4 @@ services:
 
 volumes:
   pgdata:
+  grafana-data:

@@ -7,6 +7,7 @@ import com.mts.online_shop.exception.OrderNotFoundException;
 import com.mts.online_shop.exception.UserNotFoundException;
 import com.mts.online_shop.mapper.OrderMapper;
 import com.mts.online_shop.mapper.ProductMapper;
+import com.mts.online_shop.client.bitrix.BitrixEisClientJcaAdapter;
 import com.mts.online_shop.model.*;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
@@ -19,6 +20,7 @@ import com.mts.online_shop.simulator.mail.MailSimulator;
 import com.mts.online_shop.model.OrderResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class OrderService {
     private final MailSimulator mailSimulator;
     private final UserTelegramLinkRepository userTelegramLinkRepository;
     private final MqttNotificationPublisher mqttNotificationPublisher;
+    private final ObjectProvider<BitrixEisClientJcaAdapter> bitrixEisClientProvider;
 
     public OrderService(OrderRepository orderRepository,
                         OrderMapper orderMapper,
@@ -48,7 +51,8 @@ public class OrderService {
                         BankClient bankClient,
                         MailSimulator mailSimulator,
                         UserTelegramLinkRepository userTelegramLinkRepository,
-                        MqttNotificationPublisher mqttNotificationPublisher) {
+                        MqttNotificationPublisher mqttNotificationPublisher,
+                        ObjectProvider<BitrixEisClientJcaAdapter> bitrixEisClientProvider) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.productMapper = productMapper;
@@ -58,6 +62,7 @@ public class OrderService {
         this.mailSimulator = mailSimulator;
         this.userTelegramLinkRepository = userTelegramLinkRepository;
         this.mqttNotificationPublisher = mqttNotificationPublisher;
+        this.bitrixEisClientProvider = bitrixEisClientProvider;
     }
 
     public com.mts.online_shop.model.OrderResponse getOrderByOrderId(Long orderId, Long currentUserId) {
@@ -174,6 +179,10 @@ public class OrderService {
 
         mailSimulator.sendOrderPaidEmail(user.getEmail(), order.getId(), order.getTotalPrice());
         publishOrderPaidTelegramNotifications(user, order.getId(), order.getTotalPrice());
+        BitrixEisClientJcaAdapter bitrixClient = bitrixEisClientProvider.getIfAvailable();
+        if (bitrixClient != null) {
+            bitrixClient.publishOrderPaid(order.getId(), user.getId(), order.getTotalPrice());
+        }
     }
 
     private void publishOrderPaidTelegramNotifications(User user, Long orderId, java.math.BigDecimal totalPrice) {

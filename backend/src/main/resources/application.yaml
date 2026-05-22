@@ -46,6 +46,9 @@ app:
     broker-uri: ${MQTT_BROKER_URI:tcp://localhost:1883}
     client-id-prefix: ${MQTT_CLIENT_ID_PREFIX:online-shop}
     topic: ${MQTT_TELEGRAM_TOPIC:mts/shop/telegram/notify}
+  bitrix:
+    enabled: ${BITRIX_EIS_ENABLED:false}
+    webhook-base: ${BITRIX_WEBHOOK_BASE:}
   bank:
     health-check-ms: ${BANK_HEALTH_CHECK_MS:300000}
 

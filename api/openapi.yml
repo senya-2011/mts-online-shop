@@ -7,6 +7,8 @@ info:
 servers:
   - url: http://localhost:8080/api
     description: Dev Server
+  - url: http://149.33.16.227:8080/api
+    description: VPS (если context-path=/api, фактический URL может быть /api/api/...)
 
 tags:
   - name: Auth
@@ -23,6 +25,8 @@ tags:
     description: Управление товарами (только для ADMIN)
   - name: Admin Orders
     description: Управление заказами (только для ADMIN)
+  - name: Demo-Telegram
+    description: Демо-рассылка в RabbitMQ (нагрузочный тест, без авторизации)
 
 paths:
   /auth/login:
@@ -241,7 +245,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
-                
+
+  /api/demo/telegram/broadcast:
+    post:
+      summary: Спам-рассылка «Распродажа» в RabbitMQ → Telegram
+      description: |
+        Публикует N сообщений «Распродажа &lt;случайное слово&gt;» на каждого пользователя
+        с привязанным Telegram (MQTT → очередь telegram.notifications).
+        Без авторизации. Пауза delayMs помогает увидеть активность на дашборде RabbitMQ.
+      tags: [Demo-Telegram]
+      operationId: demoTelegramBroadcast
+      security: []
+      parameters:
+        - name: count
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+          description: Сообщений на каждого привязанного пользователя
+        - name: delayMs
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 300
+            minimum: 0
+          description: Пауза между сообщениями (мс)
+      responses:
+        "200":
+          description: Рассылка запущена
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  published:
+                    type: integer
+                  messagesPerUser:
+                    type: integer
+                  delayMs:
+                    type: integer
+                  messageTemplate:
+                    type: string
+        "400":
+          description: Нет привязанных Telegram-аккаунтов
+
+  /api/demo/telegram/broadcast-page:
+    get:
+      summary: HTML-страница с кнопкой запуска рассылки
+      tags: [Demo-Telegram]
+      operationId: demoTelegramBroadcastPage
+      security: []
+      responses:
+        "200":
+          description: HTML
+          content:
+            text/html:
+              schema:
+                type: string
+
   # Admin APIs
   /admin/users:
     get:
