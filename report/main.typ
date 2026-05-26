@@ -78,6 +78,11 @@
   caption: [UML-диаграмма пакетов  разработанных в этой лабе]
 )
 
+#figure(
+  image("./umls/lr3_3.png", width: 100%),
+  caption: [UML-диаграмма развертывания]
+)
+
 #v(1cm)
 
 = Спецификация REST API
