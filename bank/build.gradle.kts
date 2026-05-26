@@ -13,7 +13,7 @@ description = "bank-simulator for mts-online-shop lab"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17)
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
@@ -86,6 +86,14 @@ tasks.named("compileJava") {
 }
 tasks.named("compileKotlin") {
     dependsOn(tasks.openApiGenerate)
+}
+
+tasks.jar {
+	enabled = false
+}
+
+tasks.bootJar {
+	archiveFileName.set("app.jar")
 }
 
 tasks.withType<Test> {

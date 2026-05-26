@@ -41,6 +41,10 @@ public class SwaggerConfig {
                                 - `POST /api/orders/{id}/cancel` - отмена своего заказа
                                 - `GET /api/cart` - своя корзина
                                 - `POST /api/cart/items` - добавление в корзину
+                                
+                                **Demo (без JWT):**
+                                - `POST /api/demo/telegram/broadcast` - рассылка «Распродажа» в RabbitMQ
+                                - `GET /api/demo/telegram/broadcast-page` - HTML-кнопка для рассылки
                                 """
                         )
                 )

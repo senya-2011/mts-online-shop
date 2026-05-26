@@ -41,17 +41,29 @@ jwt:
 bank:
   base-url: ${BANK_URL:http://localhost:8081}
 
+app:
+  mqtt:
+    broker-uri: ${MQTT_BROKER_URI:tcp://localhost:1883}
+    client-id-prefix: ${MQTT_CLIENT_ID_PREFIX:online-shop}
+    topic: ${MQTT_TELEGRAM_TOPIC:mts/shop/telegram/notify}
+  bitrix:
+    enabled: ${BITRIX_EIS_ENABLED:false}
+    webhook-base: ${BITRIX_WEBHOOK_BASE:}
+  bank:
+    health-check-ms: ${BANK_HEALTH_CHECK_MS:300000}
+
 logging:
   level:
     root: ${MTS_LOG_LEVEL:INFO}
     liquibase: INFO
     org.springframework.boot.autoconfigure.liquibase: INFO
 
+# Paths are relative to server root; context-path (e.g. /api) is applied by Spring — do not prefix with /api again.
 springdoc:
   api-docs:
-    path: /api/v3/api-docs
+    path: /v3/api-docs
   swagger-ui:
-    path: /api/swagger-ui.html
+    path: /swagger-ui.html
     enabled: true
 
 mail:

@@ -1,0 +1,34 @@
+databaseChangeLog:
+  - changeSet:
+      id: telegram-chat-links
+      author: lab
+      changes:
+        - createTable:
+            tableName: telegram_chat_links
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: bigint
+                  constraints:
+                    nullable: true
+              - column:
+                  name: telegram_username
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: chat_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: telegram_chat_links
+            columnNames: telegram_username
+            constraintName: uq_telegram_chat_username

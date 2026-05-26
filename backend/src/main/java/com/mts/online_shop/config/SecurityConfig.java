@@ -125,11 +125,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/products", "/api/products/**").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/register").permitAll()
+                .requestMatchers("/api/demo/telegram/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/swagger-ui/**", "/api/v3/api-docs/**", "/api/swagger-ui.html", "/api/swagger-ui/**").permitAll()
                 // Cart - USER and ADMIN
                 .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
                 // Orders - USER and ADMIN
                 .requestMatchers("/api/orders/**").hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/users/me/**").hasAnyRole("USER", "ADMIN")
                 // Admin only
                 .requestMatchers("/api/users/**").hasRole("ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

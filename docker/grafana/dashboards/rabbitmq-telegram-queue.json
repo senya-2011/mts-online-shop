@@ -1,0 +1,77 @@
+{
+  "id": null,
+  "uid": "rabbitmq-telegram-queue",
+  "title": "RabbitMQ Telegram Queue",
+  "tags": ["rabbitmq", "telegram"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Published to telegram.notifications",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-main"
+      },
+      "targets": [
+        {
+          "expr": "rate(sum(rabbitmq_channel_messages_published_total)[1m])",
+          "legendFormat": "incoming_to_rabbit/s",
+          "refId": "A"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "title": "Consumed from telegram.notifications",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-main"
+      },
+      "targets": [
+        {
+          "expr": "rate(sum(rabbitmq_channel_messages_delivered_ack_total{queue=\"telegram.notifications\"})[1m])",
+          "legendFormat": "delivered_to_consumer/s",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(sum(rabbitmq_channel_messages_acked_total{queue=\"telegram.notifications\"})[1m])",
+          "legendFormat": "acked/s",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "id": 3,
+      "title": "Queue Backlog",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-main"
+      },
+      "targets": [
+        {
+          "expr": "rabbitmq_queue_messages_ready{queue=\"telegram.notifications\"}",
+          "legendFormat": "ready",
+          "refId": "A"
+        },
+        {
+          "expr": "rabbitmq_queue_messages_unacked{queue=\"telegram.notifications\"}",
+          "legendFormat": "unacked",
+          "refId": "B"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }
+    }
+  ]
+}

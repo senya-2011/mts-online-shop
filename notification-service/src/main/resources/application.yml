@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: notification-service
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${MTS_DB_HOST:localhost}:${MTS_DB_PORT:5432}/${MTS_DB_NAME:db_backend}
+    username: ${MTS_DB_USERNAME:postgres}
+    password: ${MTS_DB_PASSWORD:postgres}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+  profiles:
+    active: ${SPRING_ACTIVE_PROFILE:dev}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  jms:
+    listener:
+      auto-startup: true
+
+server:
+  port: ${MY_NOTIFICATION_PORT:10081}
+logging:
+  level:
+    root: INFO
+
+app:
+  jms:
+    telegram-queue: ${TELEGRAM_JMS_QUEUE:telegram.notifications}
+  telegram:
+    bot-username: ${TELEGRAM_BOT_USERNAME:}
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+  frontend:
+    base-url: "${FRONTEND_BASE_URL:http://localhost:3000}"

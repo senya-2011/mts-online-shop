@@ -7,14 +7,20 @@ import com.mts.online_shop.exception.OrderNotFoundException;
 import com.mts.online_shop.exception.UserNotFoundException;
 import com.mts.online_shop.mapper.OrderMapper;
 import com.mts.online_shop.mapper.ProductMapper;
+import com.mts.online_shop.client.bitrix.BitrixEisClientJcaAdapter;
 import com.mts.online_shop.model.*;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
+import com.mts.messaging.contracts.TelegramNotificationEnvelope;
 import com.mts.online_shop.client.bank.BankClient;
+import com.mts.online_shop.messaging.MqttNotificationPublisher;
+import com.mts.online_shop.model.UserTelegramLink;
+import com.mts.online_shop.repository.UserTelegramLinkRepository;
 import com.mts.online_shop.simulator.mail.MailSimulator;
 import com.mts.online_shop.model.OrderResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +39,9 @@ public class OrderService {
     private final UserRepository userRepository;
     private final BankClient bankClient;
     private final MailSimulator mailSimulator;
+    private final UserTelegramLinkRepository userTelegramLinkRepository;
+    private final MqttNotificationPublisher mqttNotificationPublisher;
+    private final ObjectProvider<BitrixEisClientJcaAdapter> bitrixEisClientProvider;
 
     public OrderService(OrderRepository orderRepository,
                         OrderMapper orderMapper,
@@ -40,7 +49,10 @@ public class OrderService {
                         GoodsService goodsService,
                         UserRepository userRepository,
                         BankClient bankClient,
-                        MailSimulator mailSimulator) {
+                        MailSimulator mailSimulator,
+                        UserTelegramLinkRepository userTelegramLinkRepository,
+                        MqttNotificationPublisher mqttNotificationPublisher,
+                        ObjectProvider<BitrixEisClientJcaAdapter> bitrixEisClientProvider) {
         this.orderRepository = orderRepository;
         this.orderMapper = orderMapper;
         this.productMapper = productMapper;
@@ -48,6 +60,9 @@ public class OrderService {
         this.userRepository = userRepository;
         this.bankClient = bankClient;
         this.mailSimulator = mailSimulator;
+        this.userTelegramLinkRepository = userTelegramLinkRepository;
+        this.mqttNotificationPublisher = mqttNotificationPublisher;
+        this.bitrixEisClientProvider = bitrixEisClientProvider;
     }
 
     public com.mts.online_shop.model.OrderResponse getOrderByOrderId(Long orderId, Long currentUserId) {
@@ -163,6 +178,25 @@ public class OrderService {
         log.info("order {} marked as PAID (status not saved to DB due to Hibernate issue)", orderId);
 
         mailSimulator.sendOrderPaidEmail(user.getEmail(), order.getId(), order.getTotalPrice());
+        publishOrderPaidTelegramNotifications(user, order.getId(), order.getTotalPrice());
+        BitrixEisClientJcaAdapter bitrixClient = bitrixEisClientProvider.getIfAvailable();
+        if (bitrixClient != null) {
+            bitrixClient.publishOrderPaid(order.getId(), user.getId(), order.getTotalPrice());
+        }
+    }
+
+    private void publishOrderPaidTelegramNotifications(User user, Long orderId, java.math.BigDecimal totalPrice) {
+        String total = totalPrice.stripTrailingZeros().toPlainString();
+        String text = String.format("Заказ #%d оплачен. Сумма: %s ₽.", orderId, total);
+        for (UserTelegramLink link : userTelegramLinkRepository.findByUserId(user.getId())) {
+            mqttNotificationPublisher.publish(new TelegramNotificationEnvelope(
+                    TelegramNotificationEnvelope.TYPE_PLAIN_TEXT,
+                    user.getId(),
+                    link.getTelegramUsername(),
+                    text,
+                    null
+            ));
+        }
     }
 
     @Transactional(rollbackFor = {EmptyCartException.class, UserNotFoundException.class, RuntimeException.class})

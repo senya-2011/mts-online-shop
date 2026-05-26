@@ -4,6 +4,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/changeset/002-create-goods-table.yml
   - include:
+      file: db/changelog/changeset/005-add-deleted-to-goods.yml
+  - include:
       file: db/changelog/changeset/003-create-order-table.yml
   - include:
       file: db/changelog/changeset/004-create-order-item-table.yml
@@ -18,4 +20,8 @@ databaseChangeLog:
   - include:
       file: db/changelog/changeset/009-add-role-to-users.yml
   - include:
-      file: db/changelog/changeset/005-add-deleted-to-goods.yml
+      file: db/changelog/changeset/010-user-telegram-links.yml
+  - include:
+      file: db/changelog/changeset/011-telegram-chat-links.yml
+  - include:
+      file: db/changelog/changeset/012-seed-default-users.yml
