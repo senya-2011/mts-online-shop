@@ -34,17 +34,20 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final UserIdGeneratorService userIdGeneratorService;
+    private final org.camunda.bpm.engine.IdentityService camundaIdentityService;
 
     public AuthService(PasswordEncoder passwordEncoder, 
                       XmlUserDetailsService xmlUserDetailsService,
                       JwtService jwtService,
                       UserRepository userRepository,
-                      UserIdGeneratorService userIdGeneratorService) {
+                      UserIdGeneratorService userIdGeneratorService,
+                      org.camunda.bpm.engine.IdentityService camundaIdentityService) {
         this.passwordEncoder = passwordEncoder;
         this.xmlUserDetailsService = xmlUserDetailsService;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.userIdGeneratorService = userIdGeneratorService;
+        this.camundaIdentityService = camundaIdentityService;
     }
 
     public String authenticate(String login, String password) {
@@ -102,6 +105,31 @@ public class AuthService {
         User savedUser = userRepository.save(dbUser);
         log.info("User saved to database: {} with ID: {}", savedUser.getLogin(), savedUser.getId());
         
+        // Also create Camunda identity user so the user can login to Camunda webapps
+        try {
+            if (camundaIdentityService.createUserQuery().userId(normalizedLogin).count() == 0) {
+                org.camunda.bpm.engine.identity.User camundaUser = camundaIdentityService.newUser(normalizedLogin);
+                camundaUser.setFirstName(name == null ? normalizedLogin : name);
+                camundaUser.setEmail(normalizedEmail);
+                // Camunda expects plain password for webapp login; store the raw password
+                camundaUser.setPassword(rawPassword);
+                camundaIdentityService.saveUser(camundaUser);
+            }
+            // ensure group exists and assign
+            String groupId = "CLIENT"; // map application role USER -> CLIENT
+            if (camundaIdentityService.createGroupQuery().groupId(groupId).count() == 0) {
+                org.camunda.bpm.engine.identity.Group g = camundaIdentityService.newGroup(groupId);
+                g.setName(groupId);
+                camundaIdentityService.saveGroup(g);
+            }
+            // createMembership returns void; ensure membership exists before creating
+            if (camundaIdentityService.createGroupQuery().groupMember(normalizedLogin).groupId(groupId).count() == 0) {
+                camundaIdentityService.createMembership(normalizedLogin, groupId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to create/sync Camunda identity for {}: {}", normalizedLogin, e.getMessage());
+        }
+
         log.info("Registration completed for user: {} with ID: {}", normalizedLogin, userId);
         
         return userId;

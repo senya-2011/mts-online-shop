@@ -23,25 +23,50 @@ public class CamundaGroupSync {
     @EventListener(ApplicationReadyEvent.class)
     public void syncGroups() {
         List<User> allUsers = userRepository.findAll();
+        // ensure default groups exist
+        ensureGroupExists("CLIENT");
+        ensureGroupExists("OPERATOR");
+        ensureGroupExists("ADMIN");
         for (User u : allUsers) {
             String role = u.getRole();
             if (role == null) continue;
-            // ensure group exists
-            if (identityService.createGroupQuery().groupId(role).count() == 0) {
-                Group g = identityService.newGroup(role);
-                g.setName(role);
+            // Map application role to Camunda group
+            String groupId = mapAppRoleToGroup(role);
+            if (groupId == null) continue;
+            if (identityService.createGroupQuery().groupId(groupId).count() == 0) {
+                Group g = identityService.newGroup(groupId);
+                g.setName(groupId);
                 identityService.saveGroup(g);
             }
-            // add user to group if not present
-            long membershipCount = identityService.createGroupQuery()
-                    .groupMember(u.getLogin())
-                    .groupId(role)
-                    .count();
-            if (membershipCount == 0) {
+            if (identityService.createGroupQuery().groupMember(u.getLogin()).groupId(groupId).count() == 0) {
                 if (identityService.createUserQuery().userId(u.getLogin()).count() > 0) {
-                    identityService.createMembership(u.getLogin(), role);
+                    identityService.createMembership(u.getLogin(), groupId);
                 }
             }
+        }
+    }
+
+    private String mapAppRoleToGroup(String appRole) {
+        if (appRole == null) return null;
+        switch (appRole.toUpperCase()) {
+            case "USER":
+            case "CLIENT":
+                return "CLIENT";
+            case "OPERATOR":
+            case "EMPLOYEE":
+                return "OPERATOR";
+            case "ADMIN":
+                return "ADMIN";
+            default:
+                return appRole.toUpperCase();
+        }
+    }
+
+    private void ensureGroupExists(String groupId) {
+        if (identityService.createGroupQuery().groupId(groupId).count() == 0) {
+            Group g = identityService.newGroup(groupId);
+            g.setName(groupId);
+            identityService.saveGroup(g);
         }
     }
 }

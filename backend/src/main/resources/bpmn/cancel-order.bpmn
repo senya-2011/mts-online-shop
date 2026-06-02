@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             targetNamespace="http://camunda.org/examples">
+
+  <process id="cancel_order" name="Cancel Order Process" isExecutable="true" camunda:historyTimeToLive="30">
+    <startEvent id="StartEventCancel" name="Start" />
+    <sequenceFlow id="flow1" sourceRef="StartEventCancel" targetRef="CancelOrderTask" />
+    <serviceTask id="CancelOrderTask" name="Cancel Order" camunda:delegateExpression="${orderProcessAdapter}" camunda:asyncBefore="true" />
+    <sequenceFlow id="flow2" sourceRef="CancelOrderTask" targetRef="EndEventCancel" />
+    <endEvent id="EndEventCancel" name="End" />
+  </process>
+</definitions>

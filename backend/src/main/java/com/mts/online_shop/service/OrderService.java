@@ -241,6 +241,25 @@ public class OrderService {
     }
 
     @Transactional
+    public int cleanupExpiredOrders(Long olderThanMs) {
+        log.info("cleanupExpiredOrders olderThanMs={}", olderThanMs);
+        long cutoff = System.currentTimeMillis() - olderThanMs;
+        List<Order> all = orderRepository.findAll();
+        int count = 0;
+        for (Order o : all) {
+            if (o.getStatus() == OrderStatus.CREATED && o.getCreatedAt() != null && o.getCreatedAt().getTime() < cutoff) {
+                try {
+                    adminCancelOrder(o.getId());
+                    count++;
+                } catch (Exception e) {
+                    log.warn("Failed to cancel expired order {}: {}", o.getId(), e.getMessage());
+                }
+            }
+        }
+        return count;
+    }
+
+    @Transactional
     public void confirmPayment(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));

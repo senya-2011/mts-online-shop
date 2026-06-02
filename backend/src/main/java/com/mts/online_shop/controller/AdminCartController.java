@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -20,16 +22,21 @@ public class AdminCartController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminCartController.class);
     private final OrderService orderService;
+    private final org.camunda.bpm.engine.RuntimeService runtimeService;
 
-    public AdminCartController(OrderService orderService) {
+    public AdminCartController(OrderService orderService, org.camunda.bpm.engine.RuntimeService runtimeService) {
         this.orderService = orderService;
+        this.runtimeService = runtimeService;
     }
 
     @PostMapping("/orders/{orderId}/cancel")
     @io.swagger.v3.oas.annotations.Operation(summary = "Отменить заказ (админ)", description = "Транзакционная отмена заказа администратором с автоматическим возвратом денег")
     public ResponseEntity<MessageResponse> cancelOrder(@PathVariable Long orderId) {
         log.debug("POST admin cancel order id={}", orderId);
-        orderService.adminCancelOrder(orderId);
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("orderId", orderId);
+        vars.put("adminCancel", true);
+        runtimeService.startProcessInstanceByKey("cancel_order", vars);
         MessageResponse msg = new MessageResponse();
         msg.setMessage("Заказ #" + orderId + " отменен администратором");
         return ResponseEntity.ok(msg);

@@ -23,16 +23,13 @@ public class CamundaUserSync {
     public void syncUsers() {
         List<User> allUsers = userRepository.findAll();
         for (User appUser : allUsers) {
-            org.camunda.bpm.engine.identity.User camundaUser = identityService.newUser(appUser.getLogin());
-            camundaUser.setEmail(appUser.getEmail());
-            camundaUser.setFirstName(appUser.getName());
-            camundaUser.setLastName("");
-            camundaUser.setPassword(appUser.getPasswordHash());
-            // Сохраняем или обновляем
+            // Only create camunda user if not exists. Passwords are managed at registration to keep raw password for webapp login.
             if (identityService.createUserQuery().userId(appUser.getLogin()).count() == 0) {
-                identityService.saveUser(camundaUser);
-            } else {
-                identityService.deleteUser(appUser.getLogin());
+                org.camunda.bpm.engine.identity.User camundaUser = identityService.newUser(appUser.getLogin());
+                camundaUser.setEmail(appUser.getEmail());
+                camundaUser.setFirstName(appUser.getName());
+                camundaUser.setLastName("");
+                // do not overwrite password here; registration flow sets camunda password
                 identityService.saveUser(camundaUser);
             }
         }

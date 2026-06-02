@@ -16,11 +16,21 @@
 
     <sequenceFlow id="flow2" sourceRef="CreateOrderTask" targetRef="PaymentUserTask" />
 
-       <userTask id="PaymentUserTask" name="Enter Payment"
-                       camunda:candidateGroups="BUYER"
-                       camunda:formKey="camunda-forms:deployment:payment-form" />
+              <userTask id="PaymentUserTask" name="Enter Payment"
+                                                 camunda:candidateGroups="CLIENT"
+                                                 camunda:formKey="camunda-forms:deployment:payment-form">
+                     <extensionElements>
+                            <camunda:taskListener event="complete" class="com.mts.online_shop.service.TaskValidationListener" />
+                     </extensionElements>
+              </userTask>
+              <!-- Boundary error to catch validation errors and send back to user -->
+              <boundaryEvent id="PaymentValidationErrorBoundary" attachedToRef="PaymentUserTask">
+                     <errorEventDefinition errorRef="ValidationErrorRef" />
+              </boundaryEvent>
 
     <sequenceFlow id="flow3" sourceRef="PaymentUserTask" targetRef="ConfirmPaymentTask" />
+
+       <sequenceFlow id="flowValidationBack" sourceRef="PaymentValidationErrorBoundary" targetRef="PaymentUserTask" />
 
     <serviceTask id="ConfirmPaymentTask" name="Confirm Payment"
            camunda:delegateExpression="#{orderProcessAdapter}"
@@ -36,5 +46,6 @@
            camunda:asyncBefore="true" />
     <sequenceFlow id="flowCancelEnd" sourceRef="CancelOrderTask" targetRef="EndEvent" />
 
-  </process>
+       </process>
+       <error id="ValidationErrorRef" name="Validation error" errorCode="VALIDATION_ERROR" />
 </definitions>

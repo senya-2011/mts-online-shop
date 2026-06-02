@@ -133,9 +133,13 @@ public class OrderController {
     })
     public ResponseEntity<MessageResponse> cancelOrder(@PathVariable Long orderId) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
-        orderService.cancelOrder(orderId, userId);
+        Map<String, Object> vars = new HashMap<>();
+        vars.put("orderId", orderId);
+        vars.put("userId", userId);
+        vars.put("adminCancel", false);
+        runtimeService.startProcessInstanceByKey("cancel_order", vars);
         MessageResponse msg = new MessageResponse();
-        msg.setMessage("Заказ #" + orderId + " отменен, деньги возвращены");
+        msg.setMessage("Заказ #" + orderId + " отмена запрошена");
         return ResponseEntity.ok(msg);
     }
 

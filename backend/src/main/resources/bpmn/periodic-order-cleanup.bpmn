@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             targetNamespace="http://camunda.org/examples">
+
+  <process id="periodic_order_cleanup" name="Periodic Order Cleanup" isExecutable="true" camunda:historyTimeToLive="30">
+    <startEvent id="TimerStart">
+      <timerEventDefinition>
+        <!-- repeat every hour for demo. Adjust as needed -->
+        <timeCycle>R/PT1H</timeCycle>
+      </timerEventDefinition>
+    </startEvent>
+    <sequenceFlow id="flow1" sourceRef="TimerStart" targetRef="CleanupTask" />
+    <serviceTask id="CleanupTask" name="Cleanup Task" camunda:delegateExpression="${orderProcessAdapter}" camunda:asyncBefore="true" />
+    <sequenceFlow id="flow2" sourceRef="CleanupTask" targetRef="EndEvent" />
+    <endEvent id="EndEvent" name="End" />
+  </process>
+</definitions>

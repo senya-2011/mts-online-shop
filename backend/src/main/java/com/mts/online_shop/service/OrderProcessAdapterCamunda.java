@@ -33,6 +33,9 @@ public class OrderProcessAdapterCamunda implements JavaDelegate {
             case "CancelOrderTask":
                 handleCancelOrder(execution);
                 break;
+            case "CleanupTask":
+                handleCleanup(execution);
+                break;
             default:
                 log.warn("Unknown activity for OrderProcessAdapterCamunda: {}", activityId);
         }
@@ -65,7 +68,22 @@ public class OrderProcessAdapterCamunda implements JavaDelegate {
     private void handleCancelOrder(DelegateExecution execution) {
         Long orderId = (Long) execution.getVariable("orderId");
         Long userId = (Long) execution.getVariable("userId");
-        orderService.cancelOrder(orderId, userId);
+        Boolean adminCancel = (Boolean) execution.getVariable("adminCancel");
+        if (adminCancel != null && adminCancel.booleanValue()) {
+            orderService.adminCancelOrder(orderId);
+        } else {
+            orderService.cancelOrder(orderId, userId);
+        }
         execution.setVariable("paymentReceived", false);
+    }
+
+    private void handleCleanup(DelegateExecution execution) {
+        Long olderThanMs = (Long) execution.getVariable("olderThanMs");
+        if (olderThanMs == null) {
+            // default to 24 hours
+            olderThanMs = 24L * 60L * 60L * 1000L;
+        }
+        int cleaned = orderService.cleanupExpiredOrders(olderThanMs);
+        log.info("CleanupTask removed {} expired orders", cleaned);
     }
 }
