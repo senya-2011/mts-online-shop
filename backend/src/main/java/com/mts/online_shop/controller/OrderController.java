@@ -24,7 +24,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
+import org.camunda.bpm.engine.RuntimeService;
+import org.camunda.bpm.engine.runtime.ProcessInstance;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -40,15 +44,19 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final GoodsService goodsService;
 
+    private final RuntimeService runtimeService;
+
     public OrderController(OrderService orderService, CurrentUserService currentUserService,
                            OrderMapper orderMapper, ProductMapper productMapper, 
-                           OrderRepository orderRepository, GoodsService goodsService) {
+                           OrderRepository orderRepository, GoodsService goodsService,
+                           RuntimeService runtimeService) {
         this.orderService = orderService;
         this.currentUserService = currentUserService;
         this.orderMapper = orderMapper;
         this.productMapper = productMapper;
         this.orderRepository = orderRepository;
         this.goodsService = goodsService;
+        this.runtimeService = runtimeService;
     }
 
     @GetMapping
@@ -214,11 +222,21 @@ public class OrderController {
             log.info("  Card: ****-****-****-{}", cardNumber.substring(Math.max(0, cardNumber.length() - 4)));
             log.info("  Amount: ${}", totalAmount);
             
-            // Используем OrderService для создания заказа с реальной оплатой через банк
-            OrderResponse orderResponse = orderService.createOrderWithPayment(userId, paymentRequest);
-            
-            log.info("Order created and paid successfully via real bank");
-            
+            // Запускаем BPMN-процесс для создания и оплаты заказа
+            Map<String, Object> variables = new HashMap<>();
+            variables.put("userId", userId);
+            variables.put("cardNumber", paymentRequest.getCardNumber());
+            variables.put("cvv", paymentRequest.getCvv());
+            variables.put("expiresAt", paymentRequest.getExpiresAt());
+
+            ProcessInstance pi = runtimeService.startProcessInstanceByKey("order_process", variables);
+            Long orderId = (Long) runtimeService.getVariable(pi.getId(), "orderId");
+            if (orderId == null) {
+                log.error("Process did not create orderId for user {}", userId);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            }
+
+            OrderResponse orderResponse = orderService.getOrder(orderId, userId);
             return ResponseEntity.ok(orderResponse);
             
         } catch (EmptyCartException e) {

@@ -7,7 +7,7 @@ spring:
     resources:
       add-mappings: false
   liquibase:
-    enabled: ${MTS_LIQUIBASE_ENABLED:true}
+    enabled: false
     change-log: classpath:db/changelog/db.changelog-master.yml
   datasource:
     driver-class-name: org.postgresql.Driver
@@ -56,3 +56,16 @@ springdoc:
 
 mail:
   from: ${MTS_MAIL_USERNAME:noreply@localhost}
+
+camunda.bpm:
+  admin-user:
+    id: admin
+    password: admin
+  database:
+    schema-update: true
+  process-engine-name: onlineShopEngine
+  auto-deployment-enabled: true
+  history-level: full
+  authorization:
+    enabled: true
+  # generic-properties removed to avoid binding issues with starter

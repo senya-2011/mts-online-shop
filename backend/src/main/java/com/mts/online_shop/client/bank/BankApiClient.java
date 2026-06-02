@@ -22,9 +22,10 @@ public class BankApiClient implements BankClient {
     private static final String PAYMENTS_PATH = "/api/cards/payments";
 
     private final RestTemplate restTemplate;
+    private final String baseUrl;
 
     public BankApiClient(BankClientProperties properties) {
-        String baseUrl = properties.getBaseUrl() != null ? properties.getBaseUrl().replaceAll("/$", "") : "http://localhost:8081";
+        this.baseUrl = properties.getBaseUrl() != null ? properties.getBaseUrl().replaceAll("/$", "") : "http://localhost:8081";
         this.restTemplate = new RestTemplate();
         log.info("Bank client baseUrl={}", baseUrl);
     }
@@ -46,7 +47,8 @@ public class BankApiClient implements BankClient {
         );
 
         try {
-            String url = "http://localhost:8081" + PAYMENTS_PATH;
+            String url = baseUrl + PAYMENTS_PATH;
+            log.info("Calling bank API: {} with amount: {}", url, amount);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             

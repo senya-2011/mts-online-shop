@@ -119,8 +119,6 @@ public class TransactionalOrderService {
         order.setUpdatedAt(new Date());
         orderRepository.save(order);
 
-        // 4. Возвращаем товары в корзину 
-        // Для упрощения просто отправляем уведомление
         mailSimulator.sendOrderCancellation(order.getUser().getEmail(), order.getOrderNumber());
     }
 

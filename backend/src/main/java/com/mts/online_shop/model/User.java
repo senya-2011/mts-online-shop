@@ -33,5 +33,5 @@ public class User {
     private String passwordHash;
 
     @Column(name = "role", nullable = false, length = 20)
-    private String role = "CUSTOMER";
+    private String role = "USER";
 }

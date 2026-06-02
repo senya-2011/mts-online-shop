@@ -1,0 +1,24 @@
+{
+  "key": "payment-form",
+  "title": "Payment",
+  "components": [
+    {
+      "key": "cardNumber",
+      "label": "Card number",
+      "type": "text",
+      "validate": { "required": true }
+    },
+    {
+      "key": "cvv",
+      "label": "CVV",
+      "type": "text",
+      "validate": { "required": true }
+    },
+    {
+      "key": "expiresAt",
+      "label": "Expiry date",
+      "type": "text",
+      "validate": { "required": true }
+    }
+  ]
+}

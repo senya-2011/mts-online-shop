@@ -47,10 +47,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager() {
+    public AuthenticationManager authenticationManager(org.springframework.context.ApplicationContext applicationContext) {
         // Настройка JAAS Authentication Provider с программной конфигурацией
         JaasAuthenticationProvider jaasProvider = new JaasAuthenticationProvider();
         jaasProvider.setLoginContextName("MTSOnlineShop");
+        
+        // Устанавливаем ApplicationEventPublisher
+        jaasProvider.setApplicationEventPublisher(applicationContext);
         
         // Создаем JAAS конфигурацию через Resource (jaas.conf файл)
         Resource jaasConfigResource = new ClassPathResource("jaas.conf");
@@ -125,6 +128,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/products", "/api/products/**").permitAll()
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/register").permitAll()
+                // Allow local access to Camunda REST and webapps for development/testing
+                .requestMatchers("/engine-rest/**", "/camunda/**", "/app/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/swagger-ui/**", "/api/v3/api-docs/**", "/api/swagger-ui.html", "/api/swagger-ui/**").permitAll()
                 // Cart - USER and ADMIN
                 .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")
@@ -140,4 +145,7 @@ public class SecurityConfig {
             );
         return http.build();
     }
+
+    // Camunda engine plugin and SpringSecurityAuthenticationProvider are omitted.
+    // If needed, add proper Camunda plugin dependency and configure integration here.
 }

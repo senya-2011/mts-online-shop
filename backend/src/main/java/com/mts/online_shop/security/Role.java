@@ -12,7 +12,7 @@ public enum Role {
         Privilege.PROCESS_PAYMENTS, Privilege.VIEW_REPORTS
     )),
     
-    CUSTOMER(Set.of(
+    USER(Set.of(
         Privilege.READ_PRODUCTS,
         Privilege.READ_ORDERS, Privilege.WRITE_ORDERS, Privilege.CANCEL_ORDERS,
         Privilege.READ_CART, Privilege.WRITE_CART

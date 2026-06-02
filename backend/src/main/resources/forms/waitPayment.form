@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 2,
+  "components": [
+    {
+      "label": "Order ID",
+      "type": "textfield",
+      "key": "orderId",
+      "readonly": true
+    },
+    {
+      "label": "Payment status",
+      "type": "checkbox",
+      "key": "paymentReceived",
+      "description": "Check if payment is received"
+    },
+    {
+      "label": "Transaction ID",
+      "type": "textfield",
+      "key": "transactionId"
+    }
+  ]
+}

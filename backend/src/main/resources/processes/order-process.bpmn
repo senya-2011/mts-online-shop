@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             targetNamespace="http://camunda.org/examples">
+
+       <process id="order_process" name="Order Process" isExecutable="true" camunda:historyTimeToLive="30">
+
+    <startEvent id="StartEvent" name="Start" />
+
+    <sequenceFlow id="flow1" sourceRef="StartEvent" targetRef="CreateOrderTask" />
+
+    <serviceTask id="CreateOrderTask" name="Create Order"
+           camunda:delegateExpression="#{orderProcessAdapter}"
+           camunda:asyncBefore="true" />
+
+    <sequenceFlow id="flow2" sourceRef="CreateOrderTask" targetRef="PaymentUserTask" />
+
+       <userTask id="PaymentUserTask" name="Enter Payment"
+                       camunda:candidateGroups="BUYER"
+                       camunda:formKey="camunda-forms:deployment:payment-form" />
+
+    <sequenceFlow id="flow3" sourceRef="PaymentUserTask" targetRef="ConfirmPaymentTask" />
+
+    <serviceTask id="ConfirmPaymentTask" name="Confirm Payment"
+           camunda:delegateExpression="#{orderProcessAdapter}"
+           camunda:asyncBefore="true" />
+
+    <sequenceFlow id="flow4" sourceRef="ConfirmPaymentTask" targetRef="EndEvent" />
+
+    <endEvent id="EndEvent" name="End" />
+
+    <!-- Cancel path (simple service task triggered separately) -->
+    <serviceTask id="CancelOrderTask" name="Cancel Order"
+           camunda:delegateExpression="#{orderProcessAdapter}"
+           camunda:asyncBefore="true" />
+    <sequenceFlow id="flowCancelEnd" sourceRef="CancelOrderTask" targetRef="EndEvent" />
+
+  </process>
+</definitions>

@@ -12,7 +12,7 @@ import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.repository.UserRepository;
 import com.mts.online_shop.client.bank.BankClient;
 import com.mts.online_shop.simulator.mail.MailSimulator;
-import com.mts.online_shop.model.OrderResponse;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -238,5 +238,13 @@ public class OrderService {
         orderRepository.save(order);
         
         log.info("order cancelled by admin orderId={}", orderId);
+    }
+
+    @Transactional
+    public void confirmPayment(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+        order.setStatus(OrderStatus.PAID);
+        orderRepository.save(order);
     }
 }

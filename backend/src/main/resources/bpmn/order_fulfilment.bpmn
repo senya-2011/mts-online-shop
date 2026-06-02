@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" 
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Definitions_1" 
+                  targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="orderFulfillmentProcess" name="Order Fulfillment" isExecutable="true" camunda:versionTag="1.0" camunda:historyTimeToLive="30">
+    <bpmn:startEvent id="StartEvent" name="Order received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="CreateOrderTask" name="Create Order" camunda:delegateExpression="${orderProcessAdapter}">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="WaitPaymentTask" name="Wait for payment">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="PaymentCheckGateway" name="Payment received?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_yes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_no</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="CompleteOrderTask" name="Mark order as paid" camunda:delegateExpression="${orderProcessAdapter}">
+      <bpmn:incoming>Flow_yes</bpmn:incoming>
+      <bpmn:outgoing>Flow_end1</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="CancelOrderTask" name="Cancel order" camunda:delegateExpression="${orderProcessAdapter}">
+      <bpmn:incoming>Flow_no</bpmn:incoming>
+      <bpmn:outgoing>Flow_end2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="EndEventPaid" name="Order completed">
+      <bpmn:incoming>Flow_end1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="EndEventCancelled" name="Order cancelled">
+      <bpmn:incoming>Flow_end2</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent" targetRef="CreateOrderTask"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="CreateOrderTask" targetRef="WaitPaymentTask"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="WaitPaymentTask" targetRef="PaymentCheckGateway"/>
+    <bpmn:sequenceFlow id="Flow_yes" sourceRef="PaymentCheckGateway" targetRef="CompleteOrderTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${paymentReceived == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_no" sourceRef="PaymentCheckGateway" targetRef="CancelOrderTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${paymentReceived == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_end1" sourceRef="CompleteOrderTask" targetRef="EndEventPaid"/>
+    <bpmn:sequenceFlow id="Flow_end2" sourceRef="CancelOrderTask" targetRef="EndEventCancelled"/>
+  </bpmn:process>
+</bpmn:definitions>
