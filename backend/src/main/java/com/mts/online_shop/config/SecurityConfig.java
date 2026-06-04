@@ -23,6 +23,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -146,6 +147,8 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // Camunda engine plugin and SpringSecurityAuthenticationProvider are omitted.
-    // If needed, add proper Camunda plugin dependency and configure integration here.
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> { };
+    }
 }

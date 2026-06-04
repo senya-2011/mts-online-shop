@@ -51,6 +51,9 @@ public class XmlUserLoginModule implements LoginModule {
     
     @Override
     public boolean login() throws LoginException {
+        // Reload users from XML each login to pick up runtime changes
+        loadUsersFromXml();
+
         if (callbackHandler == null) {
             throw new LoginException("No CallbackHandler available");
         }
@@ -77,7 +80,7 @@ public class XmlUserLoginModule implements LoginModule {
             throw new FailedLoginException("Username is required");
         }
         
-        XmlUser user = users.get(username);
+        XmlUser user = users.get(username.toLowerCase());
         if (user == null) {
             log.warn("User not found: {}", username);
             throw new FailedLoginException("User not found: " + username);
@@ -173,7 +176,7 @@ public class XmlUserLoginModule implements LoginModule {
             for (int i = 0; i < userNodes.getLength(); i++) {
                 Element userElement = (Element) userNodes.item(i);
                 XmlUser user = parseUserElement(userElement);
-                users.put(user.getUsername(), user);
+                users.put(user.getUsername().toLowerCase(), user);
             }
             
             log.info("Loaded {} users from XML", users.size());
@@ -193,7 +196,15 @@ public class XmlUserLoginModule implements LoginModule {
             }
             return new File(resource.getFile());
         } else {
-            return new File(filePath);
+            File f = new File(filePath);
+            if (f.exists()) return f;
+            // try relative to working directory
+            File f2 = new File(System.getProperty("user.dir"), filePath);
+            if (f2.exists()) return f2;
+            // try classpath resource as fallback
+            var res = getClass().getClassLoader().getResource(filePath);
+            if (res != null) return new File(res.getFile());
+            return f; // will fail later when attempting to read
         }
     }
     

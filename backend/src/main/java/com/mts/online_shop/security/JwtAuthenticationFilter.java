@@ -36,6 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String ctx = request.getContextPath() == null ? "" : request.getContextPath();
+        String rel = request.getRequestURI().startsWith(ctx) ? request.getRequestURI().substring(ctx.length()) : request.getRequestURI();
+        if (rel.startsWith("/camunda") || rel.startsWith("/app") || rel.startsWith("/engine-rest") || rel.startsWith("/camunda-welcome")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
             log.debug("Processing request to: {}, Authorization header: {}", request.getRequestURI(), authHeader);

@@ -43,7 +43,16 @@ public class CamundaSecurityBridgeFilter extends OncePerRequestFilter {
         }
 
         try {
-            filterChain.doFilter(request, response);
+            try {
+                filterChain.doFilter(request, response);
+            } catch (IOException e) {
+                String cls = e.getClass().getName();
+                if (cls != null && cls.endsWith("ClientAbortException")) {
+                    log.debug("Client aborted connection while writing response: {}", e.getMessage());
+                } else {
+                    throw e;
+                }
+            }
         } finally {
             try {
                 identityService.clearAuthentication();

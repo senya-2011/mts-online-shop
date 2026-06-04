@@ -8,7 +8,7 @@
              xmlns:color="http://www.omg.org/spec/BPMN/non-normative/color/1.0"
              id="Definitions_MTS_Online_Shop"
              targetNamespace="http://mts-online-shop/bpmn"
-             exporter="Cascade AI Assistant"
+             exporter="MTS Modeler"
              exporterVersion="6.0">
 
   <!-- ================= COLLABORATION ================= -->

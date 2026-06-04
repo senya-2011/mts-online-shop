@@ -36,10 +36,11 @@ public class CamundaAuthorizationSync {
             AuthorizationService authorizationService = processEngine.getAuthorizationService();
             List<ProcessDefinition> defs = repositoryService.createProcessDefinitionQuery().list();
 
-            // mapping: processKey -> allowed groups to start
+            // mapping: processKey -> allowed groups to start (use current group names USER/ADMIN)
             Map<String, String[]> allowed = new HashMap<>();
-            allowed.put("order_process", new String[]{"CLIENT","OPERATOR","ADMIN"});
-            allowed.put("cancel_order", new String[]{"OPERATOR","ADMIN"});
+            allowed.put("order_process", new String[]{"USER","ADMIN"});
+            // cancel_order should be restricted to ADMIN only now that OPERATOR role was removed
+            allowed.put("cancel_order", new String[]{"ADMIN"});
             allowed.put("periodic_order_cleanup", new String[]{"ADMIN"});
 
             for (ProcessDefinition pd : defs) {
@@ -47,6 +48,20 @@ public class CamundaAuthorizationSync {
                 String[] groups = allowed.get(key);
                 if (groups == null) continue;
                 for (String g : groups) {
+                    // check existing authorization to avoid unique constraint violations
+                    int resourceType = Resources.PROCESS_DEFINITION.resourceType();
+                    Authorization existing = authorizationService.createAuthorizationQuery()
+                            .authorizationType(Authorization.AUTH_TYPE_GRANT)
+                            .groupIdIn(g)
+                            .resourceType(resourceType)
+                            .resourceId(key)
+                            .singleResult();
+
+                    if (existing != null) {
+                        log.debug("Authorization already exists for process={}, group={}", key, g);
+                        continue;
+                    }
+
                     Authorization a = authorizationService.createNewAuthorization(Authorization.AUTH_TYPE_GRANT);
                     a.setResource(Resources.PROCESS_DEFINITION);
                     a.setResourceId(key);

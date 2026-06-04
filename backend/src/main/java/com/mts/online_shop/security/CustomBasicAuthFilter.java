@@ -29,7 +29,13 @@ public class CustomBasicAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        
+        String ctx = request.getContextPath() == null ? "" : request.getContextPath();
+        String rel = request.getRequestURI().startsWith(ctx) ? request.getRequestURI().substring(ctx.length()) : request.getRequestURI();
+        if (rel.startsWith("/camunda") || rel.startsWith("/app") || rel.startsWith("/engine-rest") || rel.startsWith("/camunda-welcome")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         String header = request.getHeader("Authorization");
         
         if (header != null && header.startsWith("Basic ")) {

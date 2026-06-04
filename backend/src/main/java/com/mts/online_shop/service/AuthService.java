@@ -116,7 +116,7 @@ public class AuthService {
                 camundaIdentityService.saveUser(camundaUser);
             }
             // ensure group exists and assign
-            String groupId = "CLIENT"; // map application role USER -> CLIENT
+            String groupId = "USER"; // map application role USER -> Camunda group USER
             if (camundaIdentityService.createGroupQuery().groupId(groupId).count() == 0) {
                 org.camunda.bpm.engine.identity.Group g = camundaIdentityService.newGroup(groupId);
                 g.setName(groupId);

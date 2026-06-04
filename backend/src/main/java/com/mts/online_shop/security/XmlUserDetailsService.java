@@ -9,7 +9,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
+// Service bean is provided via SecurityConfig to avoid duplicate beans
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
-@Service
 public class XmlUserDetailsService implements UserDetailsService {
 
     private static final Logger log = LoggerFactory.getLogger(XmlUserDetailsService.class);

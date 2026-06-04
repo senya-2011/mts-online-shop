@@ -5,7 +5,8 @@ spring:
     throw-exception-if-no-handler-found: true
   web:
     resources:
-      add-mappings: false
+      # Camunda webapp serves static assets; enable resource handler mappings
+      add-mappings: true
   liquibase:
     enabled: false
     change-log: classpath:db/changelog/db.changelog-master.yml
@@ -46,6 +47,9 @@ logging:
     root: ${MTS_LOG_LEVEL:INFO}
     liquibase: INFO
     org.springframework.boot.autoconfigure.liquibase: INFO
+    com.mts.online_shop.security.jaas: DEBUG
+    org.camunda.bpm.engine.identity: DEBUG
+    org.springframework.security: DEBUG
 
 springdoc:
   api-docs:
@@ -63,7 +67,7 @@ camunda.bpm:
     password: admin
   database:
     schema-update: true
-  process-engine-name: onlineShopEngine
+  process-engine-name: default
   auto-deployment-enabled: true
   history-level: full
   authorization:
