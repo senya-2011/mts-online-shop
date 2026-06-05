@@ -30,6 +30,17 @@ public class CamundaSecurityBridgeFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String ctx = request.getContextPath() == null ? "" : request.getContextPath();
+        String uri = request.getRequestURI();
+        String rel = uri != null && uri.startsWith(ctx) ? uri.substring(ctx.length()) : uri;
+        return rel != null && (rel.startsWith("/camunda/app")
+                || rel.startsWith("/camunda/api")
+                || rel.startsWith("/app")
+                || rel.startsWith("/engine-rest"));
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {

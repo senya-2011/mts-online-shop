@@ -54,7 +54,7 @@ public class CamundaDashboardController {
                 <div>Assignee filter: <input id="assignee" value=""/> <button onclick="loadTasks()">Load</button></div>
                 <div id="tasks">(no tasks)</div>
                 <script>
-                const apiBase='/camunda/api';
+                const apiBase='/api/camunda-work';
                 async function startProcess(){
                   const key=document.getElementById('procKey').value;
                   const resp=await fetch(apiBase+'/start?key='+encodeURIComponent(key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});

@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -38,6 +39,7 @@ public class SecurityConfig {
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     @Bean
+    @Primary
     public XmlUserDetailsService userDetailsService(PrivilegeService privilegeService) {
         return new XmlUserDetailsService(privilegeService);
     }
@@ -80,6 +82,32 @@ public class SecurityConfig {
         return new ProviderManager(jaasProvider);
     }
 
+    @Bean
+    public org.springframework.security.authentication.jaas.JaasAuthenticationProvider jaasAuthenticationProvider() {
+        org.springframework.security.authentication.jaas.JaasAuthenticationProvider p = new org.springframework.security.authentication.jaas.JaasAuthenticationProvider();
+        p.setLoginContextName("MTSOnlineShop");
+        // use classpath jaas.conf from resources
+        Resource jaasConfigResource = new ClassPathResource("jaas.conf");
+        p.setLoginConfig(jaasConfigResource);
+        // keep authority granters similar to AuthenticationManager setup
+        p.setAuthorityGranters(new org.springframework.security.authentication.jaas.AuthorityGranter[] {
+                principal -> {
+                    if (principal instanceof com.mts.online_shop.security.jaas.XmlUserPrincipal) {
+                        com.mts.online_shop.security.jaas.XmlUserPrincipal xmlPrincipal =
+                                (com.mts.online_shop.security.jaas.XmlUserPrincipal) principal;
+                        return xmlPrincipal.getUser().getRoles();
+                    }
+                    return java.util.Collections.emptySet();
+                }
+        });
+        try {
+            p.afterPropertiesSet();
+        } catch (Exception e) {
+            log.warn("Failed to initialize jaasAuthenticationProvider bean: {}", e.getMessage());
+        }
+        return p;
+    }
+
     private javax.security.auth.login.Configuration createJaasConfiguration() {
         Map<String, String> options = new java.util.HashMap<>();
         options.put("usersFile", "classpath:users.xml");
@@ -99,6 +127,15 @@ public class SecurityConfig {
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
+            String accept = request.getHeader("Accept");
+            String uri = request.getRequestURI() == null ? "" : request.getRequestURI();
+            // If the request comes from the Camunda webapp (browser expecting HTML), redirect to the Camunda login
+            if ((accept != null && accept.contains("text/html")) || uri.startsWith("/camunda") || uri.startsWith("/app")) {
+                response.setStatus(HttpStatus.FOUND.value());
+                response.sendRedirect(request.getContextPath() + "/camunda/app/welcome/default/");
+                return;
+            }
+
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
             response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Требуется авторизация\"}");
@@ -108,6 +145,14 @@ public class SecurityConfig {
     @Bean
     public AccessDeniedHandler accessDeniedHandler() {
         return (request, response, accessDeniedException) -> {
+            String accept = request.getHeader("Accept");
+            String uri = request.getRequestURI() == null ? "" : request.getRequestURI();
+            if ((accept != null && accept.contains("text/html")) || uri.startsWith("/camunda") || uri.startsWith("/app")) {
+                response.setStatus(HttpStatus.FOUND.value());
+                response.sendRedirect(request.getContextPath() + "/camunda/app/welcome/default/");
+                return;
+            }
+
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
             response.getWriter().write("{\"error\":\"Forbidden\",\"message\":\"Недостаточно прав\"}");
@@ -130,7 +175,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/register").permitAll()
                 // Allow local access to Camunda REST and webapps for development/testing
-                .requestMatchers("/engine-rest/**", "/camunda/**", "/app/**").permitAll()
+                .requestMatchers("/engine-rest/**", "/camunda/**", "/app/**", "/api/camunda-work/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/swagger-ui/**", "/api/v3/api-docs/**", "/api/swagger-ui.html", "/api/swagger-ui/**").permitAll()
                 // Cart - USER and ADMIN
                 .requestMatchers("/api/cart/**").hasAnyRole("USER", "ADMIN")

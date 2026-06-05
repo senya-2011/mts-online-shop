@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/camunda/api")
+@RequestMapping("/api/camunda-work")
 public class CamundaWorkController {
 
     private final RuntimeService runtimeService;

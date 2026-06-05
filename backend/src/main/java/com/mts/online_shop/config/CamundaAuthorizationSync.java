@@ -67,8 +67,15 @@ public class CamundaAuthorizationSync {
                     a.setResourceId(key);
                     a.addPermission(Permissions.CREATE_INSTANCE);
                     a.setGroupId(g);
-                    authorizationService.saveAuthorization(a);
-                    log.info("Granted CREATE_INSTANCE on process {} to group {}", key, g);
+                    try {
+                        authorizationService.saveAuthorization(a);
+                        log.info("Granted CREATE_INSTANCE on process {} to group {}", key, g);
+                    } catch (Exception ex) {
+                        // Handle unique constraint / race condition gracefully
+                        log.warn("Failed to save authorization for process={}, group={} : {}", key, g, ex.getMessage());
+                        log.debug("Authorization save exception", ex);
+                        // continue with next authorization
+                    }
                 }
             }
         } catch (Exception e) {

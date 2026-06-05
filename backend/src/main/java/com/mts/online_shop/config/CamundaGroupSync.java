@@ -24,8 +24,7 @@ public class CamundaGroupSync {
     public void syncGroups() {
         List<User> allUsers = userRepository.findAll();
         // ensure default groups exist
-        ensureGroupExists("CLIENT");
-        ensureGroupExists("OPERATOR");
+        ensureGroupExists("USER");
         ensureGroupExists("ADMIN");
         for (User u : allUsers) {
             String role = u.getRole();
@@ -51,10 +50,7 @@ public class CamundaGroupSync {
         switch (appRole.toUpperCase()) {
             case "USER":
             case "CLIENT":
-                return "CLIENT";
-            case "OPERATOR":
-            case "EMPLOYEE":
-                return "OPERATOR";
+                return "USER";
             case "ADMIN":
                 return "ADMIN";
             default:

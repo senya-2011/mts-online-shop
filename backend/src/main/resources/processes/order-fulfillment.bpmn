@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+             targetNamespace="http://mts-online-shop/processes">
+
+  <!-- Order Fulfillment Process -->
+  <process id="orderFulfillmentProcess" name="Order Fulfillment" isExecutable="true" camunda:historyTimeToLive="P30D">
+    <startEvent id="StartEvent_1" name="Start" />
+
+    <!-- Create order (service task delegates to Spring bean orderProcessAdapter) -->
+    <serviceTask id="CreateOrderTask" name="Create order" camunda:class="com.mts.online_shop.service.OrderProcessAdapterCamunda" />
+
+    <!-- User payment form (generated Camunda form or embedded) -->
+    <userTask id="PaymentUserTask" name="Enter payment data" camunda:formKey="embedded:app:forms/payment-form.html">
+      <extensionElements />
+    </userTask>
+
+    <!-- Confirm payment (service task) -->
+    <serviceTask id="ConfirmPaymentTask" name="Confirm payment" camunda:class="com.mts.online_shop.service.OrderProcessAdapterCamunda" />
+
+    <!-- Gateway: was payment received? -->
+    <exclusiveGateway id="PaymentReceivedGateway" name="Payment received?" />
+
+    <endEvent id="End_Paid" name="Order completed (PAID)" />
+
+    <!-- Cancel flow -->
+    <serviceTask id="CancelOrderTask" name="Cancel order" camunda:class="com.mts.online_shop.service.OrderProcessAdapterCamunda" />
+    <endEvent id="End_Cancelled" name="Order cancelled" />
+
+    <!-- Sequence flow definitions -->
+    <sequenceFlow id="flow1" sourceRef="StartEvent_1" targetRef="CreateOrderTask" />
+    <sequenceFlow id="flow2" sourceRef="CreateOrderTask" targetRef="PaymentUserTask" />
+    <sequenceFlow id="flow3" sourceRef="PaymentUserTask" targetRef="ConfirmPaymentTask" />
+    <sequenceFlow id="flow4" sourceRef="ConfirmPaymentTask" targetRef="PaymentReceivedGateway" />
+    <sequenceFlow id="flow5" sourceRef="PaymentReceivedGateway" targetRef="End_Paid">
+      <conditionExpression xsi:type="tFormalExpression">${paymentReceived == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow6" sourceRef="PaymentReceivedGateway" targetRef="CancelOrderTask">
+      <conditionExpression xsi:type="tFormalExpression">${paymentReceived != true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="flow7" sourceRef="CancelOrderTask" targetRef="End_Cancelled" />
+
+    <!-- Boundary timer: if payment not received within configured period, cancel -->
+    <boundaryEvent id="Boundary_Timer_Payment" attachedToRef="PaymentUserTask" cancelActivity="true">
+      <timerEventDefinition>
+        <timeDuration>PT30M</timeDuration>
+      </timerEventDefinition>
+    </boundaryEvent>
+    <sequenceFlow id="flow_timer_cancel" sourceRef="Boundary_Timer_Payment" targetRef="CancelOrderTask" />
+
+  </process>
+
+  <!-- Periodic cleanup process (timer start) -->
+  <process id="orderCleanupProcess" name="Order Cleanup" isExecutable="true" camunda:historyTimeToLive="P7D">
+    <startEvent id="Start_Timer" name="Timer start">
+      <timerEventDefinition>
+        <!-- run every 24 hours by default -->
+        <timeCycle>R/PT24H</timeCycle>
+      </timerEventDefinition>
+    </startEvent>
+    <serviceTask id="CleanupTask" name="Cleanup expired orders" camunda:class="com.mts.online_shop.service.OrderProcessAdapterCamunda" />
+    <endEvent id="End_Cleanup" />
+    <sequenceFlow id="cleanup_flow1" sourceRef="Start_Timer" targetRef="CleanupTask" />
+    <sequenceFlow id="cleanup_flow2" sourceRef="CleanupTask" targetRef="End_Cleanup" />
+  </process>
+
+</definitions>

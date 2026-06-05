@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Payment Form</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    label { display:block; margin-top:8px }
+    input { width:100%; padding:8px; box-sizing:border-box }
+    button { margin-top:12px; padding:8px 12px }
+  </style>
+</head>
+<body>
+  <h3>Payment</h3>
+  <p>This simple embedded form posts variables to the application's Camunda task complete endpoint for testing.</p>
+
+  <label>Task Id
+    <input id="taskId" placeholder="Enter task id or leave blank for testing" />
+  </label>
+
+  <label>Card Number
+    <input id="cardNumber" placeholder="4111111111111111" />
+  </label>
+
+  <label>CVV
+    <input id="cvv" placeholder="123" />
+  </label>
+
+  <label>Expiry (MM/YY)
+    <input id="expiresAt" placeholder="12/26" />
+  </label>
+
+  <button id="submit">Submit payment</button>
+
+  <pre id="out" style="margin-top:12px;background:#f6f6f6;padding:8px"></pre>
+
+  <script>
+    const out = document.getElementById('out');
+    document.getElementById('submit').addEventListener('click', async () => {
+      const taskId = document.getElementById('taskId').value.trim();
+      if (!taskId) {
+        out.textContent = 'Please enter a Task Id to submit.';
+        return;
+      }
+      const vars = {
+        cardNumber: document.getElementById('cardNumber').value,
+        cvv: document.getElementById('cvv').value,
+        expiresAt: document.getElementById('expiresAt').value
+      };
+
+      try {
+        const resp = await fetch('/camunda/api/task/' + encodeURIComponent(taskId) + '/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(vars)
+        });
+        const text = await resp.text();
+        out.textContent = 'Status: ' + resp.status + '\n' + text;
+      } catch (e) {
+        out.textContent = 'Request error: ' + e.message;
+      }
+    });
+  </script>
+</body>
+</html>

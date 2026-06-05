@@ -145,120 +145,46 @@ public class OrderController {
 
     @PostMapping("/create")
     @io.swagger.v3.oas.annotations.Operation(
-        summary = "Create order with payment", 
-        description = "Creates an order from user's cart and processes payment via bank integration. Payment data is required in request body."
+        summary = "Start order BPMN process",
+        description = "Starts Camunda order process. Payment data is entered later in Camunda generated task form."
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order created and paid successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Bad request - empty cart, invalid payment data, or missing payment information"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order process started successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Bad request - empty cart"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<OrderResponse> createOrderWithPayment(@io.swagger.v3.oas.annotations.parameters.RequestBody(
-        description = "Payment information for order processing",
-        required = true,
-        content = @io.swagger.v3.oas.annotations.media.Content(
-            mediaType = "application/json",
-            schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = PaymentRequest.class),
-            examples = {
-                @io.swagger.v3.oas.annotations.media.ExampleObject(
-                    name = "Payment Example",
-                    value = "{\"cardNumber\":\"1234567890123456\",\"cvv\":\"123\",\"expiresAt\":\"12/25\"}",
-                    description = "Example payment data"
-                )
-            }
-        )
-    ) @RequestBody PaymentRequest paymentRequest) {
+    public ResponseEntity<MessageResponse> createOrderWithPayment() {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
-        log.debug("POST create order with payment for user id={}", userId);
-        
-        log.debug("Payment data: card={}, expiry={}, cvv={}", 
-            maskCardNumber(paymentRequest.getCardNumber()), 
-            paymentRequest.getExpiresAt(), 
-            "***");
-        
+        log.debug("POST start order process for user id={}", userId);
+
         try {
-            log.info("Creating order with real bank payment using OrderService");
-            log.info("User ID: {}", userId);
-            
-            // Проверим корзину перед созданием заказа
             var cartItems = goodsService.getCartItems(userId);
             log.info("Cart has {} items for user {}", cartItems.size(), userId);
-            
+
             if (cartItems.isEmpty()) {
-                log.error("Cannot create order - cart is empty for user {}", userId);
+                log.warn("Cannot start order process - cart is empty for user {}", userId);
                 return ResponseEntity.badRequest().build();
             }
-            
-            log.info("Cart items: {}", cartItems.stream().map(item -> item.getProduct().getName()).toList());
-            
-            // Рассчитываем сумму заказа
-            double totalAmount = cartItems.stream()
-                    .mapToDouble(item -> item.getProduct().getPrice().doubleValue() * item.getQuantity())
-                    .sum();
-            log.info("Order total amount: ${}", totalAmount);
-            
-            // Validate payment data
-            String cardNumber = paymentRequest.getCardNumber();
-            String cvv = paymentRequest.getCvv();
-            String expiresAt = paymentRequest.getExpiresAt();
-            
-            log.info("Received payment data from request:");
-            log.info("  Card: ****-****-****-{}", maskCardNumber(cardNumber));
-            log.info("  Expires: {}", expiresAt);
-            log.info("  CVV: ***");
-            
-            // Validate required fields
-            if (cardNumber == null || cardNumber.trim().isEmpty()) {
-                log.error("Card number is required for payment");
-                return ResponseEntity.badRequest().build();
-            }
-            if (cvv == null || cvv.trim().isEmpty()) {
-                log.error("CVV is required for payment");
-                return ResponseEntity.badRequest().build();
-            }
-            if (expiresAt == null || expiresAt.trim().isEmpty()) {
-                log.error("Expiry date is required for payment");
-                return ResponseEntity.badRequest().build();
-            }
-            
-            log.info("Processing payment via real bank:");
-            log.info("  Card: ****-****-****-{}", cardNumber.substring(Math.max(0, cardNumber.length() - 4)));
-            log.info("  Amount: ${}", totalAmount);
-            
-            // Запускаем BPMN-процесс для создания и оплаты заказа
+
             Map<String, Object> variables = new HashMap<>();
             variables.put("userId", userId);
-            variables.put("cardNumber", paymentRequest.getCardNumber());
-            variables.put("cvv", paymentRequest.getCvv());
-            variables.put("expiresAt", paymentRequest.getExpiresAt());
-
             ProcessInstance pi = runtimeService.startProcessInstanceByKey("order_process", variables);
-            Long orderId = (Long) runtimeService.getVariable(pi.getId(), "orderId");
-            if (orderId == null) {
-                log.error("Process did not create orderId for user {}", userId);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-            }
 
-            OrderResponse orderResponse = orderService.getOrder(orderId, userId);
-            return ResponseEntity.ok(orderResponse);
-            
+            MessageResponse response = new MessageResponse();
+            response.setMessage("Order process started: " + pi.getId() + ". Complete payment in Camunda Tasklist.");
+            return ResponseEntity.ok(response);
         } catch (EmptyCartException e) {
             log.error("Empty cart error: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (UserNotFoundException e) {
             log.error("User not found: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
-        } catch (org.springframework.http.converter.HttpMessageNotReadableException e) {
-            log.error("Missing payment data in request body");
-            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            log.error("Error creating order with payment: {}", e.getMessage());
+            log.error("Error starting order process: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
-    
-        
     private String maskCardNumber(String cardNumber) {
         if (cardNumber == null || cardNumber.length() < 4) {
             return "****";

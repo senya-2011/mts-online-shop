@@ -69,6 +69,11 @@ camunda.bpm:
     schema-update: true
   process-engine-name: default
   auto-deployment-enabled: true
+  deployment-resource-pattern:
+    - classpath*:/bpmn/cancel-order.bpmn
+    - classpath*:/bpmn/periodic-order-cleanup.bpmn
+    - classpath*:/bpmn/forms/*.form
+    - classpath*:/processes/order-process.bpmn
   history-level: full
   authorization:
     enabled: true

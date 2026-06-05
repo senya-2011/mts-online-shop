@@ -17,7 +17,7 @@
     <sequenceFlow id="flow2" sourceRef="CreateOrderTask" targetRef="PaymentUserTask" />
 
               <userTask id="PaymentUserTask" name="Enter Payment"
-                                                 camunda:candidateGroups="CLIENT"
+                                                 camunda:candidateGroups="USER"
                                                  camunda:formKey="camunda-forms:deployment:payment-form">
                      <extensionElements>
                             <camunda:taskListener event="complete" class="com.mts.online_shop.service.TaskValidationListener" />
