@@ -27,6 +27,16 @@ public class CustomBasicAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return isCamundaInfrastructurePath(request.getRequestURI());
+    }
+
+    private static boolean isCamundaInfrastructurePath(String uri) {
+        return uri.contains("/camunda/") || uri.endsWith("/camunda")
+                || uri.contains("/engine-rest/");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         

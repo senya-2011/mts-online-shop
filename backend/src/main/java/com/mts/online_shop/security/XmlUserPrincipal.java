@@ -10,7 +10,7 @@ public class XmlUserPrincipal extends User {
 
     public XmlUserPrincipal(String username, String password, boolean enabled, 
                          Collection<? extends GrantedAuthority> authorities, Long userId) {
-        super(username, password, enabled, true, true, !enabled, authorities);
+        super(username, password, enabled, true, true, enabled, authorities);
         this.userId = userId;
     }
 

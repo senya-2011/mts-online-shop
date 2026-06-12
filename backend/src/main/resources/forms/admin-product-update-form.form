@@ -1,0 +1,32 @@
+{
+  "components": [
+    {
+      "label": "Ошибка валидации",
+      "type": "text",
+      "key": "validationError",
+      "readonly": true
+    },
+    {
+      "label": "ID товара",
+      "type": "number",
+      "key": "productId",
+      "validate": { "required": true, "min": 1 }
+    },
+    {
+      "label": "Название",
+      "type": "textfield",
+      "key": "name"
+    },
+    {
+      "label": "Цена",
+      "type": "number",
+      "key": "price",
+      "validate": { "min": 0 }
+    }
+  ],
+  "type": "default",
+  "id": "admin-product-update-form",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.22.0",
+  "schemaVersion": 16
+}

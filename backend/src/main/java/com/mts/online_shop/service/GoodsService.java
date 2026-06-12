@@ -192,16 +192,16 @@ public class GoodsService {
 
     // ===== АДМИН-МЕТОДЫ для управления товарами =====
 
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public ProductEntity createProduct(String name, BigDecimal price) {
         log.info("createProduct name={} price={}", name, price);
         ProductEntity product = new ProductEntity(name, price);
-        ProductEntity saved = goodsRepository.save(product);
+        ProductEntity saved = goodsRepository.saveAndFlush(product);
         log.info("Product created id={}", saved.getId());
         return saved;
     }
 
-    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public ProductEntity updateProduct(Long productId, String name, BigDecimal price) {
         log.info("updateProduct id={}", productId);
         ProductEntity product = goodsRepository.findById(productId)
@@ -210,7 +210,7 @@ public class GoodsService {
         if (name != null) product.setName(name);
         if (price != null) product.setPrice(price);
         
-        ProductEntity saved = goodsRepository.save(product);
+        ProductEntity saved = goodsRepository.saveAndFlush(product);
         log.info("Product updated id={}", saved.getId());
         return saved;
     }

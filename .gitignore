@@ -34,6 +34,8 @@ bank/generated/
 
 # Misc
 bin/
+node_modules/
+.gradle-tmp/
 *.log
 .DS_Store
 

@@ -25,3 +25,9 @@ databaseChangeLog:
       file: db/changelog/changeset/011-telegram-chat-links.yml
   - include:
       file: db/changelog/changeset/012-seed-default-users.yml
+  - include:
+      file: db/changelog/changeset/013-repair-default-user-bcrypt.yml
+  - include:
+      file: db/changelog/changeset/014-orders-status-pending-payment.yml
+  - include:
+      file: db/changelog/changeset/015-promote-alisa-admin.yml

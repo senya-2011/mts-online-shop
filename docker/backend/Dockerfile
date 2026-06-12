@@ -10,10 +10,10 @@ COPY bank bank
 COPY messaging-contracts messaging-contracts
 COPY bank-jca-adapter bank-jca-adapter
 COPY notification-service notification-service
-RUN chmod +x gradlew && ./gradlew :backend:bootJar --no-daemon -x test
+RUN chmod +x gradlew && ./gradlew :backend:bootWar --no-daemon -x test
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=builder /w/backend/build/libs/app.jar /app/app.jar
+COPY --from=builder /w/backend/build/libs/online-shop.war /app/online-shop.war
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/online-shop.war"]

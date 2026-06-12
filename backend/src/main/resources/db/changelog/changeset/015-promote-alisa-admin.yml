@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: promote-alisa-to-admin
+      author: system
+      changes:
+        - update:
+            tableName: users
+            columns:
+              - column:
+                  name: role
+                  value: ADMIN
+            where: LOWER(login) = 'alisa'

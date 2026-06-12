@@ -1,0 +1,27 @@
+{
+  "components": [
+    {
+      "label": "Номер заказа",
+      "type": "number",
+      "key": "orderId",
+      "disabled": true
+    },
+    {
+      "label": "Покупатель",
+      "type": "textfield",
+      "key": "customerLogin",
+      "disabled": true
+    },
+    {
+      "label": "Подтвердить отмену заказа",
+      "type": "checkbox",
+      "key": "cancelApproved",
+      "defaultValue": false
+    }
+  ],
+  "type": "default",
+  "id": "admin-cancel-order-form",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.22.0",
+  "schemaVersion": 16
+}

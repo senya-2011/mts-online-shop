@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "label": "ID товара",
+      "type": "number",
+      "key": "productId",
+      "validate": { "required": true, "min": 1 }
+    }
+  ],
+  "type": "default",
+  "id": "user-add-product-form",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.22.0",
+  "schemaVersion": 16
+}

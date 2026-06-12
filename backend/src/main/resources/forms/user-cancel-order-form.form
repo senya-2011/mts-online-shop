@@ -1,0 +1,20 @@
+{
+  "components": [
+    {
+      "type": "text",
+      "id": "Field_cancelValidationError",
+      "text": "**{{validationError}}**"
+    },
+    {
+      "label": "Номер заказа",
+      "type": "number",
+      "key": "orderId",
+      "validate": { "required": true, "min": 1 }
+    }
+  ],
+  "type": "default",
+  "id": "user-cancel-order-form",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.22.0",
+  "schemaVersion": 16
+}

@@ -1,19 +1,17 @@
 package com.mts.online_shop.controller;
 
+import com.mts.online_shop.camunda.CamundaIdentityService;
 import com.mts.online_shop.model.LoginRequest;
 import com.mts.online_shop.model.LoginResponse;
-import com.mts.online_shop.model.MessageResponse;
 import com.mts.online_shop.model.RegisterRequest;
-import com.mts.online_shop.security.JwtService;
 import com.mts.online_shop.service.AuthService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -21,50 +19,51 @@ import java.nio.charset.StandardCharsets;
 public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-    private final JwtService jwtService;
     private final AuthService authService;
+    private final CamundaIdentityService camundaIdentityService;
 
-    public AuthController(JwtService jwtService, AuthService authService) {
-        this.jwtService = jwtService;
+    public AuthController(AuthService authService, CamundaIdentityService camundaIdentityService) {
         this.authService = authService;
+        this.camundaIdentityService = camundaIdentityService;
     }
 
     @PostMapping("/register")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Регистрация нового пользователя", description = "Создает новый аккаунт пользователя с логином, email и паролем")
-    public ResponseEntity<MessageResponse> register(@RequestBody RegisterRequest registerRequest) {
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Регистрация пользователя",
+            description = "Создаёт учётную запись и возвращает JWT для доступа к API.")
+    public ResponseEntity<LoginResponse> register(@RequestBody RegisterRequest registerRequest) {
         log.info("POST register login={} email={}", registerRequest.getLogin(), registerRequest.getEmail());
+        authService.register(
+                registerRequest.getLogin(),
+                registerRequest.getEmail(),
+                registerRequest.getPassword(),
+                registerRequest.getName());
         try {
-            Long userId = authService.register(
+            camundaIdentityService.syncRegisteredUser(
                     registerRequest.getLogin(),
-                    registerRequest.getEmail(),
                     registerRequest.getPassword(),
-                    registerRequest.getName()
-            );
-            MessageResponse response = new MessageResponse();
-            response.setMessage("Пользователь #" + userId + " зарегистрирован");
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+                    Collections.singleton("USER"));
         } catch (Exception e) {
-            log.warn("Registration failed for user {}: {}", registerRequest.getLogin(), e.getMessage());
-            MessageResponse response = new MessageResponse();
-            response.setMessage("Ошибка регистрации: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            log.error("Camunda identity sync failed for user {}: {}", registerRequest.getLogin(), e.getMessage(), e);
         }
+        String token = authService.issueTokenForUser(registerRequest.getLogin());
+        LoginResponse response = new LoginResponse();
+        response.setAccessToken(token);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
     @io.swagger.v3.oas.annotations.Operation(summary = "Аутентификация пользователя", description = "Выполняет вход пользователя и возвращает JWT токен для доступа к API")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
         log.info("POST login login={}", loginRequest.getLogin());
+        String token = authService.login(loginRequest.getLogin(), loginRequest.getPassword());
         try {
-            String token = authService.authenticate(loginRequest.getLogin(), loginRequest.getPassword());
-            LoginResponse response = new LoginResponse();
-            response.setAccessToken(token);
-            return ResponseEntity.ok(response);
+            camundaIdentityService.syncOnLogin(loginRequest.getLogin(), loginRequest.getPassword());
         } catch (Exception e) {
-            log.warn("Login failed for user {}: {}", loginRequest.getLogin(), e.getMessage());
-            LoginResponse errorResponse = new LoginResponse();
-            // Set accessToken to null to indicate error
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            log.warn("Camunda identity sync on login failed for {}: {}", loginRequest.getLogin(), e.getMessage());
         }
+        LoginResponse response = new LoginResponse();
+        response.setAccessToken(token);
+        return ResponseEntity.ok(response);
     }
 }

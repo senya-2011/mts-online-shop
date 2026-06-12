@@ -5,29 +5,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
+/**
+ * Периодическая проверка доступности банковского EIS (ЛР3), вне BPMN.
+ */
 @Component
 public class BankReachabilityScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(BankReachabilityScheduler.class);
 
-    private final BankClientProperties bankClientProperties;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestClient restClient;
 
     public BankReachabilityScheduler(BankClientProperties bankClientProperties) {
-        this.bankClientProperties = bankClientProperties;
+        this.restClient = RestClient.builder()
+                .baseUrl(bankClientProperties.getBaseUrl())
+                .build();
     }
 
     @Scheduled(fixedRateString = "${app.bank.health-check-ms:300000}")
-    public void pingBank() {
-        String base = bankClientProperties.getBaseUrl().replaceAll("/$", "");
-        String url = base + "/api/cards";
+    public void checkBankReachability() {
         try {
-            restTemplate.getForEntity(url, String.class);
-            log.debug("Bank health check OK: {}", url);
+            restClient.get()
+                    .uri("/api/cards")
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Bank EIS is reachable at /api/cards");
         } catch (Exception e) {
-            log.warn("Bank health check failed for {}: {}", url, e.getMessage());
+            log.warn("Bank EIS health check failed: {}", e.getMessage());
         }
     }
 }

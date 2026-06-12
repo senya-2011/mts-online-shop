@@ -1,5 +1,6 @@
 plugins {
 	java
+	war
 	kotlin("jvm") version "2.0.21"
 	id("org.springframework.boot") version "3.3.5"
 	id("io.spring.dependency-management") version "1.1.7"
@@ -12,8 +13,12 @@ description = "Demo project for Spring Boot"
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(17)
 	}
+}
+
+kotlin {
+	jvmToolchain(17)
 }
 
 configurations {
@@ -26,14 +31,22 @@ repositories {
 	mavenCentral()
 }
 
+val camundaVersion = "7.22.0"
+
 dependencies {
 	implementation(project(":api"))
 	implementation(project(":messaging-contracts"))
 	implementation(project(":bank-jca-adapter"))
+	providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
+	implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter:$camundaVersion")
+	implementation("org.camunda.bpm.springboot:camunda-bpm-spring-boot-starter-webapp:$camundaVersion")
+	// REST: core + ручная регистрация сервлета (starter-rest ломает WAR на WildFly)
+	implementation("org.camunda.bpm:camunda-engine-rest-core-jakarta:$camundaVersion")
 	implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.liquibase:liquibase-core")
     implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework.boot:spring-boot-starter-jersey")
 	implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     
@@ -41,7 +54,7 @@ dependencies {
     implementation("org.jboss.narayana.jta:narayana-jta:7.0.0.Final")
     implementation("org.jboss.narayana.jta:jta:7.0.0.Final")
     
-    // JWT (оставляем для совместимости кода, но не используем)
+    // JWT для REST API (/api/auth/login, JwtAuthenticationFilter)
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
@@ -71,7 +84,20 @@ tasks.jar {
 }
 
 tasks.bootJar {
-	archiveFileName.set("app.jar")
+	enabled = false
+}
+
+tasks.named<ProcessResources>("processResources") {
+	// Camunda formRefBinding=deployment: BPMN и .form в одном каталоге processes/
+	from("src/main/resources/forms") {
+		into("processes")
+		include("**/*.form")
+	}
+}
+
+tasks.bootWar {
+	archiveFileName.set("online-shop.war")
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.withType<Test> {

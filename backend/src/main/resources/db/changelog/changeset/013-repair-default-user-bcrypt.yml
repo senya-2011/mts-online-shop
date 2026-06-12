@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: repair-default-admin-bcrypt-hash
+      author: system
+      changes:
+        - sql:
+            sql: >
+              UPDATE users
+              SET password_hash = '$2b$10$obg6MpawLg3be8haz3aPZ.U8IEK2Pj5F8hlhyuQ/BMfdzSoLlVm5a'
+              WHERE login = 'admin'
+                AND (password_hash IS NULL OR password_hash NOT LIKE '$2%')
+
+  - changeSet:
+      id: repair-default-user-bcrypt-hash
+      author: system
+      changes:
+        - sql:
+            sql: >
+              UPDATE users
+              SET password_hash = '$2b$10$yp.KEmY35HLhrSoK0uX2bOHKj6lcLOOtaYwF17MG0T33uNdT0.qZG'
+              WHERE login = 'user'
+                AND (password_hash IS NULL OR password_hash NOT LIKE '$2%')

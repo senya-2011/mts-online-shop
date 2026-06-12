@@ -1,8 +1,14 @@
 spring:
   application:
     name: ${MTS_APP_NAME:online-shop}
+  jersey:
+    application-path: /engine-rest
   mvc:
     throw-exception-if-no-handler-found: true
+    formcontent:
+      filter:
+        # Camunda login uses Jersey @FormParam on the raw body; FormContentFilter consumes it and breaks the session.
+        enabled: false
   web:
     resources:
       add-mappings: false
@@ -33,6 +39,10 @@ server:
   port: ${MTS_PORT:8080}
   servlet:
     context-path: ${MTS_CONTEXT_PATH:}
+    session:
+      cookie:
+        path: /
+        same-site: lax
 
 jwt:
   secret: ${MTS_JWT_SECRET:s9/PnuqMovO16uMBoWSjwoWI8etyn1KLFvfCLyTXq+g=}
@@ -61,10 +71,44 @@ logging:
 # Paths are relative to server root; context-path (e.g. /api) is applied by Spring — do not prefix with /api again.
 springdoc:
   api-docs:
-    path: /v3/api-docs
+    path: /api/v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: /api/swagger-ui.html
     enabled: true
+    config-url: /api/v3/api-docs/swagger-config
+    url: /api/v3/api-docs
 
 mail:
   from: ${MTS_MAIL_USERNAME:noreply@localhost}
+
+camunda:
+  bpm:
+    webapp:
+      # иначе /camunda/ открывает Welcome (требует отдельных прав), а не Tasklist
+      index-redirect-enabled: false
+    admin-user:
+      id: ${CAMUNDA_ADMIN_USER:demo}
+      password: ${CAMUNDA_ADMIN_PASSWORD:demo}
+      firstName: Demo
+      lastName: Admin
+    filter:
+      create: All tasks
+    database:
+      schema-update: true
+    auto-deployment-enabled: true
+    deploy-changed-only: true
+    deployment-name: mts-online-shop
+    deployment-resource-pattern:
+      - classpath*:processes/**/*.bpmn
+      - classpath*:processes/**/*.form
+    authorization:
+      enabled: true
+    generic-properties:
+      properties:
+        loginMaxAttempts: 2147483647
+        loginDelayBase: 0
+        loginDelayMaxTime: 0
+        loginDelayFactor: 1
+    job-execution:
+      enabled: true
+    history-level: ${CAMUNDA_HISTORY_LEVEL:full}

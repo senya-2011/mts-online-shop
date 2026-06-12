@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jboss-deployment-structure xmlns="urn:jboss:deployment-structure:1.2">
+    <deployment>
+        <!-- Spring Boot + embedded Camunda: DI через Spring, не Weld/RESTEasy/JSF WildFly -->
+        <exclude-subsystems>
+            <subsystem name="weld"/>
+            <subsystem name="jaxrs"/>
+            <subsystem name="jsf"/>
+        </exclude-subsystems>
+        <exclusions>
+            <module name="org.apache.log4j"/>
+            <module name="org.slf4j"/>
+            <module name="org.slf4j.impl"/>
+            <module name="org.jboss.resteasy.resteasy-jaxrs"/>
+            <module name="org.jboss.resteasy.resteasy-jackson2-provider"/>
+            <module name="jakarta.faces.api"/>
+            <module name="jakarta.faces.impl"/>
+            <module name="org.jboss.weld.core"/>
+            <module name="org.jboss.weld.api"/>
+            <module name="org.jboss.weld.spi"/>
+            <module name="jakarta.enterprise.api"/>
+        </exclusions>
+    </deployment>
+</jboss-deployment-structure>

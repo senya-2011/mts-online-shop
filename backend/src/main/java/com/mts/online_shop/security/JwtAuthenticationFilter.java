@@ -33,21 +33,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri.contains("/camunda/") || uri.endsWith("/camunda")
+                || uri.contains("/engine-rest/");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
-            String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-            log.debug("Processing request to: {}, Authorization header: {}", request.getRequestURI(), authHeader);
-            
-            resolveBearerToken(request).ifPresent(token -> {
-                log.debug("Found JWT token: {}", token.substring(0, Math.min(token.length(), 20)) + "...");
-                jwtService.extractUserId(token).ifPresent(userId -> {
-                    Set<String> roles = jwtService.extractRoles(token).orElse(Collections.emptySet());
-                    log.debug("Extracted userId: {}, roles: {}", userId, roles);
-                    authenticate(userId, roles);
-                });
-            });
+            resolveBearerToken(request).ifPresent(token ->
+                    jwtService.extractUserId(token).ifPresent(userId -> {
+                        Set<String> roles = jwtService.extractRoles(token).orElse(Collections.emptySet());
+                        String username = jwtService.extractUsername(token).orElse(String.valueOf(userId));
+                        authenticate(userId, username, roles);
+                    }));
         }
         filterChain.doFilter(request, response);
     }
@@ -55,23 +57,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private Optional<String> resolveBearerToken(HttpServletRequest request) {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            log.debug("No valid Authorization header found");
             return Optional.empty();
         }
         return Optional.of(authHeader.substring(BEARER_PREFIX.length()).trim());
     }
 
-    private void authenticate(Long userId, Set<String> roles) {
+    private void authenticate(Long userId, String username, Set<String> roles) {
         var authorities = roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
-        
+
+        var principal = new JwtUserPrincipal(userId, username);
         var authentication = UsernamePasswordAuthenticationToken.authenticated(
-                userId,
+                principal,
                 null,
                 authorities
         );
-        log.info("Authenticated user: {} with roles: {}", userId, roles);
+        log.debug("Authenticated user: {} (id={}) with roles: {}", username, userId, roles);
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 }

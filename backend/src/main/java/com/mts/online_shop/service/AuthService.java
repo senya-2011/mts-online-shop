@@ -1,5 +1,6 @@
 package com.mts.online_shop.service;
 
+import com.mts.online_shop.camunda.CamundaIdentityService;
 import com.mts.online_shop.exception.BadRequestException;
 import com.mts.online_shop.exception.InvalidCredentialsException;
 import com.mts.online_shop.exception.UserAlreadyExistsException;
@@ -9,6 +10,9 @@ import com.mts.online_shop.security.JwtService;
 import com.mts.online_shop.security.XmlUserDetailsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,40 +35,54 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
     private final XmlUserDetailsService xmlUserDetailsService;
-    private final JwtService jwtService;
     private final UserRepository userRepository;
     private final UserIdGeneratorService userIdGeneratorService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final CamundaIdentityService camundaIdentityService;
 
-    public AuthService(PasswordEncoder passwordEncoder, 
+    public AuthService(PasswordEncoder passwordEncoder,
                       XmlUserDetailsService xmlUserDetailsService,
-                      JwtService jwtService,
                       UserRepository userRepository,
-                      UserIdGeneratorService userIdGeneratorService) {
+                      UserIdGeneratorService userIdGeneratorService,
+                      AuthenticationManager authenticationManager,
+                      JwtService jwtService,
+                      CamundaIdentityService camundaIdentityService) {
         this.passwordEncoder = passwordEncoder;
         this.xmlUserDetailsService = xmlUserDetailsService;
-        this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.userIdGeneratorService = userIdGeneratorService;
+        this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
+        this.camundaIdentityService = camundaIdentityService;
     }
 
-    public String authenticate(String login, String password) {
-        UserDetails userDetails = xmlUserDetailsService.loadUserByUsername(login);
-        
-        // BCryptPasswordEncoder comparison
-        if (!passwordEncoder.matches(password, userDetails.getPassword())) {
+    public String login(String login, String password) {
+        String normalizedLogin = normalizeLogin(login);
+        String rawPassword = normalizePassword(password);
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(normalizedLogin, rawPassword));
+        } catch (AuthenticationException e) {
             throw new InvalidCredentialsException("Invalid credentials");
         }
-        
-        Long userId = xmlUserDetailsService.getUserIdByUsername(login);
+        return issueTokenForUser(normalizedLogin);
+    }
+
+    public String issueTokenForUser(String login) {
+        return generateTokenForLogin(normalizeLogin(login));
+    }
+
+    private String generateTokenForLogin(String normalizedLogin) {
+        Long userId = xmlUserDetailsService.ensureDatabaseUserIdByLogin(normalizedLogin).orElse(null);
         if (userId == null) {
-            throw new InvalidCredentialsException("User not found");
+            throw new InvalidCredentialsException("User not found in shop database");
         }
-        
+        UserDetails userDetails = xmlUserDetailsService.loadUserByUsername(normalizedLogin);
         Set<String> roles = userDetails.getAuthorities().stream()
                 .map(authority -> authority.getAuthority().replace("ROLE_", ""))
                 .collect(Collectors.toSet());
-        
-        return jwtService.generateToken(userId, login, roles, Collections.emptyMap());
+        return jwtService.generateToken(userId, normalizedLogin, roles, Collections.emptyMap());
     }
 
     @Transactional
@@ -75,15 +93,24 @@ public class AuthService {
 
         log.info("Starting registration for user: {}", normalizedLogin);
 
-        if (xmlUserDetailsService.userExists(normalizedLogin)) {
+        if (userRepository.existsByLoginIgnoreCase(normalizedLogin)) {
             throw new UserAlreadyExistsException("User with login already exists");
         }
+        if (xmlUserDetailsService.userExists(normalizedLogin)) {
+            log.warn("Removing orphan XML user '{}' (missing in DB after previous failed registration)", normalizedLogin);
+            xmlUserDetailsService.removeUser(normalizedLogin);
+        }
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new UserAlreadyExistsException("User with email already exists");
+        }
 
-        // Hash password before saving
         String hashedPassword = passwordEncoder.encode(rawPassword);
-        
-        // Save to XML with hashed password (XmlUserDetailsService will generate ID)
-        xmlUserDetailsService.saveUser(normalizedLogin, hashedPassword, Collections.singletonList("USER"));
+
+        Long maxDbId = userRepository.findMaxUserId();
+        long minId = maxDbId != null ? maxDbId : 0L;
+        xmlUserDetailsService.saveUserWithId(
+                normalizedLogin, hashedPassword, Collections.singletonList("USER"),
+                xmlUserDetailsService.allocateNextUserId(minId));
         log.info("User saved to XML with hashed password: {}", normalizedLogin);
         
         // Get assigned ID from XML
@@ -101,9 +128,9 @@ public class AuthService {
         
         User savedUser = userRepository.save(dbUser);
         log.info("User saved to database: {} with ID: {}", savedUser.getLogin(), savedUser.getId());
-        
+
         log.info("Registration completed for user: {} with ID: {}", normalizedLogin, userId);
-        
+
         return userId;
     }
 
@@ -160,5 +187,27 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
         userRepository.delete(user);
         log.info("User deleted id={}", userId);
+    }
+
+    @Transactional
+    public void banUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
+        user.setRole("BANNED");
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void changeUserRole(Long userId, String targetRole) {
+        if (targetRole == null || targetRole.isBlank()) {
+            throw new BadRequestException("targetRole is required");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User with id: " + userId + " not found"));
+        String normalizedRole = targetRole.trim().toUpperCase(Locale.ROOT);
+        user.setRole(normalizedRole);
+        userRepository.save(user);
+        xmlUserDetailsService.syncRoleForLogin(user.getLogin(), normalizedRole);
+        camundaIdentityService.resyncShopUser(user.getLogin());
     }
 }

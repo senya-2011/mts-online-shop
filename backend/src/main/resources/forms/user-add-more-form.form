@@ -1,0 +1,15 @@
+{
+  "components": [
+    {
+      "label": "Добавить ещё один товар в корзину",
+      "type": "checkbox",
+      "key": "addMore",
+      "defaultValue": false
+    }
+  ],
+  "type": "default",
+  "id": "user-add-more-form",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.22.0",
+  "schemaVersion": 16
+}

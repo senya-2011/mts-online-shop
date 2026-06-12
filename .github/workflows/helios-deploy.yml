@@ -13,11 +13,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "17"
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -28,15 +28,15 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Build backend
+      - name: Build backend WAR
         working-directory: backend
-        run: chmod +x gradlew && ./gradlew clean bootJar -x test
+        run: chmod +x gradlew && ./gradlew clean bootWar -x test
 
       - name: Build bank
         working-directory: bank
         run: chmod +x gradlew && ./gradlew clean bootJar -x test
 
-      - name: Setup SSH and deploy
+      - name: Setup SSH and deploy to WildFly on Helios
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -50,13 +50,23 @@ jobs:
             echo "${{ secrets.HELIOS_ENV }}" | ssh -p 2222 ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru 'cat > ~/MTS/.env'
           fi
 
-          scp -P 2222 backend/build/libs/online-shop-0.0.1-SNAPSHOT.jar ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru:~/MTS/online-shop.jar
+          scp -P 2222 backend/build/libs/online-shop.war ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru:~/MTS/online-shop.war
           scp -P 2222 bank/build/libs/bank-simulator-0.0.1-SNAPSHOT.jar ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru:~/MTS/bank-simulator.jar
+          scp -P 2222 deploy/wildfly-deploy.sh ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru:~/MTS/wildfly-deploy.sh
 
-          ssh -p 2222 ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru "cd ~/MTS && set -a && [ -f .env ] && . ./.env; set +a && export MTS_PORT=13228 BANK_PORT=13229 BANK_URL=http://localhost:13229; pkill -f online-shop.jar || true; pkill -f bank-simulator.jar || true; sleep 2; nohup java -Xmx512m -Xms256m -jar bank-simulator.jar > bank-simulator.log 2>&1 & disown; sleep 2; nohup java -Xmx512m -Xms256m -jar online-shop.jar > online-shop.log 2>&1 & disown; echo Done"
+          ssh -p 2222 ${{ secrets.HELIOS_USERNAME }}@helios.cs.ifmo.ru "cd ~/MTS && set -a && [ -f .env ] && . ./.env; set +a && \
+            export BANK_URL=http://localhost:13229 && \
+            pkill -f bank-simulator.jar || true && \
+            sleep 2 && \
+            nohup java -Xmx512m -Xms256m -jar bank-simulator.jar > bank-simulator.log 2>&1 & disown && \
+            sleep 2 && \
+            chmod +x wildfly-deploy.sh && \
+            WILDFLY_HOME=\${WILDFLY_HOME:-\$HOME/wildfly} ./wildfly-deploy.sh online-shop.war && \
+            echo Done"
 
       - name: Verify
         run: |
-          sleep 10
+          sleep 20
           curl -sf http://helios.cs.ifmo.ru:13229/api/cards >/dev/null && echo "Bank OK" || echo "Bank not ready"
           curl -sf http://helios.cs.ifmo.ru:13228/api/products >/dev/null && echo "Backend OK" || echo "Backend not ready"
+          curl -sf http://helios.cs.ifmo.ru:13228/camunda/ >/dev/null && echo "Camunda OK" || echo "Camunda not ready"

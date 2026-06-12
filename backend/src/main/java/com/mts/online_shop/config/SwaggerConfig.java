@@ -12,16 +12,21 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     private static final String JWT_AUTH = "jwtAuth";
+    private static final String BASIC_AUTH = "basicAuth";
 
     @Bean
     public OpenAPI customOpenAPI() {
-        final String securitySchemeName = JWT_AUTH;
-        
         return new OpenAPI()
                 .info(new Info()
                         .title("MTS Online Shop")
                         .version("0.1.0")
                         .description("""
+                                ### Вход в Swagger (отдельно от Camunda Tasklist UI)
+                                1. **basicAuth** — логин/пароль из `users.xml` (после деплоя те же учётки синхронизируются в Camunda).
+                                2. **jwtAuth** — вызовите `POST /api/auth/login`, скопируйте `accessToken`, вставьте в Authorize (без префикса Bearer).
+                                
+                                Учётки по умолчанию: `admin` / `admin`, `user` / `user` (если не меняли `users.xml`).
+                                
                                 ### Публичные API 
                                 - `GET /api/products/**` - просмотр товаров
                                 - `POST /api/auth/login` - аутентификация и получение JWT токена
@@ -49,14 +54,20 @@ public class SwaggerConfig {
                         )
                 )
                 .components(new Components()
-                        .addSecuritySchemes(securitySchemeName,
+                        .addSecuritySchemes(JWT_AUTH,
                                 new SecurityScheme()
-                                        .name(securitySchemeName)
+                                        .name(JWT_AUTH)
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .description("Введите JWT токен")))
-                .addSecurityItem(new SecurityRequirement()
-                        .addList(securitySchemeName));
+                                        .description("JWT из POST /api/auth/login (только значение токена)"))
+                        .addSecuritySchemes(BASIC_AUTH,
+                                new SecurityScheme()
+                                        .name(BASIC_AUTH)
+                                        .type(SecurityScheme.Type.HTTP)
+                                        .scheme("basic")
+                                        .description("Логин и пароль из users.xml")))
+                .addSecurityItem(new SecurityRequirement().addList(JWT_AUTH))
+                .addSecurityItem(new SecurityRequirement().addList(BASIC_AUTH));
     }
 }

@@ -1,8 +1,8 @@
 package com.mts.online_shop.controller;
 
-import com.mts.online_shop.model.MessageResponse;
 import com.mts.online_shop.model.OrderListResponse;
 import com.mts.online_shop.model.OrderResponse;
+import com.mts.online_shop.model.MessageResponse;
 import com.mts.online_shop.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,13 +26,13 @@ public class AdminCartController {
     }
 
     @PostMapping("/orders/{orderId}/cancel")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Отменить заказ (админ)", description = "Транзакционная отмена заказа администратором с автоматическим возвратом денег")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Отменить заказ (админ)", description = "Отмена заказа администратором без BPM")
     public ResponseEntity<MessageResponse> cancelOrder(@PathVariable Long orderId) {
         log.debug("POST admin cancel order id={}", orderId);
-        orderService.adminCancelOrder(orderId);
-        MessageResponse msg = new MessageResponse();
-        msg.setMessage("Заказ #" + orderId + " отменен администратором");
-        return ResponseEntity.ok(msg);
+        orderService.markOrderCancelledByAdmin(orderId);
+        MessageResponse response = new MessageResponse();
+        response.setMessage("Заказ #" + orderId + " отменён администратором");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/orders")
@@ -46,6 +46,17 @@ public class AdminCartController {
         response.setTotal((long) allOrders.size());
         response.setPage(0);
         response.setSize(20);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/orders/{orderId}/status")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Изменить статус заказа (админ)", description = "Прямое изменение статуса без BPM")
+    public ResponseEntity<MessageResponse> updateOrderStatus(@PathVariable Long orderId,
+                                                             @RequestBody java.util.Map<String, Object> body) {
+        String targetStatus = String.valueOf(body.get("targetStatus"));
+        orderService.updateOrderStatusByAdmin(orderId, targetStatus);
+        MessageResponse response = new MessageResponse();
+        response.setMessage("Статус заказа #" + orderId + " обновлен на " + targetStatus);
         return ResponseEntity.ok(response);
     }
 }

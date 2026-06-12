@@ -5,6 +5,7 @@ import com.mts.online_shop.model.CartItem;
 import com.mts.online_shop.model.Product;
 import com.mts.online_shop.model.AddCartItemRequest;
 import com.mts.online_shop.model.MessageResponse;
+import com.mts.online_shop.camunda.BpmUserService;
 import com.mts.online_shop.security.CurrentUserService;
 import com.mts.online_shop.service.GoodsService;
 import org.slf4j.Logger;
@@ -24,10 +25,13 @@ public class UserCartController {
     private static final Logger log = LoggerFactory.getLogger(UserCartController.class);
     private final GoodsService goodsService;
     private final CurrentUserService currentUserService;
+    private final BpmUserService bpmUserService;
 
-    public UserCartController(GoodsService goodsService, CurrentUserService currentUserService) {
+    public UserCartController(GoodsService goodsService, CurrentUserService currentUserService,
+                              BpmUserService bpmUserService) {
         this.goodsService = goodsService;
         this.currentUserService = currentUserService;
+        this.bpmUserService = bpmUserService;
     }
 
     @GetMapping
@@ -109,14 +113,18 @@ public class UserCartController {
     }
 
     @PostMapping("/items")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Добавить товар в корзину", description = "Добавляет указанный товар в корзину текущего пользователя")
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Добавить товар в корзину",
+            description = "Шаг 1–2 процесса заказа: запускает user-lk-order (если ещё не запущен), "
+                    + "добавляет товар в корзину и предлагает добавить ещё в Camunda Tasklist. "
+                    + "После наполнения корзины вызовите POST /api/orders/create.")
     public ResponseEntity<MessageResponse> addToCart(@RequestBody AddCartItemRequest request) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
         log.debug("POST add to cart user={} productId={}", userId, request.getProductId());
         
         try {
             // Добавляем товар в корзину через GoodsService
-            goodsService.addProductInUserCart(userId, request.getProductId());
+            bpmUserService.addToCart(userId, request.getProductId());
             
             MessageResponse msg = new MessageResponse();
             msg.setMessage("Товар #" + request.getProductId() + " добавлен в корзину");

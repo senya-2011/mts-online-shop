@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ServerOrderProcessing" targetNamespace="http://mts-online-shop/bpmn" exporter="Camunda Modeler" exporterVersion="4.12.0">
+  <bpmn:process id="server-order-processing" name="SERVER: обработка заказа" isExecutable="true" camunda:historyTimeToLive="30">
+    <bpmn:laneSet id="LaneSet_server-order-processing">
+      <bpmn:lane id="Lane_Service" name="SERVICE">
+        <bpmn:flowNodeRef>Start_Server</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Server</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_DeductStock</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Email</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Telegram</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Complete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bitrix</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Server">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_DeductStock" name="Списание со склада" camunda:delegateExpression="${deductStockDelegate}">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Email" name="Email" camunda:delegateExpression="${sendOrderPaidEmailDelegate}">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Telegram" name="Telegram" camunda:delegateExpression="${sendTelegramNotificationDelegate}">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Bitrix" name="Bitrix" camunda:delegateExpression="${bitrixPublishDelegate}">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Complete" name="Завершение" camunda:delegateExpression="${markOrderCompletedDelegate}">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Server">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Server" targetRef="Task_DeductStock" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_DeductStock" targetRef="Task_Email" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Email" targetRef="Task_Telegram" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Telegram" targetRef="Task_Bitrix" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Bitrix" targetRef="Task_Complete" />
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="Task_Complete" targetRef="End_Server" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_server-order-processing">
+    <bpmndi:BPMNPlane id="BPMNPlane_server-order-processing" bpmnElement="server-order-processing">
+      <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1136" height="150" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="172" y="92" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <di:waypoint x="1110" y="155" />
+        <di:waypoint x="1140" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5">
+        <di:waypoint x="980" y="155" />
+        <di:waypoint x="1010" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+        <di:waypoint x="820" y="155" />
+        <di:waypoint x="880" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="650" y="155" />
+        <di:waypoint x="720" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="500" y="155" />
+        <di:waypoint x="550" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="276" y="155" />
+        <di:waypoint x="400" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Start_Server_di" bpmnElement="Start_Server">
+        <dc:Bounds x="240" y="137" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Server_di" bpmnElement="End_Server">
+        <dc:Bounds x="1140" y="137" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DeductStock_di" bpmnElement="Task_DeductStock">
+        <dc:Bounds x="400" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Email_di" bpmnElement="Task_Email">
+        <dc:Bounds x="550" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Telegram_di" bpmnElement="Task_Telegram">
+        <dc:Bounds x="720" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Complete_di" bpmnElement="Task_Complete">
+        <dc:Bounds x="1010" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Bitrix_di" bpmnElement="Task_Bitrix">
+        <dc:Bounds x="880" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

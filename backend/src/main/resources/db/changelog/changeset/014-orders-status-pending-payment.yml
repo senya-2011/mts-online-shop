@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: orders-status-check-include-pending-payment
+      author: system
+      changes:
+        - sql:
+            splitStatements: false
+            sql: ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+        - sql:
+            splitStatements: false
+            sql: >
+              ALTER TABLE orders ADD CONSTRAINT orders_status_check
+              CHECK (status IN (
+                'CREATED',
+                'PENDING_PAYMENT',
+                'PAID',
+                'COMPLETED',
+                'REFUNDED',
+                'DELIVERED',
+                'CANCELLED'
+              ));

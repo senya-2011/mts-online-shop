@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_UserLkOrder" targetNamespace="http://mts-online-shop/bpmn" exporter="Camunda Modeler" exporterVersion="4.12.0">
+  <bpmn:error id="Error_Validation" name="VALIDATION_ERROR" errorCode="VALIDATION_ERROR" />
+  <bpmn:process id="user-lk-order" name="USER: заказ в ЛК" isExecutable="true" camunda:historyTimeToLive="30">
+    <bpmn:laneSet id="LaneSet_user-lk-order">
+      <bpmn:lane id="Lane_User" name="USER">
+        <bpmn:flowNodeRef>Start_LkOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_PaymentFormValidation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterProductId</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_ProductFormValidation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AddMoreProducts</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_AddMoreFormValidation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Service" name="SERVICE">
+        <bpmn:flowNodeRef>Boundary_AddCartValidation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AddToCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AddMore</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CreateOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reserve</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_InitiatePayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReleaseOnFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MarkPaid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PaymentSuccess</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_StartServer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Success</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Failed</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidateCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_ValidateCartValidation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_InitPaymentValidation</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_LkOrder" name="Начало заказа">
+      <bpmn:extensionElements>
+        <camunda:executionListener delegateExpression="${lkOrderStartExecutionListener}" event="start" />
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_StartToProduct</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_EnterProductId" name="Выбор ID товара" camunda:formRef="user-add-product-form" camunda:formRefBinding="deployment" camunda:candidateGroups="user, admin">
+      <bpmn:extensionElements>
+        <camunda:taskListener delegateExpression="${assignTaskToStarterListener}" event="create" />
+        <camunda:taskListener delegateExpression="${cartAddFormValidationTaskListener}" event="complete" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_StartToProduct</bpmn:incoming>
+      <bpmn:incoming>Flow_AddMoreYes</bpmn:incoming>
+      <bpmn:incoming>Flow_ProductFormRetry</bpmn:incoming>
+      <bpmn:incoming>Flow_AddCartRetry</bpmn:incoming>
+      <bpmn:incoming>Flow_ValidateCartRetry</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToAddCart</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_ProductFormValidation" attachedToRef="Task_EnterProductId">
+      <bpmn:outgoing>Flow_ProductFormRetry</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_Validation" />
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Boundary_AddCartValidation" attachedToRef="Task_AddToCart">
+      <bpmn:outgoing>Flow_AddCartRetry</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_Validation" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_AddToCart" name="Добавить в корзину" camunda:delegateExpression="${addCartItemDelegate}">
+      <bpmn:incoming>Flow_ToAddCart</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToAddMore</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_AddMoreProducts" name="Добавить ещё товар?" camunda:formRef="user-add-more-form" camunda:formRefBinding="deployment" camunda:candidateGroups="user, admin">
+      <bpmn:extensionElements>
+        <camunda:taskListener delegateExpression="${assignTaskToStarterListener}" event="create" />
+        <camunda:taskListener delegateExpression="${addMoreFormTaskListener}" event="complete" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToAddMore</bpmn:incoming>
+      <bpmn:incoming>Flow_AddMoreFormRetry</bpmn:incoming>
+      <bpmn:outgoing>Flow_AddMoreGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_AddMoreFormValidation" attachedToRef="Task_AddMoreProducts">
+      <bpmn:outgoing>Flow_AddMoreFormRetry</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_Validation" />
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Gateway_AddMore" name="Добавить ещё?" default="Flow_AddMoreNo">
+      <bpmn:incoming>Flow_AddMoreGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_AddMoreYes</bpmn:outgoing>
+      <bpmn:outgoing>Flow_AddMoreNo</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ValidateCart" name="Проверка корзины" camunda:delegateExpression="${validateCartDelegate}">
+      <bpmn:incoming>Flow_AddMoreNo</bpmn:incoming>
+      <bpmn:outgoing>Flow_CreateOrder</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_ValidateCartValidation" attachedToRef="Task_ValidateCart">
+      <bpmn:outgoing>Flow_ValidateCartRetry</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_Validation" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_CreateOrder" name="Создание заказа" camunda:delegateExpression="${createOrLoadPendingOrderDelegate}">
+      <bpmn:incoming>Flow_CreateOrder</bpmn:incoming>
+      <bpmn:outgoing>Flow_Reserve</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Reserve" name="Резерв товаров" camunda:delegateExpression="${reserveProductsDelegate}">
+      <bpmn:incoming>Flow_Reserve</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToPayment</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_EnterPayment" name="Оплата корзины" camunda:formRef="user-payment-form" camunda:formRefBinding="deployment" camunda:candidateGroups="user, admin">
+      <bpmn:extensionElements>
+        <camunda:taskListener delegateExpression="${assignTaskToStarterListener}" event="create" />
+        <camunda:taskListener delegateExpression="${paymentFormValidationTaskListener}" event="complete" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToPayment</bpmn:incoming>
+      <bpmn:incoming>Flow_PaymentFormRetry</bpmn:incoming>
+      <bpmn:incoming>Flow_InitPaymentRetry</bpmn:incoming>
+      <bpmn:outgoing>Flow_InitPayment</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_PaymentFormValidation" attachedToRef="Task_EnterPayment">
+      <bpmn:outgoing>Flow_PaymentFormRetry</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_Validation" />
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_InitiatePayment" name="Проверка карты" camunda:delegateExpression="${processPaymentDelegate}">
+      <bpmn:incoming>Flow_InitPayment</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToPaymentGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_InitPaymentValidation" attachedToRef="Task_InitiatePayment">
+      <bpmn:outgoing>Flow_InitPaymentRetry</bpmn:outgoing>
+      <bpmn:errorEventDefinition errorRef="Error_Validation" />
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Gateway_PaymentSuccess" name="Оплата успешна?" default="Flow_Fail">
+      <bpmn:incoming>Flow_ToPaymentGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Paid</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_MarkPaid" name="Подтвердить оплату" camunda:asyncBefore="true" camunda:delegateExpression="${markOrderPaidDelegate}">
+      <bpmn:incoming>Flow_Paid</bpmn:incoming>
+      <bpmn:outgoing>Flow_StartServer</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_StartServer" name="Запуск обработки на сервере" camunda:delegateExpression="${startServerOrderProcessingDelegate}">
+      <bpmn:incoming>Flow_StartServer</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndOk</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ReleaseOnFail" name="Снять резерв" camunda:delegateExpression="${releaseReservationDelegate}">
+      <bpmn:incoming>Flow_Fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndFail</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Success">
+      <bpmn:incoming>Flow_EndOk</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Failed">
+      <bpmn:incoming>Flow_EndFail</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_StartToProduct" sourceRef="Start_LkOrder" targetRef="Task_EnterProductId" />
+    <bpmn:sequenceFlow id="Flow_ProductFormRetry" sourceRef="Boundary_ProductFormValidation" targetRef="Task_EnterProductId" />
+    <bpmn:sequenceFlow id="Flow_AddCartRetry" sourceRef="Boundary_AddCartValidation" targetRef="Task_EnterProductId" />
+    <bpmn:sequenceFlow id="Flow_ValidateCartRetry" sourceRef="Boundary_ValidateCartValidation" targetRef="Task_EnterProductId" />
+    <bpmn:sequenceFlow id="Flow_AddMoreFormRetry" sourceRef="Boundary_AddMoreFormValidation" targetRef="Task_AddMoreProducts" />
+    <bpmn:sequenceFlow id="Flow_PaymentFormRetry" sourceRef="Boundary_PaymentFormValidation" targetRef="Task_EnterPayment" />
+    <bpmn:sequenceFlow id="Flow_InitPaymentRetry" sourceRef="Boundary_InitPaymentValidation" targetRef="Task_EnterPayment" />
+    <bpmn:sequenceFlow id="Flow_ToAddCart" sourceRef="Task_EnterProductId" targetRef="Task_AddToCart" />
+    <bpmn:sequenceFlow id="Flow_ToAddMore" sourceRef="Task_AddToCart" targetRef="Task_AddMoreProducts" />
+    <bpmn:sequenceFlow id="Flow_AddMoreGateway" sourceRef="Task_AddMoreProducts" targetRef="Gateway_AddMore" />
+    <bpmn:sequenceFlow id="Flow_AddMoreYes" sourceRef="Gateway_AddMore" targetRef="Task_EnterProductId">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable('addMore') == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_AddMoreNo" sourceRef="Gateway_AddMore" targetRef="Task_ValidateCart" />
+    <bpmn:sequenceFlow id="Flow_CreateOrder" sourceRef="Task_ValidateCart" targetRef="Task_CreateOrder" />
+    <bpmn:sequenceFlow id="Flow_Reserve" sourceRef="Task_CreateOrder" targetRef="Task_Reserve" />
+    <bpmn:sequenceFlow id="Flow_ToPayment" sourceRef="Task_Reserve" targetRef="Task_EnterPayment" />
+    <bpmn:sequenceFlow id="Flow_InitPayment" sourceRef="Task_EnterPayment" targetRef="Task_InitiatePayment" />
+    <bpmn:sequenceFlow id="Flow_Paid" sourceRef="Gateway_PaymentSuccess" targetRef="Task_MarkPaid">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable('paymentSuccess') == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Fail" sourceRef="Gateway_PaymentSuccess" targetRef="Task_ReleaseOnFail" />
+    <bpmn:sequenceFlow id="Flow_StartServer" sourceRef="Task_MarkPaid" targetRef="Task_StartServer" />
+    <bpmn:sequenceFlow id="Flow_EndOk" sourceRef="Task_StartServer" targetRef="End_Success" />
+    <bpmn:sequenceFlow id="Flow_EndFail" sourceRef="Task_ReleaseOnFail" targetRef="End_Failed" />
+    <bpmn:sequenceFlow id="Flow_ToPaymentGateway" sourceRef="Task_InitiatePayment" targetRef="Gateway_PaymentSuccess" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_user-lk-order">
+    <bpmndi:BPMNPlane id="BPMNPlane_user-lk-order" bpmnElement="user-lk-order">
+      <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
+        <dc:Bounds x="160" y="250" width="2546" height="200" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="172" y="262" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_User_di" bpmnElement="Lane_User" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="2546" height="170" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="172" y="92" width="60" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_ToPaymentGateway_di" bpmnElement="Flow_ToPaymentGateway">
+        <di:waypoint x="1710" y="325" />
+        <di:waypoint x="2033" y="325" />
+        <di:waypoint x="2033" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EndFail_di" bpmnElement="Flow_EndFail">
+        <di:waypoint x="2108" y="400" />
+        <di:waypoint x="2190" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_EndOk_di" bpmnElement="Flow_EndOk">
+        <di:waypoint x="2408" y="300" />
+        <di:waypoint x="2482" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StartServer_di" bpmnElement="Flow_StartServer">
+        <di:waypoint x="2258" y="300" />
+        <di:waypoint x="2308" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Fail_di" bpmnElement="Flow_Fail">
+        <di:waypoint x="2058" y="325" />
+        <di:waypoint x="2058" y="360" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Paid_di" bpmnElement="Flow_Paid">
+        <di:waypoint x="2083" y="300" />
+        <di:waypoint x="2158" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InitPayment_di" bpmnElement="Flow_InitPayment">
+        <di:waypoint x="1500" y="195" />
+        <di:waypoint x="1500" y="325" />
+        <di:waypoint x="1610" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToPayment_di" bpmnElement="Flow_ToPayment">
+        <di:waypoint x="1400" y="325" />
+        <di:waypoint x="1430" y="325" />
+        <di:waypoint x="1430" y="155" />
+        <di:waypoint x="1450" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Reserve_di" bpmnElement="Flow_Reserve">
+        <di:waypoint x="1240" y="325" />
+        <di:waypoint x="1300" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_CreateOrder_di" bpmnElement="Flow_CreateOrder">
+        <di:waypoint x="1060" y="380" />
+        <di:waypoint x="1105" y="380" />
+        <di:waypoint x="1105" y="325" />
+        <di:waypoint x="1140" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AddMoreNo_di" bpmnElement="Flow_AddMoreNo">
+        <di:waypoint x="883" y="380" />
+        <di:waypoint x="960" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AddMoreYes_di" bpmnElement="Flow_AddMoreYes">
+        <di:waypoint x="859" y="356" />
+        <di:waypoint x="859" y="230" />
+        <di:waypoint x="570" y="230" />
+        <di:waypoint x="570" y="160" />
+        <di:waypoint x="520" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AddMoreGateway_di" bpmnElement="Flow_AddMoreGateway">
+        <di:waypoint x="758" y="140" />
+        <di:waypoint x="783" y="140" />
+        <di:waypoint x="783" y="380" />
+        <di:waypoint x="833" y="380" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToAddMore_di" bpmnElement="Flow_ToAddMore">
+        <di:waypoint x="630" y="325" />
+        <di:waypoint x="644" y="325" />
+        <di:waypoint x="644" y="140" />
+        <di:waypoint x="658" y="140" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToAddCart_di" bpmnElement="Flow_ToAddCart">
+        <di:waypoint x="470" y="195" />
+        <di:waypoint x="470" y="325" />
+        <di:waypoint x="530" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_PaymentFormRetry_di" bpmnElement="Flow_PaymentFormRetry">
+        <di:waypoint x="1450" y="213" />
+        <di:waypoint x="1450" y="220" />
+        <di:waypoint x="1500" y="220" />
+        <di:waypoint x="1500" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ValidateCartRetry_di" bpmnElement="Flow_ValidateCartRetry">
+        <di:waypoint x="960" y="438" />
+        <di:waypoint x="450" y="438" />
+        <di:waypoint x="450" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AddCartRetry_di" bpmnElement="Flow_AddCartRetry">
+        <di:waypoint x="512" y="365" />
+        <di:waypoint x="470" y="365" />
+        <di:waypoint x="470" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_StartToProduct_di" bpmnElement="Flow_StartToProduct">
+        <di:waypoint x="276" y="155" />
+        <di:waypoint x="420" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ProductFormRetry_di" bpmnElement="Flow_ProductFormRetry">
+        <di:waypoint x="420" y="213" />
+        <di:waypoint x="420" y="240" />
+        <di:waypoint x="460" y="240" />
+        <di:waypoint x="460" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AddMoreFormRetry_di" bpmnElement="Flow_AddMoreFormRetry">
+        <di:waypoint x="658" y="198" />
+        <di:waypoint x="658" y="205" />
+        <di:waypoint x="708" y="205" />
+        <di:waypoint x="708" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Start_LkOrder_di" bpmnElement="Start_LkOrder">
+        <dc:Bounds x="240" y="137" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AddToCart_di" bpmnElement="Task_AddToCart">
+        <dc:Bounds x="530" y="285" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_AddMore_di" bpmnElement="Gateway_AddMore" isMarkerVisible="true">
+        <dc:Bounds x="833" y="355" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="818" y="415" width="79" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateOrder_di" bpmnElement="Task_CreateOrder">
+        <dc:Bounds x="1140" y="285" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Reserve_di" bpmnElement="Task_Reserve">
+        <dc:Bounds x="1300" y="285" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnterPayment_di" bpmnElement="Task_EnterPayment">
+        <dc:Bounds x="1450" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_InitiatePayment_di" bpmnElement="Task_InitiatePayment">
+        <dc:Bounds x="1610" y="285" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_InitPaymentValidation_di" bpmnElement="Boundary_InitPaymentValidation">
+        <dc:Bounds x="1592" y="347" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_InitPaymentRetry_di" bpmnElement="Flow_InitPaymentRetry">
+        <di:waypoint x="1610" y="383" />
+        <di:waypoint x="1500" y="383" />
+        <di:waypoint x="1500" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Gateway_PaymentSuccess_di" bpmnElement="Gateway_PaymentSuccess" isMarkerVisible="true">
+        <dc:Bounds x="2033" y="275" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2032" y="237.5" width="51" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MarkPaid_di" bpmnElement="Task_MarkPaid">
+        <dc:Bounds x="2158" y="260" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_StartServer_di" bpmnElement="Task_StartServer">
+        <dc:Bounds x="2308" y="260" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReleaseOnFail_di" bpmnElement="Task_ReleaseOnFail">
+        <dc:Bounds x="2008" y="360" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Success_di" bpmnElement="End_Success">
+        <dc:Bounds x="2482" y="282" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Failed_di" bpmnElement="End_Failed">
+        <dc:Bounds x="2190" y="382" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="2200" y="428" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateCart_di" bpmnElement="Task_ValidateCart">
+        <dc:Bounds x="960" y="340" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnterProductId_di" bpmnElement="Task_EnterProductId">
+        <dc:Bounds x="420" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AddMoreProducts_di" bpmnElement="Task_AddMoreProducts">
+        <dc:Bounds x="658" y="100" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_PaymentFormValidation_di" bpmnElement="Boundary_PaymentFormValidation">
+        <dc:Bounds x="1432" y="177" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_AddCartValidation_di" bpmnElement="Boundary_AddCartValidation">
+        <dc:Bounds x="512" y="347" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_ValidateCartValidation_di" bpmnElement="Boundary_ValidateCartValidation">
+        <dc:Bounds x="942" y="402" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_ProductFormValidation_di" bpmnElement="Boundary_ProductFormValidation">
+        <dc:Bounds x="402" y="177" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_AddMoreFormValidation_di" bpmnElement="Boundary_AddMoreFormValidation">
+        <dc:Bounds x="640" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

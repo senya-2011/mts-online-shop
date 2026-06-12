@@ -1,0 +1,27 @@
+{
+  "components": [
+    {
+      "label": "Ошибка валидации",
+      "type": "text",
+      "key": "validationError",
+      "readonly": true
+    },
+    {
+      "label": "Название",
+      "type": "textfield",
+      "key": "name",
+      "validate": { "required": true }
+    },
+    {
+      "label": "Цена",
+      "type": "number",
+      "key": "price",
+      "validate": { "required": true, "min": 0 }
+    }
+  ],
+  "type": "default",
+  "id": "admin-product-create-form",
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.22.0",
+  "schemaVersion": 16
+}

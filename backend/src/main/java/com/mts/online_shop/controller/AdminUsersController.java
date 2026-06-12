@@ -26,8 +26,8 @@ public class AdminUsersController {
     private final AuthService authService;
     private final GoodsService goodsService;
     private final OrderService orderService;
-
-    public AdminUsersController(AuthService authService, GoodsService goodsService, OrderService orderService) {
+    public AdminUsersController(AuthService authService, GoodsService goodsService,
+                                OrderService orderService) {
         this.authService = authService;
         this.goodsService = goodsService;
         this.orderService = orderService;
@@ -88,5 +88,24 @@ public class AdminUsersController {
     public ResponseEntity<Object> getUserOrders(@PathVariable Long userId) {
         log.debug("GET admin user {} orders", userId);
         return ResponseEntity.ok(orderService.getOrdersByUserId(userId));
+    }
+
+    @PostMapping("/{userId}/ban")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Забанить пользователя", description = "Запускает BPM-процесс модерации бана")
+    public ResponseEntity<MessageResponse> banUser(@PathVariable Long userId) {
+        authService.banUser(userId);
+        MessageResponse msg = new MessageResponse();
+        msg.setMessage("Пользователь #" + userId + " заблокирован");
+        return ResponseEntity.ok(msg);
+    }
+
+    @PostMapping("/{userId}/role-change")
+    @io.swagger.v3.oas.annotations.Operation(summary = "Изменить роль пользователя", description = "Запускает BPM-процесс повышения роли")
+    public ResponseEntity<MessageResponse> changeRole(@PathVariable Long userId, @RequestBody(required = false) java.util.Map<String, String> body) {
+        String targetRole = body != null ? body.get("targetRole") : "ADMIN";
+        authService.changeUserRole(userId, targetRole);
+        MessageResponse msg = new MessageResponse();
+        msg.setMessage("Роль пользователя #" + userId + " обновлена на " + targetRole);
+        return ResponseEntity.ok(msg);
     }
 }

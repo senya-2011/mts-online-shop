@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+  id="Definitions_Lr4Overview"
+  targetNamespace="http://mts-online-shop/bpmn/lr4-overview"
+  exporter="Camunda Modeler" exporterVersion="4.12.0">
+
+  <bpmn:message id="Message_BankCallback" name="bank_payment_callback" />
+
+  <bpmn:collaboration id="Collaboration_Lr4">
+    <bpmn:participant id="Participant_Shop" name="MTS Online Shop — ЛР4 (5 процессов)" processRef="lr4-overview" />
+    <bpmn:participant id="Participant_Bank" name="BANK" processRef="lr4-bank" />
+    <bpmn:messageFlow id="MF_PaymentToBank" sourceRef="lk_InitiatePayment" targetRef="bank_Process" />
+    <bpmn:messageFlow id="MF_BankCallback" sourceRef="bank_Callback" targetRef="lk_BankCallback" />
+    <bpmn:textAnnotation id="Ann_Api">
+      <bpmn:text>Триггеры API:
+POST /api/cart/items · POST /api/orders/create · POST /api/orders/{id}/cancel
+POST /api/admin/products · PUT /api/admin/products/{id}
+POST /api/internal/bank/payment-callback</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Api" sourceRef="Ann_Api" targetRef="lk_Start" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="lr4-bank" isExecutable="false">
+    <bpmn:startEvent id="bank_Start" name="Запрос"><bpmn:outgoing>F_b1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:task id="bank_Process" name="Обработка платежа"><bpmn:incoming>F_b1</bpmn:incoming><bpmn:outgoing>F_b2</bpmn:outgoing></bpmn:task>
+    <bpmn:intermediateThrowEvent id="bank_Callback" name="Callback"><bpmn:incoming>F_b2</bpmn:incoming><bpmn:messageEventDefinition messageRef="Message_BankCallback" /></bpmn:intermediateThrowEvent>
+    <bpmn:sequenceFlow id="F_b1" sourceRef="bank_Start" targetRef="bank_Process" />
+    <bpmn:sequenceFlow id="F_b2" sourceRef="bank_Process" targetRef="bank_Callback" />
+  </bpmn:process>
+
+  <bpmn:process id="lr4-overview" name="МТС Online Shop — обзор ЛР4" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Lr4">
+      <bpmn:lane id="Lane_User" name="USER">
+        <bpmn:flowNodeRef>lk_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_EnterProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_AddMore</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_EnterPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_EnterOrderId</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Admin" name="ADMIN">
+        <bpmn:flowNodeRef>cancel_AdminConfirm</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ac_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ac_Form</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>au_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>au_Form</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Service" name="SERVICE">
+        <bpmn:flowNodeRef>lk_AddToCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_GwAddMore</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_ValidateCart</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_CreateOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_Reserve</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_InitiatePayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_BankCallback</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_GwPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_MarkPaid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_StartServer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_ReleaseFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_EndOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>lk_EndFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_Validate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_GwApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_Release</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_CancelOrder</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_Notify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_EndOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_EndRejected</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ac_Service</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ac_End</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>au_Service</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>au_End</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_Deduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_Email</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_Telegram</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_Bitrix</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_Complete</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>srv_End</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="lk_Start" name="USER: заказ в ЛК"><bpmn:outgoing>F_lk_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="lk_EnterProduct" name="Выбор ID товара"><bpmn:incoming>F_lk_1</bpmn:incoming><bpmn:incoming>F_lk_loop</bpmn:incoming><bpmn:outgoing>F_lk_2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="lk_AddToCart" name="Добавить в корзину"><bpmn:incoming>F_lk_2</bpmn:incoming><bpmn:outgoing>F_lk_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="lk_AddMore" name="Добавить ещё?"><bpmn:incoming>F_lk_3</bpmn:incoming><bpmn:outgoing>F_lk_4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="lk_GwAddMore" name="Ещё?" default="F_lk_5"><bpmn:incoming>F_lk_4</bpmn:incoming><bpmn:outgoing>F_lk_loop</bpmn:outgoing><bpmn:outgoing>F_lk_5</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="lk_ValidateCart" name="Проверка корзины"><bpmn:incoming>F_lk_5</bpmn:incoming><bpmn:outgoing>F_lk_6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="lk_CreateOrder" name="Создание заказа"><bpmn:incoming>F_lk_6</bpmn:incoming><bpmn:outgoing>F_lk_7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="lk_Reserve" name="Резерв"><bpmn:incoming>F_lk_7</bpmn:incoming><bpmn:outgoing>F_lk_8</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="lk_EnterPayment" name="Оплата"><bpmn:incoming>F_lk_8</bpmn:incoming><bpmn:outgoing>F_lk_9</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="lk_InitiatePayment" name="Инициация платежа"><bpmn:incoming>F_lk_9</bpmn:incoming><bpmn:outgoing>F_lk_10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:intermediateCatchEvent id="lk_BankCallback" name="Callback банка"><bpmn:incoming>F_lk_10</bpmn:incoming><bpmn:outgoing>F_lk_11</bpmn:outgoing><bpmn:messageEventDefinition messageRef="Message_BankCallback" /></bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="lk_GwPayment" name="Оплата OK?" default="F_lk_fail"><bpmn:incoming>F_lk_11</bpmn:incoming><bpmn:outgoing>F_lk_ok</bpmn:outgoing><bpmn:outgoing>F_lk_fail</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="lk_MarkPaid" name="Подтвердить оплату"><bpmn:incoming>F_lk_ok</bpmn:incoming><bpmn:outgoing>F_lk_12</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="lk_StartServer" name="→ server-order-processing"><bpmn:incoming>F_lk_12</bpmn:incoming><bpmn:outgoing>F_lk_13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="lk_ReleaseFail" name="Снять резерв"><bpmn:incoming>F_lk_fail</bpmn:incoming><bpmn:outgoing>F_lk_14</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="lk_EndOk" name="Оформлен"><bpmn:incoming>F_lk_13</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="lk_EndFail" name="Ошибка оплаты"><bpmn:incoming>F_lk_14</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_lk_1" sourceRef="lk_Start" targetRef="lk_EnterProduct" />
+    <bpmn:sequenceFlow id="F_lk_2" sourceRef="lk_EnterProduct" targetRef="lk_AddToCart" />
+    <bpmn:sequenceFlow id="F_lk_3" sourceRef="lk_AddToCart" targetRef="lk_AddMore" />
+    <bpmn:sequenceFlow id="F_lk_4" sourceRef="lk_AddMore" targetRef="lk_GwAddMore" />
+    <bpmn:sequenceFlow id="F_lk_loop" sourceRef="lk_GwAddMore" targetRef="lk_EnterProduct" />
+    <bpmn:sequenceFlow id="F_lk_5" sourceRef="lk_GwAddMore" targetRef="lk_ValidateCart" />
+    <bpmn:sequenceFlow id="F_lk_6" sourceRef="lk_ValidateCart" targetRef="lk_CreateOrder" />
+    <bpmn:sequenceFlow id="F_lk_7" sourceRef="lk_CreateOrder" targetRef="lk_Reserve" />
+    <bpmn:sequenceFlow id="F_lk_8" sourceRef="lk_Reserve" targetRef="lk_EnterPayment" />
+    <bpmn:sequenceFlow id="F_lk_9" sourceRef="lk_EnterPayment" targetRef="lk_InitiatePayment" />
+    <bpmn:sequenceFlow id="F_lk_10" sourceRef="lk_InitiatePayment" targetRef="lk_BankCallback" />
+    <bpmn:sequenceFlow id="F_lk_11" sourceRef="lk_BankCallback" targetRef="lk_GwPayment" />
+    <bpmn:sequenceFlow id="F_lk_ok" sourceRef="lk_GwPayment" targetRef="lk_MarkPaid" />
+    <bpmn:sequenceFlow id="F_lk_fail" sourceRef="lk_GwPayment" targetRef="lk_ReleaseFail" />
+    <bpmn:sequenceFlow id="F_lk_12" sourceRef="lk_MarkPaid" targetRef="lk_StartServer" />
+    <bpmn:sequenceFlow id="F_lk_13" sourceRef="lk_StartServer" targetRef="lk_EndOk" />
+    <bpmn:sequenceFlow id="F_lk_14" sourceRef="lk_ReleaseFail" targetRef="lk_EndFail" />
+
+    <bpmn:startEvent id="cancel_Start" name="USER: отмена"><bpmn:outgoing>F_c_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="cancel_EnterOrderId" name="Номер заказа"><bpmn:incoming>F_c_1</bpmn:incoming><bpmn:outgoing>F_c_2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="cancel_Validate" name="Проверка"><bpmn:incoming>F_c_2</bpmn:incoming><bpmn:outgoing>F_c_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="cancel_AdminConfirm" name="Подтверждение (админ)"><bpmn:incoming>F_c_3</bpmn:incoming><bpmn:outgoing>F_c_4</bpmn:outgoing></bpmn:userTask>
+    <bpmn:exclusiveGateway id="cancel_GwApproved" name="Одобрено?" default="F_c_rej"><bpmn:incoming>F_c_4</bpmn:incoming><bpmn:outgoing>F_c_app</bpmn:outgoing><bpmn:outgoing>F_c_rej</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="cancel_Release" name="Снятие резерва"><bpmn:incoming>F_c_app</bpmn:incoming><bpmn:outgoing>F_c_5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="cancel_CancelOrder" name="Отмена"><bpmn:incoming>F_c_5</bpmn:incoming><bpmn:outgoing>F_c_6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="cancel_Notify" name="Уведомление"><bpmn:incoming>F_c_6</bpmn:incoming><bpmn:outgoing>F_c_7</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="cancel_EndOk" name="Отменён"><bpmn:incoming>F_c_7</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="cancel_EndRejected" name="Отклонено"><bpmn:incoming>F_c_rej</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_c_1" sourceRef="cancel_Start" targetRef="cancel_EnterOrderId" />
+    <bpmn:sequenceFlow id="F_c_2" sourceRef="cancel_EnterOrderId" targetRef="cancel_Validate" />
+    <bpmn:sequenceFlow id="F_c_3" sourceRef="cancel_Validate" targetRef="cancel_AdminConfirm" />
+    <bpmn:sequenceFlow id="F_c_4" sourceRef="cancel_AdminConfirm" targetRef="cancel_GwApproved" />
+    <bpmn:sequenceFlow id="F_c_app" sourceRef="cancel_GwApproved" targetRef="cancel_Release" />
+    <bpmn:sequenceFlow id="F_c_rej" sourceRef="cancel_GwApproved" targetRef="cancel_EndRejected" />
+    <bpmn:sequenceFlow id="F_c_5" sourceRef="cancel_Release" targetRef="cancel_CancelOrder" />
+    <bpmn:sequenceFlow id="F_c_6" sourceRef="cancel_CancelOrder" targetRef="cancel_Notify" />
+    <bpmn:sequenceFlow id="F_c_7" sourceRef="cancel_Notify" targetRef="cancel_EndOk" />
+
+    <bpmn:startEvent id="ac_Start" name="ADMIN: создать"><bpmn:outgoing>F_ac_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="ac_Form" name="Данные товара"><bpmn:incoming>F_ac_1</bpmn:incoming><bpmn:outgoing>F_ac_2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="ac_Service" name="Создать товар"><bpmn:incoming>F_ac_2</bpmn:incoming><bpmn:outgoing>F_ac_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="ac_End" name="Создан"><bpmn:incoming>F_ac_3</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_ac_1" sourceRef="ac_Start" targetRef="ac_Form" />
+    <bpmn:sequenceFlow id="F_ac_2" sourceRef="ac_Form" targetRef="ac_Service" />
+    <bpmn:sequenceFlow id="F_ac_3" sourceRef="ac_Service" targetRef="ac_End" />
+
+    <bpmn:startEvent id="au_Start" name="ADMIN: изменить"><bpmn:outgoing>F_au_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="au_Form" name="Изменение товара"><bpmn:incoming>F_au_1</bpmn:incoming><bpmn:outgoing>F_au_2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="au_Service" name="Обновить"><bpmn:incoming>F_au_2</bpmn:incoming><bpmn:outgoing>F_au_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="au_End" name="Обновлён"><bpmn:incoming>F_au_3</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_au_1" sourceRef="au_Start" targetRef="au_Form" />
+    <bpmn:sequenceFlow id="F_au_2" sourceRef="au_Form" targetRef="au_Service" />
+    <bpmn:sequenceFlow id="F_au_3" sourceRef="au_Service" targetRef="au_End" />
+
+    <bpmn:startEvent id="srv_Start" name="SERVER: обработка"><bpmn:outgoing>F_s_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="srv_Deduct" name="Списание"><bpmn:incoming>F_s_1</bpmn:incoming><bpmn:outgoing>F_s_2</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="srv_Email" name="Email"><bpmn:incoming>F_s_2</bpmn:incoming><bpmn:outgoing>F_s_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="srv_Telegram" name="Telegram"><bpmn:incoming>F_s_3</bpmn:incoming><bpmn:outgoing>F_s_4</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="srv_Bitrix" name="Bitrix"><bpmn:incoming>F_s_4</bpmn:incoming><bpmn:outgoing>F_s_5</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="srv_Complete" name="COMPLETED"><bpmn:incoming>F_s_5</bpmn:incoming><bpmn:outgoing>F_s_6</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="srv_End" name="Готово"><bpmn:incoming>F_s_6</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="F_s_1" sourceRef="srv_Start" targetRef="srv_Deduct" />
+    <bpmn:sequenceFlow id="F_s_2" sourceRef="srv_Deduct" targetRef="srv_Email" />
+    <bpmn:sequenceFlow id="F_s_3" sourceRef="srv_Email" targetRef="srv_Telegram" />
+    <bpmn:sequenceFlow id="F_s_4" sourceRef="srv_Telegram" targetRef="srv_Bitrix" />
+    <bpmn:sequenceFlow id="F_s_5" sourceRef="srv_Bitrix" targetRef="srv_Complete" />
+    <bpmn:sequenceFlow id="F_s_6" sourceRef="srv_Complete" targetRef="srv_End" />
+    <bpmn:sequenceFlow id="F_lk_to_srv" sourceRef="lk_StartServer" targetRef="srv_Start" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_Lr4">
+    <bpmndi:BPMNPlane id="BPMNPlane_Lr4" bpmnElement="Collaboration_Lr4">
+      <bpmndi:BPMNShape id="Participant_Shop_di" bpmnElement="Participant_Shop" isHorizontal="false">
+        <dc:Bounds x="140" y="60" width="6080" height="700" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
+        <dc:Bounds x="160" y="480" width="6040" height="160" />
+        <bpmndi:BPMNLabel><dc:Bounds x="172" y="492" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Admin_di" bpmnElement="Lane_Admin" isHorizontal="true">
+        <dc:Bounds x="160" y="290" width="6040" height="160" />
+        <bpmndi:BPMNLabel><dc:Bounds x="172" y="302" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_User_di" bpmnElement="Lane_User" isHorizontal="true">
+        <dc:Bounds x="160" y="100" width="6040" height="160" />
+        <bpmndi:BPMNLabel><dc:Bounds x="172" y="112" width="60" height="14" /></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_lk_1_di" bpmnElement="F_lk_1">
+        <di:waypoint x="298" y="180" />
+        <di:waypoint x="373" y="180" />
+        <di:waypoint x="373" y="533" />
+        <di:waypoint x="448" y="533" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_2_di" bpmnElement="F_lk_2">
+        <di:waypoint x="448" y="533" />
+        <di:waypoint x="523" y="533" />
+        <di:waypoint x="523" y="560" />
+        <di:waypoint x="598" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_3_di" bpmnElement="F_lk_3">
+        <di:waypoint x="598" y="560" />
+        <di:waypoint x="673" y="560" />
+        <di:waypoint x="673" y="180" />
+        <di:waypoint x="748" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_4_di" bpmnElement="F_lk_4">
+        <di:waypoint x="748" y="180" />
+        <di:waypoint x="823" y="180" />
+        <di:waypoint x="823" y="560" />
+        <di:waypoint x="898" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_loop_di" bpmnElement="F_lk_loop">
+        <di:waypoint x="898" y="560" />
+        <di:waypoint x="673" y="560" />
+        <di:waypoint x="673" y="533" />
+        <di:waypoint x="448" y="533" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_5_di" bpmnElement="F_lk_5">
+        <di:waypoint x="898" y="560" />
+        <di:waypoint x="973" y="560" />
+        <di:waypoint x="973" y="588" />
+        <di:waypoint x="1048" y="588" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_6_di" bpmnElement="F_lk_6">
+        <di:waypoint x="1048" y="588" />
+        <di:waypoint x="1123" y="588" />
+        <di:waypoint x="1123" y="560" />
+        <di:waypoint x="1198" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_7_di" bpmnElement="F_lk_7">
+        <di:waypoint x="1198" y="560" />
+        <di:waypoint x="1348" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_8_di" bpmnElement="F_lk_8">
+        <di:waypoint x="1348" y="560" />
+        <di:waypoint x="1423" y="560" />
+        <di:waypoint x="1423" y="180" />
+        <di:waypoint x="1498" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_9_di" bpmnElement="F_lk_9">
+        <di:waypoint x="1498" y="180" />
+        <di:waypoint x="1573" y="180" />
+        <di:waypoint x="1573" y="560" />
+        <di:waypoint x="1648" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_10_di" bpmnElement="F_lk_10">
+        <di:waypoint x="1648" y="560" />
+        <di:waypoint x="1798" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_11_di" bpmnElement="F_lk_11">
+        <di:waypoint x="1798" y="560" />
+        <di:waypoint x="1948" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_ok_di" bpmnElement="F_lk_ok">
+        <di:waypoint x="1948" y="560" />
+        <di:waypoint x="2023" y="560" />
+        <di:waypoint x="2023" y="533" />
+        <di:waypoint x="2098" y="533" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_fail_di" bpmnElement="F_lk_fail">
+        <di:waypoint x="1948" y="560" />
+        <di:waypoint x="2023" y="560" />
+        <di:waypoint x="2023" y="658" />
+        <di:waypoint x="2098" y="658" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_12_di" bpmnElement="F_lk_12">
+        <di:waypoint x="2098" y="533" />
+        <di:waypoint x="2173" y="533" />
+        <di:waypoint x="2173" y="582" />
+        <di:waypoint x="2248" y="582" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_13_di" bpmnElement="F_lk_13">
+        <di:waypoint x="2248" y="582" />
+        <di:waypoint x="2323" y="582" />
+        <di:waypoint x="2323" y="560" />
+        <di:waypoint x="2398" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_14_di" bpmnElement="F_lk_14">
+        <di:waypoint x="2098" y="658" />
+        <di:waypoint x="2173" y="658" />
+        <di:waypoint x="2173" y="700" />
+        <di:waypoint x="2248" y="700" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_1_di" bpmnElement="F_c_1">
+        <di:waypoint x="2554" y="180" />
+        <di:waypoint x="2704" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_2_di" bpmnElement="F_c_2">
+        <di:waypoint x="2704" y="180" />
+        <di:waypoint x="2779" y="180" />
+        <di:waypoint x="2779" y="560" />
+        <di:waypoint x="2854" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_3_di" bpmnElement="F_c_3">
+        <di:waypoint x="2854" y="560" />
+        <di:waypoint x="2929" y="560" />
+        <di:waypoint x="2929" y="370" />
+        <di:waypoint x="3004" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_4_di" bpmnElement="F_c_4">
+        <di:waypoint x="3004" y="370" />
+        <di:waypoint x="3079" y="370" />
+        <di:waypoint x="3079" y="560" />
+        <di:waypoint x="3154" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_app_di" bpmnElement="F_c_app">
+        <di:waypoint x="3154" y="560" />
+        <di:waypoint x="3229" y="560" />
+        <di:waypoint x="3229" y="533" />
+        <di:waypoint x="3304" y="533" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_rej_di" bpmnElement="F_c_rej">
+        <di:waypoint x="3154" y="560" />
+        <di:waypoint x="3229" y="560" />
+        <di:waypoint x="3229" y="658" />
+        <di:waypoint x="3304" y="658" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_5_di" bpmnElement="F_c_5">
+        <di:waypoint x="3304" y="533" />
+        <di:waypoint x="3379" y="533" />
+        <di:waypoint x="3379" y="560" />
+        <di:waypoint x="3454" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_6_di" bpmnElement="F_c_6">
+        <di:waypoint x="3454" y="560" />
+        <di:waypoint x="3604" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_7_di" bpmnElement="F_c_7">
+        <di:waypoint x="3604" y="560" />
+        <di:waypoint x="3754" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ac_1_di" bpmnElement="F_ac_1">
+        <di:waypoint x="3910" y="370" />
+        <di:waypoint x="4060" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ac_2_di" bpmnElement="F_ac_2">
+        <di:waypoint x="4060" y="370" />
+        <di:waypoint x="4135" y="370" />
+        <di:waypoint x="4135" y="560" />
+        <di:waypoint x="4210" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_ac_3_di" bpmnElement="F_ac_3">
+        <di:waypoint x="4210" y="560" />
+        <di:waypoint x="4360" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_au_1_di" bpmnElement="F_au_1">
+        <di:waypoint x="4516" y="370" />
+        <di:waypoint x="4666" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_au_2_di" bpmnElement="F_au_2">
+        <di:waypoint x="4666" y="370" />
+        <di:waypoint x="4741" y="370" />
+        <di:waypoint x="4741" y="560" />
+        <di:waypoint x="4816" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_au_3_di" bpmnElement="F_au_3">
+        <di:waypoint x="4816" y="560" />
+        <di:waypoint x="4966" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_s_1_di" bpmnElement="F_s_1">
+        <di:waypoint x="5122" y="560" />
+        <di:waypoint x="5272" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_s_2_di" bpmnElement="F_s_2">
+        <di:waypoint x="5272" y="560" />
+        <di:waypoint x="5422" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_s_3_di" bpmnElement="F_s_3">
+        <di:waypoint x="5422" y="560" />
+        <di:waypoint x="5572" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_s_4_di" bpmnElement="F_s_4">
+        <di:waypoint x="5572" y="560" />
+        <di:waypoint x="5722" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_s_5_di" bpmnElement="F_s_5">
+        <di:waypoint x="5722" y="560" />
+        <di:waypoint x="5872" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_s_6_di" bpmnElement="F_s_6">
+        <di:waypoint x="5872" y="560" />
+        <di:waypoint x="6022" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_lk_to_srv_di" bpmnElement="F_lk_to_srv">
+        <di:waypoint x="2248" y="582" />
+        <di:waypoint x="3685" y="582" />
+        <di:waypoint x="3685" y="560" />
+        <di:waypoint x="5122" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="lk_Start_di" bpmnElement="lk_Start">
+        <dc:Bounds x="280" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_EnterProduct_di" bpmnElement="lk_EnterProduct">
+        <dc:Bounds x="398" y="493" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_AddToCart_di" bpmnElement="lk_AddToCart">
+        <dc:Bounds x="548" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_AddMore_di" bpmnElement="lk_AddMore">
+        <dc:Bounds x="698" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_GwAddMore_di" bpmnElement="lk_GwAddMore" isMarkerVisible="true">
+        <dc:Bounds x="873" y="535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_ValidateCart_di" bpmnElement="lk_ValidateCart">
+        <dc:Bounds x="998" y="548" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_CreateOrder_di" bpmnElement="lk_CreateOrder">
+        <dc:Bounds x="1148" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_Reserve_di" bpmnElement="lk_Reserve">
+        <dc:Bounds x="1298" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_EnterPayment_di" bpmnElement="lk_EnterPayment">
+        <dc:Bounds x="1448" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_InitiatePayment_di" bpmnElement="lk_InitiatePayment">
+        <dc:Bounds x="1598" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_BankCallback_di" bpmnElement="lk_BankCallback">
+        <dc:Bounds x="1780" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_GwPayment_di" bpmnElement="lk_GwPayment" isMarkerVisible="true">
+        <dc:Bounds x="1923" y="535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_MarkPaid_di" bpmnElement="lk_MarkPaid">
+        <dc:Bounds x="2048" y="493" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_StartServer_di" bpmnElement="lk_StartServer">
+        <dc:Bounds x="2198" y="542" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_EndOk_di" bpmnElement="lk_EndOk">
+        <dc:Bounds x="2380" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_ReleaseFail_di" bpmnElement="lk_ReleaseFail">
+        <dc:Bounds x="2048" y="618" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lk_EndFail_di" bpmnElement="lk_EndFail">
+        <dc:Bounds x="2230" y="682" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_Start_di" bpmnElement="cancel_Start">
+        <dc:Bounds x="2536" y="162" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_EnterOrderId_di" bpmnElement="cancel_EnterOrderId">
+        <dc:Bounds x="2654" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_Validate_di" bpmnElement="cancel_Validate">
+        <dc:Bounds x="2804" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_AdminConfirm_di" bpmnElement="cancel_AdminConfirm">
+        <dc:Bounds x="2954" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_GwApproved_di" bpmnElement="cancel_GwApproved" isMarkerVisible="true">
+        <dc:Bounds x="3129" y="535" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_Release_di" bpmnElement="cancel_Release">
+        <dc:Bounds x="3254" y="493" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_CancelOrder_di" bpmnElement="cancel_CancelOrder">
+        <dc:Bounds x="3404" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_Notify_di" bpmnElement="cancel_Notify">
+        <dc:Bounds x="3554" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_EndOk_di" bpmnElement="cancel_EndOk">
+        <dc:Bounds x="3736" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_EndRejected_di" bpmnElement="cancel_EndRejected">
+        <dc:Bounds x="3286" y="640" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ac_Start_di" bpmnElement="ac_Start">
+        <dc:Bounds x="3892" y="352" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ac_Form_di" bpmnElement="ac_Form">
+        <dc:Bounds x="4010" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ac_Service_di" bpmnElement="ac_Service">
+        <dc:Bounds x="4160" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ac_End_di" bpmnElement="ac_End">
+        <dc:Bounds x="4342" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="au_Start_di" bpmnElement="au_Start">
+        <dc:Bounds x="4498" y="352" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="au_Form_di" bpmnElement="au_Form">
+        <dc:Bounds x="4616" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="au_Service_di" bpmnElement="au_Service">
+        <dc:Bounds x="4766" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="au_End_di" bpmnElement="au_End">
+        <dc:Bounds x="4948" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_Start_di" bpmnElement="srv_Start">
+        <dc:Bounds x="5104" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_Deduct_di" bpmnElement="srv_Deduct">
+        <dc:Bounds x="5222" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_Email_di" bpmnElement="srv_Email">
+        <dc:Bounds x="5372" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_Telegram_di" bpmnElement="srv_Telegram">
+        <dc:Bounds x="5522" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_Bitrix_di" bpmnElement="srv_Bitrix">
+        <dc:Bounds x="5672" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_Complete_di" bpmnElement="srv_Complete">
+        <dc:Bounds x="5822" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="srv_End_di" bpmnElement="srv_End">
+        <dc:Bounds x="6004" y="542" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Bank_di" bpmnElement="Participant_Bank" isHorizontal="false">
+        <dc:Bounds x="6280" y="480" width="260" height="180" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bank_Start_di" bpmnElement="bank_Start"><dc:Bounds x="6310" y="530" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bank_Process_di" bpmnElement="bank_Process"><dc:Bounds x="6370" y="518" width="100" height="60" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="bank_Callback_di" bpmnElement="bank_Callback"><dc:Bounds x="6490" y="530" width="36" height="36" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F_b1_di" bpmnElement="F_b1"><di:waypoint x="6346" y="548" /><di:waypoint x="6370" y="548" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_b2_di" bpmnElement="F_b2"><di:waypoint x="6470" y="548" /><di:waypoint x="6490" y="548" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Ann_Api_di" bpmnElement="Ann_Api"><dc:Bounds x="160" y="8" width="380" height="72" /></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Assoc_Api_di" bpmnElement="Assoc_Api"><di:waypoint x="350" y="80" /><di:waypoint x="298" y="118" /></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_PaymentToBank_di" bpmnElement="MF_PaymentToBank">
+        <di:waypoint x="1698" y="560" />
+        <di:waypoint x="6420" y="548" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_BankCallback_di" bpmnElement="MF_BankCallback">
+        <di:waypoint x="6508" y="548" />
+        <di:waypoint x="1780" y="560" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

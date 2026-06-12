@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_UserOrderCancel" targetNamespace="http://mts-online-shop/bpmn" exporter="Camunda Modeler" exporterVersion="4.12.0">
+  <bpmn:process id="user-order-cancel" name="USER: отмена заказа" isExecutable="true" camunda:historyTimeToLive="30">
+    <bpmn:laneSet id="LaneSet_user-order-cancel">
+      <bpmn:lane id="Lane_User" name="USER">
+        <bpmn:flowNodeRef>Start_Cancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterOrderId</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Rejected</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Admin" name="ADMIN">
+        <bpmn:flowNodeRef>Task_AdminConfirmCancel</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Service" name="SERVICE">
+        <bpmn:flowNodeRef>Gateway_AdminApproved</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Notify</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Release</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Cancel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Cancelled</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidateRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_ValidationResult</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Cancel" name="Заявка на отмену">
+      <bpmn:extensionElements>
+        <camunda:executionListener delegateExpression="${orderCancelStartExecutionListener}" event="start" />
+      </bpmn:extensionElements>
+      <bpmn:outgoing>Flow_1wgioyq</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_EnterOrderId" name="Номер заказа для отмены" camunda:formRef="user-cancel-order-form" camunda:formRefBinding="deployment" camunda:candidateGroups="user">
+      <bpmn:extensionElements>
+        <camunda:taskListener delegateExpression="${assignTaskToStarterListener}" event="create" />
+        <camunda:taskListener delegateExpression="${orderCancelErrorDisplayTaskListener}" event="create" />
+        <camunda:taskListener delegateExpression="${orderCancelFormValidationTaskListener}" event="complete" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_1wgioyq</bpmn:incoming>
+      <bpmn:incoming>Flow_ValidationRetry</bpmn:incoming>
+      <bpmn:outgoing>Flow_AfterForm</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_ValidateRequest" name="Проверка заявки" camunda:delegateExpression="${validateCancellationRequestDelegate}">
+      <bpmn:incoming>Flow_AfterForm</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToValidationGateway</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_ValidationResult" name="Заявка корректна?" default="Flow_ValidationRetry">
+      <bpmn:incoming>Flow_ToValidationGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToAdmin</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ValidationRetry</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_AdminConfirmCancel" name="Подтверждение отмены (админ)" camunda:formRef="admin-cancel-order-form" camunda:formRefBinding="deployment" camunda:candidateGroups="admin">
+      <bpmn:extensionElements>
+        <camunda:taskListener delegateExpression="${adminTaskAssigneeGuardListener}" event="create" />
+        <camunda:taskListener delegateExpression="${adminTaskAssigneeGuardListener}" event="assignment" />
+        <camunda:taskListener delegateExpression="${adminCancelFormTaskListener}" event="create" />
+        <camunda:taskListener delegateExpression="${adminCancelFormTaskListener}" event="complete" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_ToAdmin</bpmn:incoming>
+      <bpmn:outgoing>Flow_AdminGateway</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_AdminApproved" name="Отмена одобрена?" default="Flow_Rejected">
+      <bpmn:incoming>Flow_AdminGateway</bpmn:incoming>
+      <bpmn:outgoing>Flow_Approved</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Rejected</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Release" name="Снятие резерва" camunda:delegateExpression="${releaseReservationDelegate}">
+      <bpmn:incoming>Flow_Approved</bpmn:incoming>
+      <bpmn:outgoing>Flow_Cancel</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Cancel" name="Отмена заказа" camunda:delegateExpression="${cancelOrderDelegate}">
+      <bpmn:incoming>Flow_Cancel</bpmn:incoming>
+      <bpmn:outgoing>Flow_Notify</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_Notify" name="Уведомление" camunda:delegateExpression="${sendOrderCancelledEmailDelegate}">
+      <bpmn:incoming>Flow_Notify</bpmn:incoming>
+      <bpmn:outgoing>Flow_EndOk</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Cancelled" name="Заказ отменён">
+      <bpmn:incoming>Flow_EndOk</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Rejected" name="Отмена отклонена">
+      <bpmn:incoming>Flow_Rejected</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_AfterForm" sourceRef="Task_EnterOrderId" targetRef="Task_ValidateRequest" />
+    <bpmn:sequenceFlow id="Flow_ToValidationGateway" sourceRef="Task_ValidateRequest" targetRef="Gateway_ValidationResult" />
+    <bpmn:sequenceFlow id="Flow_ToAdmin" sourceRef="Gateway_ValidationResult" targetRef="Task_AdminConfirmCancel">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable('validationResult') == 'OK'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_ValidationRetry" sourceRef="Gateway_ValidationResult" targetRef="Task_EnterOrderId" />
+    <bpmn:sequenceFlow id="Flow_AdminGateway" sourceRef="Task_AdminConfirmCancel" targetRef="Gateway_AdminApproved" />
+    <bpmn:sequenceFlow id="Flow_Approved" sourceRef="Gateway_AdminApproved" targetRef="Task_Release">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${execution.getVariable('cancelApproved') == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_Rejected" sourceRef="Gateway_AdminApproved" targetRef="End_Rejected" />
+    <bpmn:sequenceFlow id="Flow_Cancel" sourceRef="Task_Release" targetRef="Task_Cancel" />
+    <bpmn:sequenceFlow id="Flow_Notify" sourceRef="Task_Cancel" targetRef="Task_Notify" />
+    <bpmn:sequenceFlow id="Flow_EndOk" sourceRef="Task_Notify" targetRef="End_Cancelled" />
+    <bpmn:sequenceFlow id="Flow_1wgioyq" sourceRef="Start_Cancel" targetRef="Task_EnterOrderId" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_user-order-cancel">
+    <bpmndi:BPMNPlane id="BPMNPlane_user-order-cancel" bpmnElement="user-order-cancel">
+      <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
+        <dc:Bounds x="160" y="400" width="1590" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Admin_di" bpmnElement="Lane_Admin" isHorizontal="true">
+        <dc:Bounds x="160" y="230" width="1590" height="170" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_User_di" bpmnElement="Lane_User" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1590" height="150" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_EndOk_di" bpmnElement="Flow_EndOk">
+        <di:waypoint x="1508" y="495" />
+        <di:waypoint x="1622" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Notify_di" bpmnElement="Flow_Notify">
+        <di:waypoint x="1380" y="495" />
+        <di:waypoint x="1408" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Cancel_di" bpmnElement="Flow_Cancel">
+        <di:waypoint x="1230" y="495" />
+        <di:waypoint x="1280" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Rejected_di" bpmnElement="Flow_Rejected">
+        <di:waypoint x="1033" y="495" />
+        <di:waypoint x="1083" y="495" />
+        <di:waypoint x="1083" y="155" />
+        <di:waypoint x="1162" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Approved_di" bpmnElement="Flow_Approved">
+        <di:waypoint x="1033" y="495" />
+        <di:waypoint x="1130" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AdminGateway_di" bpmnElement="Flow_AdminGateway">
+        <di:waypoint x="858" y="325" />
+        <di:waypoint x="933" y="325" />
+        <di:waypoint x="933" y="495" />
+        <di:waypoint x="1008" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToAdmin_di" bpmnElement="Flow_ToAdmin">
+        <di:waypoint x="805" y="495" />
+        <di:waypoint x="805" y="325" />
+        <di:waypoint x="808" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToValidationGateway_di" bpmnElement="Flow_ToValidationGateway">
+        <di:waypoint x="780" y="495" />
+        <di:waypoint x="805" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ValidationRetry_di" bpmnElement="Flow_ValidationRetry">
+        <di:waypoint x="780" y="520" />
+        <di:waypoint x="558" y="520" />
+        <di:waypoint x="558" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AfterForm_di" bpmnElement="Flow_AfterForm">
+        <di:waypoint x="608" y="155" />
+        <di:waypoint x="633" y="155" />
+        <di:waypoint x="633" y="495" />
+        <di:waypoint x="680" y="495" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wgioyq_di" bpmnElement="Flow_1wgioyq">
+        <di:waypoint x="276" y="155" />
+        <di:waypoint x="508" y="155" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Start_Cancel_di" bpmnElement="Start_Cancel">
+        <dc:Bounds x="240" y="137" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnterOrderId_di" bpmnElement="Task_EnterOrderId">
+        <dc:Bounds x="508" y="115" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AdminConfirmCancel_di" bpmnElement="Task_AdminConfirmCancel">
+        <dc:Bounds x="808" y="285" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_AdminApproved_di" bpmnElement="Gateway_AdminApproved" isMarkerVisible="true">
+        <dc:Bounds x="983" y="470" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ValidationResult_di" bpmnElement="Gateway_ValidationResult" isMarkerVisible="true">
+        <dc:Bounds x="755" y="470" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Notify_di" bpmnElement="Task_Notify">
+        <dc:Bounds x="1408" y="455" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Rejected_di" bpmnElement="End_Rejected">
+        <dc:Bounds x="1162" y="137" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Release_di" bpmnElement="Task_Release">
+        <dc:Bounds x="1130" y="455" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Cancel_di" bpmnElement="Task_Cancel">
+        <dc:Bounds x="1280" y="455" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Cancelled_di" bpmnElement="End_Cancelled">
+        <dc:Bounds x="1622" y="477" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidateRequest_di" bpmnElement="Task_ValidateRequest">
+        <dc:Bounds x="680" y="455" width="100" height="80" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -10,11 +10,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
@@ -59,6 +63,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<Problem> handleNoHandlerFound(NoHandlerFoundException e, WebRequest request) {
+        if (isCamundaInfrastructureRequest(request)) {
+            return ResponseEntity.notFound().build();
+        }
         log.warn("No handler found: {} {}", e.getHttpMethod(), e.getRequestURL());
         return problem(HttpStatus.NOT_FOUND, "Not Found", "not-found", "No handler for this request", request);
     }
@@ -71,8 +78,47 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Problem> handleGeneric(Exception e, WebRequest request) {
+        if (isClientDisconnect(e) || isResponseCommitted(request)) {
+            return null;
+        }
+        if (isCamundaInfrastructureRequest(request)) {
+            log.debug("Camunda resource error: {}", e.toString());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
         log.error("Unhandled error", e);
         return problem(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", "internal-error", null, request);
+    }
+
+    private static boolean isCamundaInfrastructureRequest(WebRequest request) {
+        if (!(request instanceof ServletWebRequest servletRequest)) {
+            return false;
+        }
+        String path = servletRequest.getRequest().getRequestURI();
+        return path.contains("/camunda/") || path.contains("/engine-rest/");
+    }
+
+    private static boolean isResponseCommitted(WebRequest request) {
+        if (request instanceof ServletWebRequest servletRequest) {
+            HttpServletResponse response = servletRequest.getResponse();
+            return response != null && response.isCommitted();
+        }
+        return false;
+    }
+
+    private static boolean isClientDisconnect(Throwable e) {
+        Throwable current = e;
+        while (current != null) {
+            if (current instanceof ClosedChannelException
+                    || current instanceof IOException && "Broken pipe".equalsIgnoreCase(current.getMessage())) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("разорвала установленное подключение")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private static ResponseEntity<Problem> problem(HttpStatus status,

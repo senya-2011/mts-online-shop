@@ -15,9 +15,13 @@ import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import com.mts.online_shop.security.UsersXmlLocation;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.Locale;
 
 public class XmlUserLoginModule implements LoginModule {
 
@@ -77,7 +81,7 @@ public class XmlUserLoginModule implements LoginModule {
             throw new FailedLoginException("Username is required");
         }
         
-        XmlUser user = users.get(username);
+        XmlUser user = users.get(username.toLowerCase(Locale.ROOT));
         if (user == null) {
             log.warn("User not found: {}", username);
             throw new FailedLoginException("User not found: " + username);
@@ -157,13 +161,8 @@ public class XmlUserLoginModule implements LoginModule {
     }
     
     private void loadUsersFromXml() {
-        String usersFilePath = (String) options.get("usersFile");
-        if (usersFilePath == null) {
-            usersFilePath = "classpath:users.xml";
-        }
-        
         try {
-            File usersFile = getUsersFile(usersFilePath);
+            File usersFile = resolveUsersFile();
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document document = builder.parse(usersFile);
@@ -173,10 +172,10 @@ public class XmlUserLoginModule implements LoginModule {
             for (int i = 0; i < userNodes.getLength(); i++) {
                 Element userElement = (Element) userNodes.item(i);
                 XmlUser user = parseUserElement(userElement);
-                users.put(user.getUsername(), user);
+                users.put(user.getUsername().toLowerCase(Locale.ROOT), user);
             }
-            
-            log.info("Loaded {} users from XML", users.size());
+
+            log.info("Loaded {} users from {} for JAAS", users.size(), usersFile.getAbsolutePath());
             
         } catch (Exception e) {
             log.error("Failed to load users from XML: {}", e.getMessage(), e);
@@ -184,17 +183,24 @@ public class XmlUserLoginModule implements LoginModule {
         }
     }
     
-    private File getUsersFile(String filePath) {
-        if (filePath.startsWith("classpath:")) {
-            String resourcePath = filePath.substring("classpath:".length());
+    private File resolveUsersFile() {
+        Path runtimePath = UsersXmlLocation.resolve();
+        if (runtimePath.toFile().exists()) {
+            return runtimePath.toFile();
+        }
+        String usersFilePath = (String) options.get("usersFile");
+        if (usersFilePath == null) {
+            usersFilePath = "classpath:users.xml";
+        }
+        if (usersFilePath.startsWith("classpath:")) {
+            String resourcePath = usersFilePath.substring("classpath:".length());
             var resource = getClass().getClassLoader().getResource(resourcePath);
             if (resource == null) {
                 throw new RuntimeException("Resource not found: " + resourcePath);
             }
             return new File(resource.getFile());
-        } else {
-            return new File(filePath);
         }
+        return new File(usersFilePath);
     }
     
     private XmlUser parseUserElement(Element userElement) {

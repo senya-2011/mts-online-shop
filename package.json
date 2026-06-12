@@ -1,0 +1,8 @@
+{
+  "name": "mts-online-shop-bpmn-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "bpmn-auto-layout": "^1.0.1"
+  }
+}

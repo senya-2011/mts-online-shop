@@ -33,9 +33,9 @@ public class OrderMapper {
             return null;
         }
         return switch (status) {
-            case CREATED -> OrderResponse.StatusEnum.CREATED;
-            case PAID, DELIVERED -> OrderResponse.StatusEnum.PAID;
-            case CANCELLED -> OrderResponse.StatusEnum.CANCELLED;
+            case CREATED, PENDING_PAYMENT -> OrderResponse.StatusEnum.CREATED;
+            case PAID, DELIVERED, COMPLETED -> OrderResponse.StatusEnum.PAID;
+            case CANCELLED, REFUNDED -> OrderResponse.StatusEnum.CANCELLED;
         };
     }
 

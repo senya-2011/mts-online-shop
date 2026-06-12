@@ -6,6 +6,7 @@ import com.mts.online_shop.model.Product;
 import com.mts.online_shop.model.ProductEntity;
 import com.mts.online_shop.model.CreateProductRequest;
 import com.mts.online_shop.model.UpdateProductRequest;
+import com.mts.online_shop.camunda.BpmAdminService;
 import com.mts.online_shop.service.GoodsService;
 import com.mts.online_shop.mapper.ProductMapper;
 import org.slf4j.Logger;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/admin/products")
@@ -28,10 +28,13 @@ public class AdminProductsController {
     private static final Logger log = LoggerFactory.getLogger(AdminProductsController.class);
     private final GoodsService goodsService;
     private final ProductMapper productMapper;
+    private final BpmAdminService bpmAdminService;
 
-    public AdminProductsController(GoodsService goodsService, ProductMapper productMapper) {
+    public AdminProductsController(GoodsService goodsService, ProductMapper productMapper,
+                                   BpmAdminService bpmAdminService) {
         this.goodsService = goodsService;
         this.productMapper = productMapper;
+        this.bpmAdminService = bpmAdminService;
     }
 
     @GetMapping
@@ -52,27 +55,35 @@ public class AdminProductsController {
     }
 
     @PostMapping
-    @io.swagger.v3.oas.annotations.Operation(summary = "Создать товар", description = "Создает новый товар в каталоге")
-    public ResponseEntity<Product> createProduct(@RequestBody CreateProductRequest request) {
-        log.debug("POST admin product name={}", request.getName());
-        ProductEntity entity = goodsService.createProduct(
-            request.getName(),
-            BigDecimal.valueOf(request.getPrice())
-        );
-        return ResponseEntity.status(HttpStatus.CREATED).body(productMapper.toDto(entity));
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Создать товар",
+            description = "По умолчанию запускает BPM и оставляет форму в Tasklist. "
+                    + "Синхронное создание: ?sync=true и тело {name, price}.")
+    public ResponseEntity<?> createProduct(@RequestBody(required = false) CreateProductRequest request,
+                                           @RequestParam(defaultValue = "false") boolean sync) {
+        if (sync && request != null && request.getName() != null) {
+            log.debug("POST admin product sync name={}", request.getName());
+            Long productId = bpmAdminService.createProductSync(request.getName(), request.getPrice());
+            ProductEntity entity = goodsService.getProductById(productId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(productMapper.toDto(entity));
+        }
+        return ResponseEntity.accepted().body(bpmAdminService.startCreateProduct());
     }
 
     @PutMapping("/{productId}")
-    @io.swagger.v3.oas.annotations.Operation(summary = "Обновить товар", description = "Обновляет информацию о существующем товаре")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long productId,
-                                               @RequestBody UpdateProductRequest request) {
-        log.debug("PUT admin product id={}", productId);
-        ProductEntity entity = goodsService.updateProduct(
-            productId,
-            request.getName(),
-            request.getPrice() != null ? BigDecimal.valueOf(request.getPrice()) : null
-        );
-        return ResponseEntity.ok(productMapper.toDto(entity));
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Обновить товар",
+            description = "По умолчанию запускает BPM-форму в Tasklist. Синхронно: ?sync=true и тело с полями.")
+    public ResponseEntity<?> updateProduct(@PathVariable Long productId,
+                                           @RequestBody(required = false) UpdateProductRequest request,
+                                           @RequestParam(defaultValue = "false") boolean sync) {
+        log.debug("PUT admin product id={} sync={}", productId, sync);
+        if (sync && request != null) {
+            bpmAdminService.updateProductSync(productId, request.getName(), request.getPrice());
+            ProductEntity entity = goodsService.getProductById(productId);
+            return ResponseEntity.ok(productMapper.toDto(entity));
+        }
+        return ResponseEntity.accepted().body(bpmAdminService.startUpdateProduct(productId));
     }
 
     @DeleteMapping("/{productId}")

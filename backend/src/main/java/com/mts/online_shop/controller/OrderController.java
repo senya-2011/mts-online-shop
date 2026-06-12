@@ -7,12 +7,14 @@ import com.mts.online_shop.exception.OrderNotFoundException;
 import com.mts.online_shop.mapper.OrderMapper;
 import com.mts.online_shop.mapper.ProductMapper;
 import com.mts.online_shop.model.MessageResponse;
+import com.mts.online_shop.model.OrderBpmStartResponse;
 import com.mts.online_shop.model.OrderListResponse;
 import com.mts.online_shop.model.OrderResponse;
 import com.mts.online_shop.model.PaymentRequest;
 import com.mts.online_shop.model.Order;
 import com.mts.online_shop.repository.OrderRepository;
 import com.mts.online_shop.security.CurrentUserService;
+import com.mts.online_shop.camunda.BpmUserService;
 import com.mts.online_shop.service.OrderService;
 import com.mts.online_shop.service.GoodsService;
 import org.slf4j.Logger;
@@ -34,16 +36,19 @@ public class OrderController {
 
     private static final Logger log = LoggerFactory.getLogger(OrderController.class);
     private final OrderService orderService;
+    private final BpmUserService bpmUserService;
     private final CurrentUserService currentUserService;
     private final OrderMapper orderMapper;
     private final ProductMapper productMapper;
     private final OrderRepository orderRepository;
     private final GoodsService goodsService;
 
-    public OrderController(OrderService orderService, CurrentUserService currentUserService,
+    public OrderController(OrderService orderService, BpmUserService bpmUserService,
+                           CurrentUserService currentUserService,
                            OrderMapper orderMapper, ProductMapper productMapper, 
                            OrderRepository orderRepository, GoodsService goodsService) {
         this.orderService = orderService;
+        this.bpmUserService = bpmUserService;
         this.currentUserService = currentUserService;
         this.orderMapper = orderMapper;
         this.productMapper = productMapper;
@@ -125,16 +130,34 @@ public class OrderController {
     })
     public ResponseEntity<MessageResponse> cancelOrder(@PathVariable Long orderId) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
-        orderService.cancelOrder(orderId, userId);
-        MessageResponse msg = new MessageResponse();
-        msg.setMessage("Заказ #" + orderId + " отменен, деньги возвращены");
-        return ResponseEntity.ok(msg);
+        try {
+            bpmUserService.cancelOrder(orderId, userId);
+            MessageResponse msg = new MessageResponse();
+            msg.setMessage("Заявка на отмену заказа #" + orderId + " отправлена администратору");
+            return ResponseEntity.ok(msg);
+        } catch (com.mts.online_shop.exception.InvalidPaymentDataException e) {
+            log.warn("Cancel rejected for order {}: {}", orderId, e.getMessage());
+            MessageResponse msg = new MessageResponse();
+            msg.setMessage(e.getMessage());
+            return ResponseEntity.badRequest().body(msg);
+        } catch (com.mts.online_shop.exception.OrderAccessDeniedException | com.mts.online_shop.exception.OrderNotFoundException e) {
+            log.warn("Cancel failed for order {}: {}", orderId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (org.camunda.bpm.engine.ProcessEngineException e) {
+            log.error("BPM cancel failed for order {}: {}", orderId, e.getMessage());
+            MessageResponse msg = new MessageResponse();
+            msg.setMessage("Не удалось запустить отмену заказа: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(msg);
+        }
     }
 
     @PostMapping("/create")
     @io.swagger.v3.oas.annotations.Operation(
-        summary = "Create order with payment", 
-        description = "Creates an order from user's cart and processes payment via bank integration. Payment data is required in request body."
+        summary = "Create order (BPM + Camunda form)",
+        description = "Шаг 3 процесса заказа: по содержимому корзины создаётся заказ и открывается оплата. "
+                + "Без тела — задача «Оплата корзины» в Camunda Tasklist (202). "
+                + "С данными карты — оплата сразу через API (200). "
+                + "Перед вызовом добавьте товары: POST /api/cart/items или форма «Выбор ID товара»."
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Order created and paid successfully"),
@@ -142,7 +165,7 @@ public class OrderController {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public ResponseEntity<OrderResponse> createOrderWithPayment(@io.swagger.v3.oas.annotations.parameters.RequestBody(
+    public ResponseEntity<?> createOrderWithPayment(@io.swagger.v3.oas.annotations.parameters.RequestBody(
         description = "Payment information for order processing",
         required = true,
         content = @io.swagger.v3.oas.annotations.media.Content(
@@ -156,69 +179,25 @@ public class OrderController {
                 )
             }
         )
-    ) @RequestBody PaymentRequest paymentRequest) {
+    ) @RequestBody(required = false) PaymentRequest paymentRequest) {
         Long userId = currentUserService.getCurrentUserIdOrThrow();
-        log.debug("POST create order with payment for user id={}", userId);
-        
-        log.debug("Payment data: card={}, expiry={}, cvv={}", 
-            maskCardNumber(paymentRequest.getCardNumber()), 
-            paymentRequest.getExpiresAt(), 
-            "***");
-        
+        log.debug("POST create order for user id={}", userId);
+
         try {
-            log.info("Creating order with real bank payment using OrderService");
-            log.info("User ID: {}", userId);
-            
-            // Проверим корзину перед созданием заказа
             var cartItems = goodsService.getCartItems(userId);
-            log.info("Cart has {} items for user {}", cartItems.size(), userId);
-            
             if (cartItems.isEmpty()) {
                 log.error("Cannot create order - cart is empty for user {}", userId);
                 return ResponseEntity.badRequest().build();
             }
-            
-            log.info("Cart items: {}", cartItems.stream().map(item -> item.getProduct().getName()).toList());
-            
-            // Рассчитываем сумму заказа
-            double totalAmount = cartItems.stream()
-                    .mapToDouble(item -> item.getProduct().getPrice().doubleValue() * item.getQuantity())
-                    .sum();
-            log.info("Order total amount: ${}", totalAmount);
-            
-            // Validate payment data
-            String cardNumber = paymentRequest.getCardNumber();
-            String cvv = paymentRequest.getCvv();
-            String expiresAt = paymentRequest.getExpiresAt();
-            
-            log.info("Received payment data from request:");
-            log.info("  Card: ****-****-****-{}", maskCardNumber(cardNumber));
-            log.info("  Expires: {}", expiresAt);
-            log.info("  CVV: ***");
-            
-            // Validate required fields
-            if (cardNumber == null || cardNumber.trim().isEmpty()) {
-                log.error("Card number is required for payment");
-                return ResponseEntity.badRequest().build();
+
+            if (paymentRequest == null || !hasPaymentData(paymentRequest)) {
+                OrderBpmStartResponse started = bpmUserService.startOrderCreate(userId);
+                log.info("Order BPM started for user {}, taskId={}", userId, started.getTaskId());
+                return ResponseEntity.accepted().body(started);
             }
-            if (cvv == null || cvv.trim().isEmpty()) {
-                log.error("CVV is required for payment");
-                return ResponseEntity.badRequest().build();
-            }
-            if (expiresAt == null || expiresAt.trim().isEmpty()) {
-                log.error("Expiry date is required for payment");
-                return ResponseEntity.badRequest().build();
-            }
-            
-            log.info("Processing payment via real bank:");
-            log.info("  Card: ****-****-****-{}", cardNumber.substring(Math.max(0, cardNumber.length() - 4)));
-            log.info("  Amount: ${}", totalAmount);
-            
-            // Используем OrderService для создания заказа с реальной оплатой через банк
-            OrderResponse orderResponse = orderService.createOrderWithPayment(userId, paymentRequest);
-            
-            log.info("Order created and paid successfully via real bank");
-            
+
+            log.info("Creating order with payment via API for user {}", userId);
+            OrderResponse orderResponse = bpmUserService.createOrderWithPayment(userId, paymentRequest);
             return ResponseEntity.ok(orderResponse);
             
         } catch (EmptyCartException e) {
@@ -235,8 +214,13 @@ public class OrderController {
             return ResponseEntity.badRequest().build();
         }
     }
-    
-        
+
+    private static boolean hasPaymentData(PaymentRequest paymentRequest) {
+        return paymentRequest.getCardNumber() != null && !paymentRequest.getCardNumber().isBlank()
+                && paymentRequest.getCvv() != null && !paymentRequest.getCvv().isBlank()
+                && paymentRequest.getExpiresAt() != null && !paymentRequest.getExpiresAt().isBlank();
+    }
+
     private String maskCardNumber(String cardNumber) {
         if (cardNumber == null || cardNumber.length() < 4) {
             return "****";

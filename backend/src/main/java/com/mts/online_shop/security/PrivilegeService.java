@@ -1,6 +1,5 @@
 package com.mts.online_shop.security;
 
-import com.mts.online_shop.security.jaas.XmlUserLoginModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
