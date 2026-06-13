@@ -20,7 +20,8 @@
 14. [Статика → динамика (слайд 6)](#17-статика--динамика-подробно-для-слайда-6)
 15. [Защита лабораторной](#18-защита-лабораторной)
 16. [Шпаргалка процесс → файлы](#19-шпаргалка-процесс--файлы)
-17. [Выводы](#13-выводы)
+17. [Слайды-план защиты](#20-слайды-план-защиты-7–9-слайдов)
+18. [Выводы](#13-выводы)
 
 ---
 
@@ -430,7 +431,13 @@ flowchart TB
 
 ## 15. Подробно: что сделали, как и в каких файлах
 
-Ниже — та же информация, что в отчёте, но **по шагам выполнения работы**: что именно делали, как технически, в каком файле.
+Ниже — «карта проекта» для защиты: что именно делали, как технически, в каком файле. Иди блоками сверху вниз.
+
+### Одной фразой
+
+**Что сделали:** перенесли сценарии магазина (заказ, отмена, товары) из Java-кода в **BPMN-схемы Camunda**, а Java оставили для работы с БД, почтой, Telegram и т.д.
+
+**Как:** нарисовали процессы в Modeler → привязали формы → на каждый автоматический шаг написали **delegate** → REST/API запускает процессы через **BpmUserService**.
 
 ### Шаг 1. Подключили Camunda embedded
 
@@ -512,15 +519,23 @@ public class AddCartItemDelegate implements JavaDelegate {
 
 ### Шаг 6. Listeners — проверки форм и assignee
 
-Пакет [`camunda/listener/`](backend/src/main/java/com/mts/online_shop/camunda/listener/).
+Пакет [`camunda/listener/`](backend/src/main/java/com/mts/online_shop/camunda/listener/). Полный список — в [разделе 6](#6-taskexecution-listeners).
 
-| Файл | Когда срабатывает | Зачем |
-|------|-------------------|-------|
+| Файл | Когда | Зачем |
+|------|-------|-------|
 | [`AssignTaskToStarterListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/AssignTaskToStarterListener.java) | create task | Задача — тому, кто начал процесс |
 | [`LkOrderStartExecutionListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/LkOrderStartExecutionListener.java) | start process | Записать `userId` |
-| [`CartAddFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/CartAddFormValidationTaskListener.java) | complete task | Проверить ID товара |
-| [`PaymentFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/PaymentFormValidationTaskListener.java) | complete task | Проверить карту |
-| [`OrderCancelErrorDisplayTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/OrderCancelErrorDisplayTaskListener.java) | create task | Показать ошибку в Tasklist |
+| [`OrderCancelStartExecutionListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/OrderCancelStartExecutionListener.java) | start cancel | Preset `orderId`, `userId` |
+| [`CartAddFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/CartAddFormValidationTaskListener.java) | complete | Проверить ID товара |
+| [`AddMoreFormTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/AddMoreFormTaskListener.java) | complete | Проверить «добавить ещё» |
+| [`PaymentFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/PaymentFormValidationTaskListener.java) | complete | Проверить карту |
+| [`ProductCreateFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/ProductCreateFormValidationTaskListener.java) | complete | Товар create |
+| [`ProductUpdateFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/ProductUpdateFormValidationTaskListener.java) | complete | Товар update |
+| [`OrderCancelFormValidationTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/OrderCancelFormValidationTaskListener.java) | complete | Номер заказа |
+| [`AdminCancelFormTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/AdminCancelFormTaskListener.java) | admin cancel | Подтверждение |
+| [`AdminTaskAssigneeGuardListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/AdminTaskAssigneeGuardListener.java) | admin tasks | Только admin |
+| [`OrderCancelErrorDisplayTaskListener.java`](backend/src/main/java/com/mts/online_shop/camunda/listener/OrderCancelErrorDisplayTaskListener.java) | create | Показать ошибку в Tasklist |
+| [`BpmValidationErrorWriter.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmValidationErrorWriter.java) | — | Ошибка валидации не теряется при rollback Camunda |
 
 Привязка в BPMN:
 
@@ -591,6 +606,10 @@ JMS в BPMN не используется — только Java API (delegates).
 
 ## 17. Статика → динамика подробно (для слайда 6)
 
+Это **самый важный технический слайд**: где Java перестала «рулить всем сама» и как работает Camunda.
+
+**Заголовок слайда:** «Замена статической логики на динамическую: слой интеграции с Camunda»
+
 ### Было vs стало
 
 ```
@@ -601,6 +620,9 @@ JMS в BPMN не используется — только Java API (delegates).
                                     JavaDelegate → OrderService → БД
 ```
 
+- **Статика** — порядок шагов зашит в Java; чтобы поменять процесс — правишь код.
+- **Динамика** — порядок шагов на схеме (`.bpmn`); Java только выполняет отдельные шаги.
+
 ### Три слоя в коде
 
 | Слой | Классы | Задача |
@@ -609,30 +631,131 @@ JMS в BPMN не используется — только Java API (delegates).
 | **2. Мост** | `BpmUserService`, `BpmAdminService`, `BpmTaskCompleter` | `startProcess` / `completeTask` |
 | **3. Исполнение** | `*Delegate`, `*Listener` | Один шаг схемы → сервис |
 
-### Ключевой код моста
+### Что осталось в Java (не исчезло)
 
-**Старт процесса** — [`BpmUserService.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmUserService.java):
+- `OrderService`, `GoodsService` — работа с БД
+- `BpmDelegateSupport` — транзакции `REQUIRES_NEW`
+- `@Scheduled` — периодические задачи (Spring, не Camunda)
+- Spring Security — JWT и роли
+
+### Аналогия «конвейер»
+
+1. **Controller** — кнопка: «начни оформление заказа».
+2. **BpmUserService** — переводчик REST ↔ Camunda.
+3. **Camunda + BPMN** — инструкция на стене: что за чем идёт.
+4. **Delegate** — рабочий на участке: «добавить в корзину», «списать со склада».
+5. **OrderService** — склад/база: реально пишет в PostgreSQL.
+
+### Ключевые файлы (что открыть на защите)
+
+#### 1. [`UserCartController.java`](backend/src/main/java/com/mts/online_shop/controller/UserCartController.java)
 
 ```java
-runtimeService.startProcessInstanceByKey("user-lk-order", variables);
+bpmUserService.addToCart(userId, request.getProductId());
 ```
 
-**Завершение задачи (как Submit в Tasklist)** — [`BpmTaskCompleter.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmTaskCompleter.java):
+«Раньше здесь мог быть прямой вызов `goodsService`. Теперь контроллер передаёт управление **процессу**.»
+
+#### 2. [`BpmUserService.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmUserService.java)
+
+```java
+runtimeService.startProcessInstanceByKey(PROCESS_USER_LK_ORDER, variables);
+bpmTaskCompleter.completeUserTask(processInstanceId, TASK_ENTER_PRODUCT,
+    Map.of("productId", productId));
+```
+
+| Метод | Что делает |
+|-------|------------|
+| `startLkOrder()` | Старт процесса `user-lk-order` |
+| `addToCart()` | Complete user task «Выбор товара» |
+| `cancelOrder()` | Старт `user-order-cancel` |
+
+#### 3. [`BpmTaskCompleter.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmTaskCompleter.java)
 
 ```java
 taskService.complete(task.getId(), formVariables);
 ```
 
-**Автоматический шаг** — [`AddCartItemDelegate.java`](backend/src/main/java/com/mts/online_shop/camunda/delegate/AddCartItemDelegate.java):
+«Tasklist и Swagger делают одно и то же — `taskService.complete` с переменными формы.»
+
+#### 4. [`user-lk-order.bpmn`](backend/src/main/resources/processes/user-lk-order.bpmn)
+
+- User task `Task_EnterProductId` → форма `user-add-product-form`
+- Service task `Task_AddToCart` → `${addCartItemDelegate}`
+
+«После complete Camunda **сама** идёт к delegate. Контроллер об этом не думает.»
+
+#### 5. [`AddCartItemDelegate.java`](backend/src/main/java/com/mts/online_shop/camunda/delegate/AddCartItemDelegate.java)
 
 ```java
-bpmDelegateSupport.runInNewTransaction(() ->
-    goodsService.addProductInUserCart(userId, productId));
+@Component("addCartItemDelegate")
+public class AddCartItemDelegate implements JavaDelegate {
+    public void execute(DelegateExecution execution) {
+        bpmDelegateSupport.runInNewTransaction(() ->
+            goodsService.addProductInUserCart(userId, productId));
+    }
+}
+```
+
+#### 6. [`BpmDelegateSupport.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmDelegateSupport.java)
+
+```java
+template.setPropagationBehavior(PROPAGATION_REQUIRES_NEW);
+```
+
+«Shop-БД в отдельной транзакции — требование про управление транзакциями.»
+
+#### 7. [`BpmAdminService.java`](backend/src/main/java/com/mts/online_shop/camunda/BpmAdminService.java)
+
+`startCreateProduct()` → `admin-product-create`; `createProductSync()` — старт + complete + чтение `productId`.
+
+### Async, listeners, subprocess
+
+| Механизм | Файл / место | Зачем |
+|----------|--------------|-------|
+| **TaskListener** | [`camunda/listener/`](backend/src/main/java/com/mts/online_shop/camunda/listener/) | Проверка формы до complete |
+| **asyncBefore** | [`user-lk-order.bpmn`](backend/src/main/resources/processes/user-lk-order.bpmn) → `Task_MarkPaid` | Job Executor в фоне |
+| **Subprocess** | [`StartServerOrderProcessingDelegate`](backend/src/main/java/com/mts/online_shop/camunda/delegate/StartServerOrderProcessingDelegate.java) | Запуск второго процесса |
+
+### Что заменили
+
+| Было | Стало |
+|------|-------|
+| `TransactionalOrderService` (удалён) | Шаги в BPMN + delegates |
+| Императивный сценарий в одном сервисе | `user-lk-order.bpmn` |
+| Прямой вызов из controller | `BpmUserService.startOrderCreate()` |
+
+### Sequence diagram (для слайда)
+
+```mermaid
+sequenceDiagram
+    participant C as UserCartController
+    participant B as BpmUserService
+    participant E as Camunda Engine
+    participant D as AddCartItemDelegate
+    participant S as GoodsService
+    participant DB as PostgreSQL
+
+    C->>B: addToCart(userId, productId)
+    B->>E: startProcess / completeTask
+    E->>D: service task AddToCart
+    D->>S: addProductInUserCart()
+    S->>DB: INSERT cart
+    E-->>B: next step (AddMore form)
 ```
 
 ### Текст для защиты (можно заучить)
 
 > «Контроллер больше не выполняет весь сценарий заказа. Он вызывает BpmUserService, который через RuntimeService стартует процесс или через TaskService завершает user task. Дальше Camunda идёт по BPMN. Автоматические шаги — JavaDelegate, которые вызывают существующие OrderService и GoodsService. Запись в shop-БД — в отдельной транзакции REQUIRES_NEW через BpmDelegateSupport.»
+
+### Вопросы по слайду 6
+
+| Вопрос | Ответ |
+|--------|--------|
+| Зачем BpmUserService, если есть Tasklist? | Tasklist — для человека; API — чтобы Swagger тоже мог стартовать/закрывать задачи |
+| Почему не выкинули OrderService? | Camunda не умеет SQL; OrderService — «руки», delegate — «пульт» |
+| Где динамика, если delegates на Java? | Динамика — **порядок и ветвление** на BPMN; delegates — стабильные кирпичики |
+| Чем complete из API отличается от Tasklist? | Ничем для Camunda — оба вызывают `taskService.complete` |
 
 ---
 
@@ -640,12 +763,29 @@ bpmDelegateSupport.runInNewTransaction(() ->
 
 ### Что показать live (2–3 мин)
 
-1. Swagger: `POST /api/auth/login`
+**Сценарий А — заказ (основной):**
+
+1. Swagger: `POST /api/auth/login` (user)
 2. `POST /api/cart/items` → «запустился процесс»
-3. Tasklist `/camunda/app/tasklist/` → формы
+3. Tasklist `/camunda/app/tasklist/` → формы «Добавить ещё?», «Оплата»
 4. Оплата: карта `4111111111111111`, CVV `123`, срок `12/28`
 5. Cockpit → running/completed instances
-6. (опционально) отмена: `POST /api/orders/{id}/cancel` → user + admin tasks
+
+**Сценарий Б — отмена (опционально):**
+
+6. `POST /api/orders/{id}/cancel` → user task + admin task в Tasklist
+
+**Сценарий В — admin (если спросят):**
+
+7. Login admin → `POST /api/admin/products` → форма в Tasklist
+
+### Адреса на Helios
+
+| Сервис | URL |
+|--------|-----|
+| Swagger | `http://helios...:13228/api/swagger-ui.html` |
+| Tasklist | `http://helios...:13228/camunda/app/tasklist/` |
+| Cockpit | `http://helios...:13228/camunda/app/cockpit/` |
 
 ### Какие файлы открыть в IDE / Modeler
 
