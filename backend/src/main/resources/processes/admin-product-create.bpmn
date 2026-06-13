@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_AdminProductCreate" targetNamespace="http://mts-online-shop/bpmn" exporter="Camunda Modeler" exporterVersion="4.12.0">
   <bpmn:error id="Error_Validation" name="VALIDATION_ERROR" errorCode="VALIDATION_ERROR" />
+  <bpmn:collaboration id="Collaboration_admin_product_create">
+    <bpmn:participant id="Participant_admin_product_create" name="MTS Online Shop" processRef="admin-product-create" />
+  </bpmn:collaboration>
   <bpmn:process id="admin-product-create" name="ADMIN: добавление товара" isExecutable="true" camunda:historyTimeToLive="30">
     <bpmn:laneSet id="LaneSet_admin-product-create">
-      <bpmn:lane id="Lane_Service" name="SERVICE">
-        <bpmn:flowNodeRef>End_Created</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_CreateProduct</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_CreateValidation</bpmn:flowNodeRef>
-      </bpmn:lane>
       <bpmn:lane id="Lane_Admin" name="ADMIN">
         <bpmn:flowNodeRef>Task_CreateProductForm</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Start_Create</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_FormValidation</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Service" name="SERVICE">
+        <bpmn:flowNodeRef>Task_CreateProduct</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Created</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="Start_Create">
@@ -49,63 +50,62 @@
     <bpmn:sequenceFlow id="Flow_End" sourceRef="Task_CreateProduct" targetRef="End_Created" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_admin-product-create">
-    <bpmndi:BPMNPlane id="BPMNPlane_admin-product-create" bpmnElement="admin-product-create">
+    <bpmndi:BPMNPlane id="BPMNPlane_admin-product-create" bpmnElement="Collaboration_admin_product_create">
+      <bpmndi:BPMNShape id="Participant_admin_product_create_di" bpmnElement="Participant_admin_product_create" isHorizontal="true">
+        <dc:Bounds x="130" y="80" width="850" height="310" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
         <dc:Bounds x="160" y="230" width="800" height="160" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="172" y="432" width="60" height="14" />
-        </bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Admin_di" bpmnElement="Lane_Admin" isHorizontal="true">
         <dc:Bounds x="160" y="80" width="800" height="150" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="172" y="262" width="60" height="14" />
-        </bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
-        <di:waypoint x="660" y="310" />
-        <di:waypoint x="696" y="310" />
-        <di:waypoint x="696" y="325" />
-        <di:waypoint x="732" y="325" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="458" y="155" />
-        <di:waypoint x="483" y="155" />
-        <di:waypoint x="483" y="310" />
-        <di:waypoint x="560" y="310" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_ServiceValidationRetry_di" bpmnElement="Flow_ServiceValidationRetry">
-        <di:waypoint x="542" y="350" />
-        <di:waypoint x="440" y="350" />
-        <di:waypoint x="440" y="195" />
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="276" y="155" />
+        <di:waypoint x="380" y="155" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_FormValidationRetry_di" bpmnElement="Flow_FormValidationRetry">
-        <di:waypoint x="358" y="213" />
-        <di:waypoint x="358" y="220" />
-        <di:waypoint x="408" y="220" />
-        <di:waypoint x="408" y="195" />
+        <di:waypoint x="380" y="213" />
+        <di:waypoint x="380" y="220" />
+        <di:waypoint x="410" y="220" />
+        <di:waypoint x="410" y="195" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="258" y="155" />
-        <di:waypoint x="358" y="155" />
+      <bpmndi:BPMNEdge id="Flow_ServiceValidationRetry_di" bpmnElement="Flow_ServiceValidationRetry">
+        <di:waypoint x="558" y="383" />
+        <di:waypoint x="430" y="383" />
+        <di:waypoint x="430" y="155" />
+        <di:waypoint x="380" y="155" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Task_CreateProductForm_di" bpmnElement="Task_CreateProductForm">
-        <dc:Bounds x="358" y="115" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Created_di" bpmnElement="End_Created">
-        <dc:Bounds x="732" y="307" width="36" height="36" />
-      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="480" y="195" />
+        <di:waypoint x="494" y="195" />
+        <di:waypoint x="494" y="325" />
+        <di:waypoint x="508" y="325" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
+        <di:waypoint x="608" y="325" />
+        <di:waypoint x="722" y="325" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Start_Create_di" bpmnElement="Start_Create">
-        <dc:Bounds x="222" y="137" width="36" height="36" />
+        <dc:Bounds x="240" y="137" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CreateProductForm_di" bpmnElement="Task_CreateProductForm">
+        <dc:Bounds x="380" y="115" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_CreateProduct_di" bpmnElement="Task_CreateProduct">
-        <dc:Bounds x="560" y="270" width="100" height="80" />
+        <dc:Bounds x="508" y="285" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Created_di" bpmnElement="End_Created">
+        <dc:Bounds x="722" y="307" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Boundary_FormValidation_di" bpmnElement="Boundary_FormValidation">
-        <dc:Bounds x="340" y="177" width="36" height="36" />
+        <dc:Bounds x="362" y="177" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Boundary_CreateValidation_di" bpmnElement="Boundary_CreateValidation">
-        <dc:Bounds x="542" y="332" width="36" height="36" />
+        <dc:Bounds x="540" y="347" width="36" height="36" />
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

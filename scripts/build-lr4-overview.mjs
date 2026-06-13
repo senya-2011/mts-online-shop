@@ -12,6 +12,8 @@ const MODELER = 'Camunda Modeler';
 const VERSION = '4.12.0';
 const LANE_X = 160;
 const LANE_H = 160;
+/** Ширина полоски с названием пула (Camunda Modeler: pool.x = LANE_X - 30). */
+const POOL_LABEL_WIDTH = 30;
 const LANE_Y = { USER: 100, ADMIN: 290, SERVICE: 480 };
 const SECTION_GAP = 120;
 
@@ -29,9 +31,8 @@ const sections = [
     <bpmn:serviceTask id="lk_CreateOrder" name="Создание заказа"><bpmn:incoming>F_lk_6</bpmn:incoming><bpmn:outgoing>F_lk_7</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="lk_Reserve" name="Резерв"><bpmn:incoming>F_lk_7</bpmn:incoming><bpmn:outgoing>F_lk_8</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="lk_EnterPayment" name="Оплата"><bpmn:incoming>F_lk_8</bpmn:incoming><bpmn:outgoing>F_lk_9</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="lk_InitiatePayment" name="Инициация платежа"><bpmn:incoming>F_lk_9</bpmn:incoming><bpmn:outgoing>F_lk_10</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:intermediateCatchEvent id="lk_BankCallback" name="Callback банка"><bpmn:incoming>F_lk_10</bpmn:incoming><bpmn:outgoing>F_lk_11</bpmn:outgoing><bpmn:messageEventDefinition messageRef="Message_BankCallback" /></bpmn:intermediateCatchEvent>
-    <bpmn:exclusiveGateway id="lk_GwPayment" name="Оплата OK?" default="F_lk_fail"><bpmn:incoming>F_lk_11</bpmn:incoming><bpmn:outgoing>F_lk_ok</bpmn:outgoing><bpmn:outgoing>F_lk_fail</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="lk_InitiatePayment" name="Проверка карты"><bpmn:incoming>F_lk_9</bpmn:incoming><bpmn:outgoing>F_lk_10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="lk_GwPayment" name="Оплата OK?" default="F_lk_fail"><bpmn:incoming>F_lk_10</bpmn:incoming><bpmn:outgoing>F_lk_ok</bpmn:outgoing><bpmn:outgoing>F_lk_fail</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="lk_MarkPaid" name="Подтвердить оплату"><bpmn:incoming>F_lk_ok</bpmn:incoming><bpmn:outgoing>F_lk_12</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="lk_StartServer" name="→ server-order-processing"><bpmn:incoming>F_lk_12</bpmn:incoming><bpmn:outgoing>F_lk_13</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="lk_ReleaseFail" name="Снять резерв"><bpmn:incoming>F_lk_fail</bpmn:incoming><bpmn:outgoing>F_lk_14</bpmn:outgoing></bpmn:serviceTask>
@@ -47,8 +48,7 @@ const sections = [
     <bpmn:sequenceFlow id="F_lk_7" sourceRef="lk_CreateOrder" targetRef="lk_Reserve" />
     <bpmn:sequenceFlow id="F_lk_8" sourceRef="lk_Reserve" targetRef="lk_EnterPayment" />
     <bpmn:sequenceFlow id="F_lk_9" sourceRef="lk_EnterPayment" targetRef="lk_InitiatePayment" />
-    <bpmn:sequenceFlow id="F_lk_10" sourceRef="lk_InitiatePayment" targetRef="lk_BankCallback" />
-    <bpmn:sequenceFlow id="F_lk_11" sourceRef="lk_BankCallback" targetRef="lk_GwPayment" />
+    <bpmn:sequenceFlow id="F_lk_10" sourceRef="lk_InitiatePayment" targetRef="lk_GwPayment" />
     <bpmn:sequenceFlow id="F_lk_ok" sourceRef="lk_GwPayment" targetRef="lk_MarkPaid" />
     <bpmn:sequenceFlow id="F_lk_fail" sourceRef="lk_GwPayment" targetRef="lk_ReleaseFail" />
     <bpmn:sequenceFlow id="F_lk_12" sourceRef="lk_MarkPaid" targetRef="lk_StartServer" />
@@ -57,7 +57,7 @@ const sections = [
     lanes: {
       USER: ['lk_Start', 'lk_EnterProduct', 'lk_AddMore', 'lk_EnterPayment'],
       ADMIN: [],
-      SERVICE: ['lk_AddToCart', 'lk_GwAddMore', 'lk_ValidateCart', 'lk_CreateOrder', 'lk_Reserve', 'lk_InitiatePayment', 'lk_BankCallback', 'lk_GwPayment', 'lk_MarkPaid', 'lk_StartServer', 'lk_ReleaseFail', 'lk_EndOk', 'lk_EndFail'],
+      SERVICE: ['lk_AddToCart', 'lk_GwAddMore', 'lk_ValidateCart', 'lk_CreateOrder', 'lk_Reserve', 'lk_InitiatePayment', 'lk_GwPayment', 'lk_MarkPaid', 'lk_StartServer', 'lk_ReleaseFail', 'lk_EndOk', 'lk_EndFail'],
     },
   },
   {
@@ -65,8 +65,9 @@ const sections = [
     x0: 0,
     xml: `
     <bpmn:startEvent id="cancel_Start" name="USER: отмена"><bpmn:outgoing>F_c_1</bpmn:outgoing></bpmn:startEvent>
-    <bpmn:userTask id="cancel_EnterOrderId" name="Номер заказа"><bpmn:incoming>F_c_1</bpmn:incoming><bpmn:outgoing>F_c_2</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="cancel_Validate" name="Проверка"><bpmn:incoming>F_c_2</bpmn:incoming><bpmn:outgoing>F_c_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="cancel_EnterOrderId" name="Номер заказа"><bpmn:incoming>F_c_1</bpmn:incoming><bpmn:incoming>F_c_retry</bpmn:incoming><bpmn:outgoing>F_c_2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="cancel_Validate" name="Проверка"><bpmn:incoming>F_c_2</bpmn:incoming><bpmn:outgoing>F_c_2g</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="cancel_GwValid" name="OK?" default="F_c_retry"><bpmn:incoming>F_c_2g</bpmn:incoming><bpmn:outgoing>F_c_3</bpmn:outgoing><bpmn:outgoing>F_c_retry</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:userTask id="cancel_AdminConfirm" name="Подтверждение (админ)"><bpmn:incoming>F_c_3</bpmn:incoming><bpmn:outgoing>F_c_4</bpmn:outgoing></bpmn:userTask>
     <bpmn:exclusiveGateway id="cancel_GwApproved" name="Одобрено?" default="F_c_rej"><bpmn:incoming>F_c_4</bpmn:incoming><bpmn:outgoing>F_c_app</bpmn:outgoing><bpmn:outgoing>F_c_rej</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="cancel_Release" name="Снятие резерва"><bpmn:incoming>F_c_app</bpmn:incoming><bpmn:outgoing>F_c_5</bpmn:outgoing></bpmn:serviceTask>
@@ -76,7 +77,9 @@ const sections = [
     <bpmn:endEvent id="cancel_EndRejected" name="Отклонено"><bpmn:incoming>F_c_rej</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="F_c_1" sourceRef="cancel_Start" targetRef="cancel_EnterOrderId" />
     <bpmn:sequenceFlow id="F_c_2" sourceRef="cancel_EnterOrderId" targetRef="cancel_Validate" />
-    <bpmn:sequenceFlow id="F_c_3" sourceRef="cancel_Validate" targetRef="cancel_AdminConfirm" />
+    <bpmn:sequenceFlow id="F_c_2g" sourceRef="cancel_Validate" targetRef="cancel_GwValid" />
+    <bpmn:sequenceFlow id="F_c_3" sourceRef="cancel_GwValid" targetRef="cancel_AdminConfirm" />
+    <bpmn:sequenceFlow id="F_c_retry" sourceRef="cancel_GwValid" targetRef="cancel_EnterOrderId" />
     <bpmn:sequenceFlow id="F_c_4" sourceRef="cancel_AdminConfirm" targetRef="cancel_GwApproved" />
     <bpmn:sequenceFlow id="F_c_app" sourceRef="cancel_GwApproved" targetRef="cancel_Release" />
     <bpmn:sequenceFlow id="F_c_rej" sourceRef="cancel_GwApproved" targetRef="cancel_EndRejected" />
@@ -86,7 +89,7 @@ const sections = [
     lanes: {
       USER: ['cancel_Start', 'cancel_EnterOrderId'],
       ADMIN: ['cancel_AdminConfirm'],
-      SERVICE: ['cancel_Validate', 'cancel_GwApproved', 'cancel_Release', 'cancel_CancelOrder', 'cancel_Notify', 'cancel_EndOk', 'cancel_EndRejected'],
+      SERVICE: ['cancel_Validate', 'cancel_GwValid', 'cancel_GwApproved', 'cancel_Release', 'cancel_CancelOrder', 'cancel_Notify', 'cancel_EndOk', 'cancel_EndRejected'],
     },
   },
   {
@@ -291,7 +294,7 @@ resolveRemainingOverlaps(allBounds);
 
 const maxRight = Math.max(...[...allBounds.values()].map((b) => b.x + b.w));
 const laneW = maxRight - LANE_X + 160;
-const poolH = LANE_Y.SERVICE + LANE_H + 60;
+const poolH = LANE_Y.SERVICE + LANE_H - LANE_Y.USER;
 
 const processBody = sections.map((s) => s.xml).join('\n') + `
     <bpmn:sequenceFlow id="F_lk_to_srv" sourceRef="lk_StartServer" targetRef="srv_Start" />`;
@@ -323,14 +326,11 @@ const xml = `<?xml version="1.0" encoding="UTF-8"?>
 
   <bpmn:collaboration id="Collaboration_Lr4">
     <bpmn:participant id="Participant_Shop" name="MTS Online Shop — ЛР4 (5 процессов)" processRef="lr4-overview" />
-    <bpmn:participant id="Participant_Bank" name="BANK" processRef="lr4-bank" />
-    <bpmn:messageFlow id="MF_PaymentToBank" sourceRef="lk_InitiatePayment" targetRef="bank_Process" />
-    <bpmn:messageFlow id="MF_BankCallback" sourceRef="bank_Callback" targetRef="lk_BankCallback" />
+    <bpmn:participant id="Participant_Bank" name="BANK (lab: оплата по regex, без вызова)" processRef="lr4-bank" />
     <bpmn:textAnnotation id="Ann_Api">
       <bpmn:text>Триггеры API:
 POST /api/cart/items · POST /api/orders/create · POST /api/orders/{id}/cancel
-POST /api/admin/products · PUT /api/admin/products/{id}
-POST /api/internal/bank/payment-callback</bpmn:text>
+POST /api/admin/products · PUT /api/admin/products/{id}</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Assoc_Api" sourceRef="Ann_Api" targetRef="lk_Start" />
   </bpmn:collaboration>
@@ -352,8 +352,9 @@ ${processBody}
 
   <bpmndi:BPMNDiagram id="BPMNDiagram_Lr4">
     <bpmndi:BPMNPlane id="BPMNPlane_Lr4" bpmnElement="Collaboration_Lr4">
-      <bpmndi:BPMNShape id="Participant_Shop_di" bpmnElement="Participant_Shop" isHorizontal="false">
-        <dc:Bounds x="${LANE_X - 20}" y="60" width="${laneW + 40}" height="${poolH}" />
+      <bpmndi:BPMNShape id="Participant_Shop_di" bpmnElement="Participant_Shop" isHorizontal="true">
+        <dc:Bounds x="${LANE_X - POOL_LABEL_WIDTH}" y="${LANE_Y.USER}" width="${laneW + POOL_LABEL_WIDTH}" height="${poolH}" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
 ${['SERVICE', 'ADMIN', 'USER'].map((lane) => {
   const laneId = `Lane_${lane.charAt(0) + lane.slice(1).toLowerCase()}`;
@@ -370,8 +371,9 @@ ${[...allBounds.entries()].map(([id, b]) => {
   const gw = b.gateway ? ' isMarkerVisible="true"' : '';
   return `      <bpmndi:BPMNShape id="${id}_di" bpmnElement="${id}"${gw}>\n        <dc:Bounds x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" />\n      </bpmndi:BPMNShape>`;
 }).join('\n')}
-      <bpmndi:BPMNShape id="Participant_Bank_di" bpmnElement="Participant_Bank" isHorizontal="false">
+      <bpmndi:BPMNShape id="Participant_Bank_di" bpmnElement="Participant_Bank" isHorizontal="true">
         <dc:Bounds x="${bankX}" y="${LANE_Y.SERVICE}" width="260" height="180" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="bank_Start_di" bpmnElement="bank_Start"><dc:Bounds x="${bankX + 30}" y="${LANE_Y.SERVICE + 50}" width="36" height="36" /></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="bank_Process_di" bpmnElement="bank_Process"><dc:Bounds x="${bankX + 90}" y="${LANE_Y.SERVICE + 38}" width="100" height="60" /></bpmndi:BPMNShape>
@@ -380,14 +382,6 @@ ${[...allBounds.entries()].map(([id, b]) => {
       <bpmndi:BPMNEdge id="F_b2_di" bpmnElement="F_b2"><di:waypoint x="${bankX + 190}" y="${LANE_Y.SERVICE + 68}" /><di:waypoint x="${bankX + 210}" y="${LANE_Y.SERVICE + 68}" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Ann_Api_di" bpmnElement="Ann_Api"><dc:Bounds x="${LANE_X}" y="8" width="380" height="72" /></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Assoc_Api_di" bpmnElement="Assoc_Api"><di:waypoint x="${LANE_X + 190}" y="${80}" /><di:waypoint x="${allBounds.get('lk_Start').x + 18}" y="${LANE_Y.USER + 18}" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MF_PaymentToBank_di" bpmnElement="MF_PaymentToBank">
-        <di:waypoint x="${allBounds.get('lk_InitiatePayment').x + allBounds.get('lk_InitiatePayment').w}" y="${allBounds.get('lk_InitiatePayment').y + 40}" />
-        <di:waypoint x="${bankX + 140}" y="${LANE_Y.SERVICE + 68}" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MF_BankCallback_di" bpmnElement="MF_BankCallback">
-        <di:waypoint x="${bankX + 228}" y="${LANE_Y.SERVICE + 68}" />
-        <di:waypoint x="${allBounds.get('lk_BankCallback').x}" y="${allBounds.get('lk_BankCallback').y + 18}" />
-      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>`;

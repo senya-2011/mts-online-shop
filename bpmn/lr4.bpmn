@@ -11,14 +11,11 @@
 
   <bpmn:collaboration id="Collaboration_Lr4">
     <bpmn:participant id="Participant_Shop" name="MTS Online Shop — ЛР4 (5 процессов)" processRef="lr4-overview" />
-    <bpmn:participant id="Participant_Bank" name="BANK" processRef="lr4-bank" />
-    <bpmn:messageFlow id="MF_PaymentToBank" sourceRef="lk_InitiatePayment" targetRef="bank_Process" />
-    <bpmn:messageFlow id="MF_BankCallback" sourceRef="bank_Callback" targetRef="lk_BankCallback" />
+    <bpmn:participant id="Participant_Bank" name="BANK (lab: оплата по regex, без вызова)" processRef="lr4-bank" />
     <bpmn:textAnnotation id="Ann_Api">
       <bpmn:text>Триггеры API:
 POST /api/cart/items · POST /api/orders/create · POST /api/orders/{id}/cancel
-POST /api/admin/products · PUT /api/admin/products/{id}
-POST /api/internal/bank/payment-callback</bpmn:text>
+POST /api/admin/products · PUT /api/admin/products/{id}</bpmn:text>
     </bpmn:textAnnotation>
     <bpmn:association id="Assoc_Api" sourceRef="Ann_Api" targetRef="lk_Start" />
   </bpmn:collaboration>
@@ -55,7 +52,6 @@ POST /api/internal/bank/payment-callback</bpmn:text>
         <bpmn:flowNodeRef>lk_CreateOrder</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>lk_Reserve</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>lk_InitiatePayment</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>lk_BankCallback</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>lk_GwPayment</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>lk_MarkPaid</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>lk_StartServer</bpmn:flowNodeRef>
@@ -63,6 +59,7 @@ POST /api/internal/bank/payment-callback</bpmn:text>
         <bpmn:flowNodeRef>lk_EndOk</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>lk_EndFail</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>cancel_Validate</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>cancel_GwValid</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>cancel_GwApproved</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>cancel_Release</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>cancel_CancelOrder</bpmn:flowNodeRef>
@@ -92,9 +89,8 @@ POST /api/internal/bank/payment-callback</bpmn:text>
     <bpmn:serviceTask id="lk_CreateOrder" name="Создание заказа"><bpmn:incoming>F_lk_6</bpmn:incoming><bpmn:outgoing>F_lk_7</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="lk_Reserve" name="Резерв"><bpmn:incoming>F_lk_7</bpmn:incoming><bpmn:outgoing>F_lk_8</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:userTask id="lk_EnterPayment" name="Оплата"><bpmn:incoming>F_lk_8</bpmn:incoming><bpmn:outgoing>F_lk_9</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="lk_InitiatePayment" name="Инициация платежа"><bpmn:incoming>F_lk_9</bpmn:incoming><bpmn:outgoing>F_lk_10</bpmn:outgoing></bpmn:serviceTask>
-    <bpmn:intermediateCatchEvent id="lk_BankCallback" name="Callback банка"><bpmn:incoming>F_lk_10</bpmn:incoming><bpmn:outgoing>F_lk_11</bpmn:outgoing><bpmn:messageEventDefinition messageRef="Message_BankCallback" /></bpmn:intermediateCatchEvent>
-    <bpmn:exclusiveGateway id="lk_GwPayment" name="Оплата OK?" default="F_lk_fail"><bpmn:incoming>F_lk_11</bpmn:incoming><bpmn:outgoing>F_lk_ok</bpmn:outgoing><bpmn:outgoing>F_lk_fail</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="lk_InitiatePayment" name="Проверка карты"><bpmn:incoming>F_lk_9</bpmn:incoming><bpmn:outgoing>F_lk_10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="lk_GwPayment" name="Оплата OK?" default="F_lk_fail"><bpmn:incoming>F_lk_10</bpmn:incoming><bpmn:outgoing>F_lk_ok</bpmn:outgoing><bpmn:outgoing>F_lk_fail</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="lk_MarkPaid" name="Подтвердить оплату"><bpmn:incoming>F_lk_ok</bpmn:incoming><bpmn:outgoing>F_lk_12</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="lk_StartServer" name="→ server-order-processing"><bpmn:incoming>F_lk_12</bpmn:incoming><bpmn:outgoing>F_lk_13</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:serviceTask id="lk_ReleaseFail" name="Снять резерв"><bpmn:incoming>F_lk_fail</bpmn:incoming><bpmn:outgoing>F_lk_14</bpmn:outgoing></bpmn:serviceTask>
@@ -110,8 +106,7 @@ POST /api/internal/bank/payment-callback</bpmn:text>
     <bpmn:sequenceFlow id="F_lk_7" sourceRef="lk_CreateOrder" targetRef="lk_Reserve" />
     <bpmn:sequenceFlow id="F_lk_8" sourceRef="lk_Reserve" targetRef="lk_EnterPayment" />
     <bpmn:sequenceFlow id="F_lk_9" sourceRef="lk_EnterPayment" targetRef="lk_InitiatePayment" />
-    <bpmn:sequenceFlow id="F_lk_10" sourceRef="lk_InitiatePayment" targetRef="lk_BankCallback" />
-    <bpmn:sequenceFlow id="F_lk_11" sourceRef="lk_BankCallback" targetRef="lk_GwPayment" />
+    <bpmn:sequenceFlow id="F_lk_10" sourceRef="lk_InitiatePayment" targetRef="lk_GwPayment" />
     <bpmn:sequenceFlow id="F_lk_ok" sourceRef="lk_GwPayment" targetRef="lk_MarkPaid" />
     <bpmn:sequenceFlow id="F_lk_fail" sourceRef="lk_GwPayment" targetRef="lk_ReleaseFail" />
     <bpmn:sequenceFlow id="F_lk_12" sourceRef="lk_MarkPaid" targetRef="lk_StartServer" />
@@ -119,8 +114,9 @@ POST /api/internal/bank/payment-callback</bpmn:text>
     <bpmn:sequenceFlow id="F_lk_14" sourceRef="lk_ReleaseFail" targetRef="lk_EndFail" />
 
     <bpmn:startEvent id="cancel_Start" name="USER: отмена"><bpmn:outgoing>F_c_1</bpmn:outgoing></bpmn:startEvent>
-    <bpmn:userTask id="cancel_EnterOrderId" name="Номер заказа"><bpmn:incoming>F_c_1</bpmn:incoming><bpmn:outgoing>F_c_2</bpmn:outgoing></bpmn:userTask>
-    <bpmn:serviceTask id="cancel_Validate" name="Проверка"><bpmn:incoming>F_c_2</bpmn:incoming><bpmn:outgoing>F_c_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="cancel_EnterOrderId" name="Номер заказа"><bpmn:incoming>F_c_1</bpmn:incoming><bpmn:incoming>F_c_retry</bpmn:incoming><bpmn:outgoing>F_c_2</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="cancel_Validate" name="Проверка"><bpmn:incoming>F_c_2</bpmn:incoming><bpmn:outgoing>F_c_2g</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="cancel_GwValid" name="OK?" default="F_c_retry"><bpmn:incoming>F_c_2g</bpmn:incoming><bpmn:outgoing>F_c_3</bpmn:outgoing><bpmn:outgoing>F_c_retry</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:userTask id="cancel_AdminConfirm" name="Подтверждение (админ)"><bpmn:incoming>F_c_3</bpmn:incoming><bpmn:outgoing>F_c_4</bpmn:outgoing></bpmn:userTask>
     <bpmn:exclusiveGateway id="cancel_GwApproved" name="Одобрено?" default="F_c_rej"><bpmn:incoming>F_c_4</bpmn:incoming><bpmn:outgoing>F_c_app</bpmn:outgoing><bpmn:outgoing>F_c_rej</bpmn:outgoing></bpmn:exclusiveGateway>
     <bpmn:serviceTask id="cancel_Release" name="Снятие резерва"><bpmn:incoming>F_c_app</bpmn:incoming><bpmn:outgoing>F_c_5</bpmn:outgoing></bpmn:serviceTask>
@@ -130,7 +126,9 @@ POST /api/internal/bank/payment-callback</bpmn:text>
     <bpmn:endEvent id="cancel_EndRejected" name="Отклонено"><bpmn:incoming>F_c_rej</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="F_c_1" sourceRef="cancel_Start" targetRef="cancel_EnterOrderId" />
     <bpmn:sequenceFlow id="F_c_2" sourceRef="cancel_EnterOrderId" targetRef="cancel_Validate" />
-    <bpmn:sequenceFlow id="F_c_3" sourceRef="cancel_Validate" targetRef="cancel_AdminConfirm" />
+    <bpmn:sequenceFlow id="F_c_2g" sourceRef="cancel_Validate" targetRef="cancel_GwValid" />
+    <bpmn:sequenceFlow id="F_c_3" sourceRef="cancel_GwValid" targetRef="cancel_AdminConfirm" />
+    <bpmn:sequenceFlow id="F_c_retry" sourceRef="cancel_GwValid" targetRef="cancel_EnterOrderId" />
     <bpmn:sequenceFlow id="F_c_4" sourceRef="cancel_AdminConfirm" targetRef="cancel_GwApproved" />
     <bpmn:sequenceFlow id="F_c_app" sourceRef="cancel_GwApproved" targetRef="cancel_Release" />
     <bpmn:sequenceFlow id="F_c_rej" sourceRef="cancel_GwApproved" targetRef="cancel_EndRejected" />
@@ -172,8 +170,9 @@ POST /api/internal/bank/payment-callback</bpmn:text>
 
   <bpmndi:BPMNDiagram id="BPMNDiagram_Lr4">
     <bpmndi:BPMNPlane id="BPMNPlane_Lr4" bpmnElement="Collaboration_Lr4">
-      <bpmndi:BPMNShape id="Participant_Shop_di" bpmnElement="Participant_Shop" isHorizontal="false">
-        <dc:Bounds x="140" y="60" width="6080" height="700" />
+      <bpmndi:BPMNShape id="Participant_Shop_di" bpmnElement="Participant_Shop" isHorizontal="true">
+        <dc:Bounds x="130" y="100" width="6070" height="540" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
         <dc:Bounds x="160" y="480" width="6040" height="160" />
@@ -249,59 +248,67 @@ POST /api/internal/bank/payment-callback</bpmn:text>
         <di:waypoint x="1648" y="560" />
         <di:waypoint x="1798" y="560" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F_lk_11_di" bpmnElement="F_lk_11">
-        <di:waypoint x="1798" y="560" />
-        <di:waypoint x="1948" y="560" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_lk_ok_di" bpmnElement="F_lk_ok">
-        <di:waypoint x="1948" y="560" />
-        <di:waypoint x="2023" y="560" />
-        <di:waypoint x="2023" y="533" />
-        <di:waypoint x="2098" y="533" />
+        <di:waypoint x="1798" y="560" />
+        <di:waypoint x="1873" y="560" />
+        <di:waypoint x="1873" y="533" />
+        <di:waypoint x="1948" y="533" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_lk_fail_di" bpmnElement="F_lk_fail">
-        <di:waypoint x="1948" y="560" />
-        <di:waypoint x="2023" y="560" />
-        <di:waypoint x="2023" y="658" />
-        <di:waypoint x="2098" y="658" />
+        <di:waypoint x="1798" y="560" />
+        <di:waypoint x="1873" y="560" />
+        <di:waypoint x="1873" y="658" />
+        <di:waypoint x="1948" y="658" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_lk_12_di" bpmnElement="F_lk_12">
-        <di:waypoint x="2098" y="533" />
-        <di:waypoint x="2173" y="533" />
-        <di:waypoint x="2173" y="582" />
-        <di:waypoint x="2248" y="582" />
+        <di:waypoint x="1948" y="533" />
+        <di:waypoint x="2023" y="533" />
+        <di:waypoint x="2023" y="582" />
+        <di:waypoint x="2098" y="582" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_lk_13_di" bpmnElement="F_lk_13">
-        <di:waypoint x="2248" y="582" />
-        <di:waypoint x="2323" y="582" />
-        <di:waypoint x="2323" y="560" />
-        <di:waypoint x="2398" y="560" />
+        <di:waypoint x="2098" y="582" />
+        <di:waypoint x="2173" y="582" />
+        <di:waypoint x="2173" y="560" />
+        <di:waypoint x="2248" y="560" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_lk_14_di" bpmnElement="F_lk_14">
-        <di:waypoint x="2098" y="658" />
-        <di:waypoint x="2173" y="658" />
-        <di:waypoint x="2173" y="700" />
-        <di:waypoint x="2248" y="700" />
+        <di:waypoint x="1948" y="658" />
+        <di:waypoint x="2023" y="658" />
+        <di:waypoint x="2023" y="700" />
+        <di:waypoint x="2098" y="700" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_c_1_di" bpmnElement="F_c_1">
-        <di:waypoint x="2554" y="180" />
-        <di:waypoint x="2704" y="180" />
+        <di:waypoint x="2404" y="180" />
+        <di:waypoint x="2479" y="180" />
+        <di:waypoint x="2479" y="588" />
+        <di:waypoint x="2554" y="588" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_c_2_di" bpmnElement="F_c_2">
-        <di:waypoint x="2704" y="180" />
-        <di:waypoint x="2779" y="180" />
-        <di:waypoint x="2779" y="560" />
+        <di:waypoint x="2554" y="588" />
+        <di:waypoint x="2629" y="588" />
+        <di:waypoint x="2629" y="560" />
+        <di:waypoint x="2704" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_2g_di" bpmnElement="F_c_2g">
+        <di:waypoint x="2704" y="560" />
         <di:waypoint x="2854" y="560" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_c_3_di" bpmnElement="F_c_3">
         <di:waypoint x="2854" y="560" />
         <di:waypoint x="2929" y="560" />
-        <di:waypoint x="2929" y="370" />
-        <di:waypoint x="3004" y="370" />
+        <di:waypoint x="2929" y="533" />
+        <di:waypoint x="3004" y="533" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F_c_retry_di" bpmnElement="F_c_retry">
+        <di:waypoint x="2854" y="560" />
+        <di:waypoint x="2704" y="560" />
+        <di:waypoint x="2704" y="588" />
+        <di:waypoint x="2554" y="588" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_c_4_di" bpmnElement="F_c_4">
-        <di:waypoint x="3004" y="370" />
-        <di:waypoint x="3079" y="370" />
+        <di:waypoint x="3004" y="533" />
+        <di:waypoint x="3079" y="533" />
         <di:waypoint x="3079" y="560" />
         <di:waypoint x="3154" y="560" />
       </bpmndi:BPMNEdge>
@@ -384,9 +391,9 @@ POST /api/internal/bank/payment-callback</bpmn:text>
         <di:waypoint x="6022" y="560" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F_lk_to_srv_di" bpmnElement="F_lk_to_srv">
-        <di:waypoint x="2248" y="582" />
-        <di:waypoint x="3685" y="582" />
-        <di:waypoint x="3685" y="560" />
+        <di:waypoint x="2098" y="582" />
+        <di:waypoint x="3610" y="582" />
+        <di:waypoint x="3610" y="560" />
         <di:waypoint x="5122" y="560" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="lk_Start_di" bpmnElement="lk_Start">
@@ -419,38 +426,38 @@ POST /api/internal/bank/payment-callback</bpmn:text>
       <bpmndi:BPMNShape id="lk_InitiatePayment_di" bpmnElement="lk_InitiatePayment">
         <dc:Bounds x="1598" y="520" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="lk_BankCallback_di" bpmnElement="lk_BankCallback">
-        <dc:Bounds x="1780" y="542" width="36" height="36" />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="lk_GwPayment_di" bpmnElement="lk_GwPayment" isMarkerVisible="true">
-        <dc:Bounds x="1923" y="535" width="50" height="50" />
+        <dc:Bounds x="1773" y="535" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="lk_MarkPaid_di" bpmnElement="lk_MarkPaid">
-        <dc:Bounds x="2048" y="493" width="100" height="80" />
+        <dc:Bounds x="1898" y="493" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="lk_StartServer_di" bpmnElement="lk_StartServer">
-        <dc:Bounds x="2198" y="542" width="100" height="80" />
+        <dc:Bounds x="2048" y="542" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="lk_EndOk_di" bpmnElement="lk_EndOk">
-        <dc:Bounds x="2380" y="542" width="36" height="36" />
+        <dc:Bounds x="2230" y="542" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="lk_ReleaseFail_di" bpmnElement="lk_ReleaseFail">
-        <dc:Bounds x="2048" y="618" width="100" height="80" />
+        <dc:Bounds x="1898" y="618" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="lk_EndFail_di" bpmnElement="lk_EndFail">
-        <dc:Bounds x="2230" y="682" width="36" height="36" />
+        <dc:Bounds x="2080" y="682" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="cancel_Start_di" bpmnElement="cancel_Start">
-        <dc:Bounds x="2536" y="162" width="36" height="36" />
+        <dc:Bounds x="2386" y="162" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="cancel_EnterOrderId_di" bpmnElement="cancel_EnterOrderId">
-        <dc:Bounds x="2654" y="140" width="100" height="80" />
+        <dc:Bounds x="2504" y="548" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="cancel_Validate_di" bpmnElement="cancel_Validate">
-        <dc:Bounds x="2804" y="520" width="100" height="80" />
+        <dc:Bounds x="2654" y="520" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="cancel_GwValid_di" bpmnElement="cancel_GwValid" isMarkerVisible="true">
+        <dc:Bounds x="2829" y="535" width="50" height="50" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="cancel_AdminConfirm_di" bpmnElement="cancel_AdminConfirm">
-        <dc:Bounds x="2954" y="330" width="100" height="80" />
+        <dc:Bounds x="2954" y="493" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="cancel_GwApproved_di" bpmnElement="cancel_GwApproved" isMarkerVisible="true">
         <dc:Bounds x="3129" y="535" width="50" height="50" />
@@ -515,8 +522,9 @@ POST /api/internal/bank/payment-callback</bpmn:text>
       <bpmndi:BPMNShape id="srv_End_di" bpmnElement="srv_End">
         <dc:Bounds x="6004" y="542" width="36" height="36" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_Bank_di" bpmnElement="Participant_Bank" isHorizontal="false">
+      <bpmndi:BPMNShape id="Participant_Bank_di" bpmnElement="Participant_Bank" isHorizontal="true">
         <dc:Bounds x="6280" y="480" width="260" height="180" />
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="bank_Start_di" bpmnElement="bank_Start"><dc:Bounds x="6310" y="530" width="36" height="36" /></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="bank_Process_di" bpmnElement="bank_Process"><dc:Bounds x="6370" y="518" width="100" height="60" /></bpmndi:BPMNShape>
@@ -525,14 +533,6 @@ POST /api/internal/bank/payment-callback</bpmn:text>
       <bpmndi:BPMNEdge id="F_b2_di" bpmnElement="F_b2"><di:waypoint x="6470" y="548" /><di:waypoint x="6490" y="548" /></bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Ann_Api_di" bpmnElement="Ann_Api"><dc:Bounds x="160" y="8" width="380" height="72" /></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Assoc_Api_di" bpmnElement="Assoc_Api"><di:waypoint x="350" y="80" /><di:waypoint x="298" y="118" /></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MF_PaymentToBank_di" bpmnElement="MF_PaymentToBank">
-        <di:waypoint x="1698" y="560" />
-        <di:waypoint x="6420" y="548" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MF_BankCallback_di" bpmnElement="MF_BankCallback">
-        <di:waypoint x="6508" y="548" />
-        <di:waypoint x="1780" y="560" />
-      </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

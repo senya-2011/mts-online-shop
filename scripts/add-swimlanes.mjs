@@ -9,15 +9,18 @@ import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { layoutProcess } from 'bpmn-auto-layout';
+import { fixPoolLayout } from './fix-bpmn-pool-layout.mjs';
 
 const processesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'backend/src/main/resources/processes');
 const MODELER_EXPORTER = 'Camunda Modeler';
 const MODELER_VERSION = '4.12.0';
-const SKIP_FILES = new Set(['user-order-cancel.bpmn', 'admin-product-create.bpmn', 'user-lk-order.bpmn']);
+const POOL_NAME = 'MTS Online Shop';
+const SKIP_FILES = new Set(['user-order-cancel.bpmn', 'admin-product-create.bpmn', 'admin-product-update.bpmn', 'user-lk-order.bpmn']);
+const ONLY_FILES = process.argv.slice(2);
 
 const LANE_X = 160;
 const LANE_H = 150;
-const LANE_Y_SLOTS = [80, 250, 420];
+const LANE_Y_SLOTS = [80, 230, 390];
 const LANE_SEMANTIC_ORDER = ['USER', 'ADMIN', 'SERVICE'];
 const LANE_DI_ORDER = ['SERVICE', 'ADMIN', 'USER'];
 
@@ -76,10 +79,27 @@ function buildLaneSet(processId, lanes) {
 }
 
 function stripDiagramAndLanes(xml) {
-  let result = xml.replace(/<bpmn:collaboration[\s\S]*?<\/bpmn:collaboration>\s*/m, '');
-  result = result.replace(/<bpmn:laneSet[\s\S]*?<\/bpmn:laneSet>\s*/m, '');
+  let result = xml.replace(/<bpmn:laneSet[\s\S]*?<\/bpmn:laneSet>\s*/m, '');
   result = result.replace(/<bpmndi:BPMNDiagram[\s\S]*?<\/bpmndi:BPMNDiagram>\s*/m, '');
   return result;
+}
+
+function ensureCollaboration(xml, processId) {
+  if (xml.includes('<bpmn:collaboration')) {
+    return xml;
+  }
+  const suffix = processId.replace(/-/g, '_');
+  const collabId = `Collaboration_${suffix}`;
+  const participantId = `Participant_${suffix}`;
+  const collaborationXml =
+    `  <bpmn:collaboration id="${collabId}">\n` +
+    `    <bpmn:participant id="${participantId}" name="${POOL_NAME}" processRef="${processId}" />\n` +
+    `  </bpmn:collaboration>\n\n`;
+  return xml.replace(/\n(\s*)<bpmn:process/, `\n${collaborationXml}$1<bpmn:process`);
+}
+
+function collaborationId(xml) {
+  return xml.match(/<bpmn:collaboration id="([^"]+)"/)?.[1] ?? null;
 }
 
 function ensureModelerExporter(xml) {
@@ -231,20 +251,21 @@ function resolveOverlaps(boundsMap, flows) {
     }
   }
 
-  const ids = [...boundsMap.keys()];
+  const ids = [...boundsMap.keys()].filter((id) => !id.startsWith('Boundary_'));
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
       const a = boundsMap.get(ids[i]);
       const b = boundsMap.get(ids[j]);
-      if (!boxesOverlap(a, b)) continue;
+      if (!a || !b || !boxesOverlap(a, b)) continue;
       const shiftId = failIds.has(ids[j]) ? ids[j] : failIds.has(ids[i]) ? ids[i] : ids[j];
       const current = boundsMap.get(shiftId);
+      if (!current) continue;
       boundsMap.set(shiftId, { ...current, x: current.x + 180, y: current.y + 100 });
     }
   }
 }
 
-function buildModelerDiagram(processId, lanes, layoutShapes, flows, boundaryHosts) {
+function buildModelerDiagram(processId, planeElement, lanes, layoutShapes, flows, boundaryHosts) {
   const laneYMap = buildLaneYMap(lanes);
   const minX = Math.min(...[...layoutShapes.values()].map((s) => s.x));
   const xShift = Math.max(0, LANE_X + 80 - minX);
@@ -264,6 +285,14 @@ function buildModelerDiagram(processId, lanes, layoutShapes, flows, boundaryHost
   }
 
   resolveOverlaps(boundsMap, flows);
+  // boundary events must stay on their host task after overlap resolution
+  for (const [id, shape] of layoutShapes) {
+    if (!shape.boundary) continue;
+    const hostId = boundaryHosts.get(id);
+    const host = boundsMap.get(hostId);
+    if (!host) continue;
+    boundsMap.set(id, placeBoundary(shape, host));
+  }
 
   const maxRight = Math.max(...[...boundsMap.values()].map((b) => b.x + b.w));
   const laneW = Math.max(800, maxRight - LANE_X + 120);
@@ -274,9 +303,7 @@ function buildModelerDiagram(processId, lanes, layoutShapes, flows, boundaryHost
     const laneTop = laneYMap[lane];
     return `      <bpmndi:BPMNShape id="${laneId}_di" bpmnElement="${laneId}" isHorizontal="true">
         <dc:Bounds x="${LANE_X}" y="${laneTop}" width="${laneW}" height="${LANE_H}" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="${LANE_X + 12}" y="${laneTop + 12}" width="60" height="14" />
-        </bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>`;
   });
 
@@ -303,9 +330,9 @@ function buildModelerDiagram(processId, lanes, layoutShapes, flows, boundaryHost
       </bpmndi:BPMNShape>`;
   });
 
-  // Порядок как в user-order-cancel (Modeler 4.12): lanes → edges → shapes
+  // Порядок как в user-order-cancel (Modeler 4.12): lanes → edges → shapes; pool добавит fixPoolLayout
   return `  <bpmndi:BPMNDiagram id="BPMNDiagram_${processId}">
-    <bpmndi:BPMNPlane id="BPMNPlane_${processId}" bpmnElement="${processId}">
+    <bpmndi:BPMNPlane id="BPMNPlane_${processId}" bpmnElement="${planeElement}">
 ${laneShapes.join('\n')}
 ${edges.join('\n')}
 ${nodeShapes.join('\n')}
@@ -318,6 +345,9 @@ async function processFile(file) {
     console.log(`SKIP ${file}`);
     return;
   }
+  if (ONLY_FILES.length > 0 && !ONLY_FILES.includes(file)) {
+    return;
+  }
   const path = join(processesDir, file);
   let xml = readFileSync(path, 'utf8');
   const processId = xml.match(/<bpmn:process id="([^"]+)"/)[1];
@@ -326,6 +356,7 @@ async function processFile(file) {
   const boundaryHosts = parseBoundaryHosts(xml);
 
   xml = stripDiagramAndLanes(xml);
+  xml = ensureCollaboration(xml, processId);
   xml = xml.replace(/(<bpmn:process[^>]*>\s*)/, `$1${buildLaneSet(processId, lanes)}`);
   xml = ensureModelerExporter(xml);
 
@@ -339,11 +370,13 @@ async function processFile(file) {
   }
 
   const { shapes: layoutShapes } = parseLayout(laidOut);
-  const diagram = buildModelerDiagram(processId, lanes, layoutShapes, flows, boundaryHosts);
+  const planeElement = collaborationId(laidOut) ?? processId;
+  const diagram = buildModelerDiagram(processId, planeElement, lanes, layoutShapes, flows, boundaryHosts);
   const withoutDiagram = laidOut
     .replace(/<bpmndi:BPMNDiagram[\s\S]*?<\/bpmndi:BPMNDiagram>\s*/m, '')
     .replace(/<\/bpmn:definitions>\s*$/m, '');
-  writeFileSync(path, `${withoutDiagram.trimEnd()}\n${diagram}\n</bpmn:definitions>\n`, 'utf8');
+  const output = fixPoolLayout(`${withoutDiagram.trimEnd()}\n${diagram}\n</bpmn:definitions>\n`);
+  writeFileSync(path, output, 'utf8');
   console.log(`OK ${file}`);
 }
 

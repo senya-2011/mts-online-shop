@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/**
- * Форматная проверка карты для Camunda Tasklist (без вызова банка).
- */
+
 public final class PaymentCardValidator {
 
     private static final Pattern CARD_PATTERN = Pattern.compile("^[0-9]{16}$");
@@ -23,9 +21,7 @@ public final class PaymentCardValidator {
         return cardNumber.replaceAll("[\\s-]", "");
     }
 
-    /**
-     * @return сообщение об ошибке или {@code null}, если данные корректны
-     */
+   
     public static String validate(String cardNumber, String cvv, String expiresAt) {
         String normalizedCard = normalizeCardNumber(cardNumber);
         String normalizedCvv = cvv == null ? null : cvv.trim();

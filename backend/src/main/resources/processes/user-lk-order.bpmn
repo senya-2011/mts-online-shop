@@ -1,33 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_UserLkOrder" targetNamespace="http://mts-online-shop/bpmn" exporter="Camunda Modeler" exporterVersion="4.12.0">
   <bpmn:error id="Error_Validation" name="VALIDATION_ERROR" errorCode="VALIDATION_ERROR" />
+  <bpmn:collaboration id="Collaboration_user_lk_order">
+    <bpmn:participant id="Participant_user_lk_order" name="MTS Online Shop" processRef="user-lk-order" />
+  </bpmn:collaboration>
   <bpmn:process id="user-lk-order" name="USER: заказ в ЛК" isExecutable="true" camunda:historyTimeToLive="30">
     <bpmn:laneSet id="LaneSet_user-lk-order">
       <bpmn:lane id="Lane_User" name="USER">
-        <bpmn:flowNodeRef>Start_LkOrder</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_EnterPayment</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_PaymentFormValidation</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_EnterProductId</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_ProductFormValidation</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_AddMoreProducts</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_AddMoreFormValidation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnterPayment</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Start_LkOrder</bpmn:flowNodeRef>
       </bpmn:lane>
       <bpmn:lane id="Lane_Service" name="SERVICE">
-        <bpmn:flowNodeRef>Boundary_AddCartValidation</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_AddToCart</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_AddMore</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ValidateCart</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_CreateOrder</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_Reserve</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_InitiatePayment</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_ReleaseOnFail</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_MarkPaid</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Gateway_PaymentSuccess</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_StartServer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReleaseOnFail</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_AddMore</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_PaymentSuccess</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>End_Success</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>End_Failed</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Task_ValidateCart</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_ValidateCartValidation</bpmn:flowNodeRef>
-        <bpmn:flowNodeRef>Boundary_InitPaymentValidation</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="Start_LkOrder" name="Начало заказа">
@@ -167,18 +164,18 @@
     <bpmn:sequenceFlow id="Flow_ToPaymentGateway" sourceRef="Task_InitiatePayment" targetRef="Gateway_PaymentSuccess" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_user-lk-order">
-    <bpmndi:BPMNPlane id="BPMNPlane_user-lk-order" bpmnElement="user-lk-order">
+    <bpmndi:BPMNPlane id="BPMNPlane_user-lk-order" bpmnElement="Collaboration_user_lk_order">
+      <bpmndi:BPMNShape id="Participant_user_lk_order_di" bpmnElement="Participant_user_lk_order" isHorizontal="true">
+        <dc:Bounds x="130" y="80" width="2576" height="370" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
         <dc:Bounds x="160" y="250" width="2546" height="200" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="172" y="262" width="60" height="14" />
-        </bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_User_di" bpmnElement="Lane_User" isHorizontal="true">
         <dc:Bounds x="160" y="80" width="2546" height="170" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="172" y="92" width="60" height="14" />
-        </bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_ToPaymentGateway_di" bpmnElement="Flow_ToPaymentGateway">
         <di:waypoint x="1710" y="325" />
@@ -260,6 +257,11 @@
         <di:waypoint x="1500" y="220" />
         <di:waypoint x="1500" y="195" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_InitPaymentRetry_di" bpmnElement="Flow_InitPaymentRetry">
+        <di:waypoint x="1610" y="383" />
+        <di:waypoint x="1500" y="383" />
+        <di:waypoint x="1500" y="155" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_ValidateCartRetry_di" bpmnElement="Flow_ValidateCartRetry">
         <di:waypoint x="960" y="438" />
         <di:waypoint x="450" y="438" />
@@ -310,14 +312,6 @@
       <bpmndi:BPMNShape id="Task_InitiatePayment_di" bpmnElement="Task_InitiatePayment">
         <dc:Bounds x="1610" y="285" width="100" height="80" />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Boundary_InitPaymentValidation_di" bpmnElement="Boundary_InitPaymentValidation">
-        <dc:Bounds x="1592" y="347" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_InitPaymentRetry_di" bpmnElement="Flow_InitPaymentRetry">
-        <di:waypoint x="1610" y="383" />
-        <di:waypoint x="1500" y="383" />
-        <di:waypoint x="1500" y="155" />
-      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Gateway_PaymentSuccess_di" bpmnElement="Gateway_PaymentSuccess" isMarkerVisible="true">
         <dc:Bounds x="2033" y="275" width="50" height="50" />
         <bpmndi:BPMNLabel>
@@ -353,6 +347,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Boundary_PaymentFormValidation_di" bpmnElement="Boundary_PaymentFormValidation">
         <dc:Bounds x="1432" y="177" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_InitPaymentValidation_di" bpmnElement="Boundary_InitPaymentValidation">
+        <dc:Bounds x="1592" y="347" width="36" height="36" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Boundary_AddCartValidation_di" bpmnElement="Boundary_AddCartValidation">
         <dc:Bounds x="512" y="347" width="36" height="36" />

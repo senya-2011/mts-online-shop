@@ -6,11 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
-/**
- * Camunda webapp at context root ({@code /}) on WildFly: the default {@code CsrfPreventionFilter}
- * sets XSRF-TOKEN with a wrong cookie path, so the first API call after login fails and the UI logs out.
- * Re-register the filter name as a no-op (documented Camunda Spring Boot workaround).
- */
 @Configuration
 public class CamundaWebappSecurityConfiguration {
 

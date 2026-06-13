@@ -21,11 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-/**
- * Если схема приложения уже создана (например, после предыдущего запуска),
- * но таблица databasechangelog пуста — помечаем changeset'ы как выполненные (changelogSync),
- * чтобы не падать на CREATE TABLE ... already exists.
- */
+
 @Configuration
 @EnableConfigurationProperties(LiquibaseProperties.class)
 @ConditionalOnProperty(name = "spring.liquibase.enabled", havingValue = "true", matchIfMissing = true)

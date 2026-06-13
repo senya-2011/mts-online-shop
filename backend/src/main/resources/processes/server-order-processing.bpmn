@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="Definitions_ServerOrderProcessing" targetNamespace="http://mts-online-shop/bpmn" exporter="Camunda Modeler" exporterVersion="4.12.0">
+  <bpmn:collaboration id="Collaboration_server_order_processing">
+    <bpmn:participant id="Participant_server_order_processing" name="MTS Online Shop" processRef="server-order-processing" />
+  </bpmn:collaboration>
+
   <bpmn:process id="server-order-processing" name="SERVER: обработка заказа" isExecutable="true" camunda:historyTimeToLive="30">
     <bpmn:laneSet id="LaneSet_server-order-processing">
       <bpmn:lane id="Lane_Service" name="SERVICE">
@@ -46,12 +50,14 @@
     <bpmn:sequenceFlow id="Flow_End" sourceRef="Task_Complete" targetRef="End_Server" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_server-order-processing">
-    <bpmndi:BPMNPlane id="BPMNPlane_server-order-processing" bpmnElement="server-order-processing">
+    <bpmndi:BPMNPlane id="BPMNPlane_server-order-processing" bpmnElement="Collaboration_server_order_processing">
+      <bpmndi:BPMNShape id="Participant_server_order_processing_di" bpmnElement="Participant_server_order_processing" isHorizontal="true">
+        <dc:Bounds x="130" y="80" width="1186" height="170" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Service_di" bpmnElement="Lane_Service" isHorizontal="true">
         <dc:Bounds x="160" y="80" width="1136" height="150" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="172" y="92" width="60" height="14" />
-        </bpmndi:BPMNLabel>
+        <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_End_di" bpmnElement="Flow_End">
         <di:waypoint x="1110" y="155" />
